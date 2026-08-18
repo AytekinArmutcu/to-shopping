@@ -49,6 +49,7 @@ Screen (app/) → Repository (features/*/repository.ts) → Drizzle → SQLite
 2. **Fachlogik kennt die Datenbank nicht.** Sortierung, Ranking, Formatprüfung sind reine Funktionen: Eingabe rein, Ergebnis raus.
 3. **Der Zustand-Store hält keine Daten.** Nur UI-Zustand (aktive Liste, „erledigte anzeigen", Suchtext). Daten kommen aus der DB.
 4. **Kein sichtbarer Text im Code.** Alle Texte in `src/i18n/locales/de.json`.
+5. **Keine Testdateien unter `app/`.** Alles dort ist eine Route und wird ins App-Bundle gebündelt – eine Testdatei bringt die App zum Absturz, ohne dass Typecheck, Lint oder Unit-Tests etwas merken. Tests liegen neben ihrem Code in `src/`.
 
 **Weitere Regeln:**
 

@@ -14,7 +14,7 @@ Diese Datei richtet sich an jemanden, der das Projekt zum ersten Mal öffnet. Di
 | npm | ≥ 10 | `npm --version` |
 | Git | beliebig | `git --version` |
 | JDK | **17 oder 21** – nicht neuer (siehe unten) | `java -version` |
-| Android Studio | mit Android SDK Platform 35 **und 36**, Build-Tools 35 | – |
+| Android Studio | SDK Platform 35 **und 36**, Build-Tools 35, **CMake 3.31.6** | – |
 | Android-Gerät oder Emulator | Android 8.0 oder neuer | `adb devices` |
 
 Die Umgebungsvariable `ANDROID_HOME` muss auf das SDK zeigen, unter Windows üblicherweise
@@ -139,20 +139,48 @@ docs/         Produkt- und Architekturdokumentation
   React `19.2.3`. Ohne die Overrides bricht `npm install` mit einem Peer-Dependency-Konflikt ab.
   Beim nächsten SDK-Wechsel prüfen, ob sie noch nötig sind.
 - **Markdown ist von Prettier ausgenommen**, damit die Tabellen in `docs/` unverändert bleiben.
-- **Windows-Pfadgrenze (MAX_PATH).** Der native C++-Build erzeugt Objektdateipfade, in denen der
-  Projektpfad zweimal steckt – bei `react-native-gesture-handler` überschreitet das die
-  260-Zeichen-Grenze von Windows, und der Build bricht mit
-  `ninja: error: ... Filename longer than 260 characters` ab. Das Projekt in einen kürzeren Ordner
-  zu verschieben genügt nicht. Nötig ist die Unterstützung langer Pfade, einmalig in einer
-  **PowerShell mit Administratorrechten**, danach neu starten:
+- **Windows-Pfadgrenze (MAX_PATH) – gelöst, aber wissenswert.** Der native C++-Build erzeugt
+  Objektdateipfade, in denen der Projektpfad zweimal steckt; bei `react-native-gesture-handler`
+  sind das rund 380 Zeichen. Das mit dem SDK ausgelieferte **ninja 1.10.2** bricht dabei mit
+  `Filename longer than 260 characters` ab – und zwar unabhängig davon, ob Windows lange Pfade
+  erlaubt, weil ninja die Grenze selbst prüft. Behoben in **ninja 1.12**
+  ([ninja-build/ninja#1900](https://github.com/ninja-build/ninja/issues/1900)), das mit
+  **CMake 3.31.6** ausgeliefert wird. Diese Version wird deshalb vom Config-Plugin erzwungen.
+
+  Das Projekt in einen kürzeren Ordner zu verschieben hätte **nicht** gereicht: Selbst unter
+  `C:\ts` bliebe der Pfad bei 299 Zeichen, weil CMake den Quellpfad im Objektdateinamen
+  nachbildet. Nachgerechnet, nicht geschätzt.
+
+  Ergänzend sinnvoll, einmalig in einer **PowerShell mit Administratorrechten**, danach neu starten:
 
   ```powershell
   New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" -Name LongPathsEnabled -Value 1 -PropertyType DWORD -Force
   git config --system core.longpaths true
   ```
 
+- **Nicht auf CMake 4.x wechseln.** Dort ist die Kompatibilität zu
+  `cmake_minimum_required(VERSION < 3.5)` entfallen, woran mehrere native
+  React-Native-Abhängigkeiten scheitern. 3.31.6 ist die getestete Version.
+
+- **`plugins/withAndroidBuildConfig.js`** setzt die CMake-Version und beschränkt die
+  Prozessorarchitekturen auf `arm64-v8a` (Galaxy S24) und `x86_64` (Emulator). Ohne dieses
+  Plugin wären beide Einstellungen nach dem nächsten `expo prebuild` weg, weil `android/`
+  neu erzeugt und nicht versioniert wird. Die Beschränkung senkte die Bauzeit von
+  **2 h 48 min auf unter 2 Minuten**. Vor einer Store-Veröffentlichung prüfen, ob
+  `armeabi-v7a` für ältere Geräte wieder aufzunehmen ist.
+
+- **Keine Testdateien unter `app/`.** Alles dort ist eine Route und landet im App-Bundle –
+  eine Testdatei zöge die Testbibliothek mitsamt Node-Modulen hinein, und die App startet
+  nicht mehr. Typecheck, Lint und Unit-Tests bemerken das nicht, nur der E2E-Test.
+  `metro.config.js` sperrt Testdateien zusätzlich aus dem Bundle aus.
+
 - **Android SDK Platform 36 wird benötigt**, nicht nur 35 – React Native 0.86 kompiliert dagegen.
   Gradle installiert sie beim ersten Build selbst nach; schlägt das mit
   `FileAlreadyExistsException` fehl, liegt eine Dateileiche in `%LOCALAPPDATA%\Android\Sdk\.temp`.
   Ordner löschen und Build wiederholen, oder die Plattform in Android Studio unter
   **Settings → Languages & Frameworks → Android SDK** installieren.
+
+- **CMake installiert Gradle nicht automatisch nach** – anders als SDK-Plattformen. Fehlt die
+  Version, bricht der Build mit `[CXX1300] CMake '3.31.6' was not found in SDK` ab. Installation
+  in Android Studio unter **Settings → Languages & Frameworks → Android SDK → SDK Tools**,
+  dort **„Show Package Details"** anhaken, sonst sind die Versionen nicht sichtbar.

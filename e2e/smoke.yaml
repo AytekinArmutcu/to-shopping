@@ -1,15 +1,26 @@
 # E2E-Smoke-Test (M0).
 #
-# Prueft nur, dass die App auf einem echten Geraet startet und den
-# Startbildschirm zeigt. Wird in M3 auf den vollstaendigen Hauptweg
-# erweitert: hinzufuegen -> abhaken -> Einkauf abschliessen (T-12.4).
+# Prueft, dass die App auf einem echten Geraet startet und den Startbildschirm
+# zeigt. Wird in M3 auf den vollstaendigen Hauptweg erweitert:
+# hinzufuegen -> abhaken -> Einkauf abschliessen (T-12.4).
+#
+# Bewusst ohne "clearState": Im Entwicklungs-Build loescht das auch die
+# gespeicherte Adresse des Metro-Servers, worauf die App das JavaScript-Bundle
+# neu beziehen muss - das dauert laenger als jede sinnvolle Wartezeit und macht
+# den Test unzuverlaessig. Sobald es einen Release-Build mit eingebettetem
+# Bundle gibt (vor der Auslieferung an Tester), kann clearState zurueckkommen.
+#
+# extendedWaitUntil statt assertVisible: Der erste Start muss das Bundle vom
+# Metro-Server laden, was deutlich laenger dauert als Maestros Standardwartezeit.
 #
 # Ausfuehren:  npm run e2e
-# Voraussetzung: Geraet per USB verbunden, USB-Debugging aktiv.
+# Voraussetzungen: Geraet oder Emulator verbunden, "npm start" laeuft.
 appId: de.toshopping.app
 ---
-- launchApp:
-    clearState: true
-- assertVisible:
-    id: 'home-screen'
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: 'home-screen'
+    timeout: 60000
 - assertVisible: 'To-Shopping'
+- assertVisible: 'Meilenstein M0'
