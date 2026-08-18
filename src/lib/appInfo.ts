@@ -1,7 +1,7 @@
 export const APP_NAME = 'To-Shopping';
 
 /** Aktueller Stand laut docs/roadmap.md. Wird pro Meilenstein hochgesetzt. */
-export const MILESTONE = 'M0';
+export const MILESTONE = 'M1';
 
 /**
  * Beispiel fuer eine reine Funktion nach ADR-008: Eingabe rein, Ergebnis raus,

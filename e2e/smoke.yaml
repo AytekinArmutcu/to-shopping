@@ -23,4 +23,9 @@ appId: de.toshopping.app
       id: 'home-screen'
     timeout: 60000
 - assertVisible: 'To-Shopping'
-- assertVisible: 'Meilenstein M0'
+# Beweist, dass Migration und Startkatalog gelaufen sind: Der Text entsteht
+# aus einer Live-Abfrage gegen SQLite. Bewusst ohne feste Zahlen - der
+# Katalog darf wachsen, ohne den Smoke-Test zu brechen. Die Zahlen selbst
+# prueft src/db/seed/logic.test.ts.
+- assertVisible:
+    id: 'home-db-summary'

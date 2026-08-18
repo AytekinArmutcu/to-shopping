@@ -429,6 +429,46 @@ Der Smoke-Flow ist in wenigen Zeilen lesbarem YAML beschrieben – auch ohne Pro
 
 ---
 
+## ADR-023 – Android-Build-Einstellungen als eigenes Config-Plugin
+
+**Datum:** 2026-08-18 · **Status:** Angenommen
+
+**Kontext**
+Der Ordner `android/` ist nicht versioniert und wird bei jedem `expo prebuild` neu erzeugt. Zwei Einstellungen sind dort aber zwingend nötig: eine neuere CMake-Version (das mitgelieferte ninja 1.10.2 bricht bei Pfaden über 260 Zeichen ab, behoben in ninja 1.12, ausgeliefert mit CMake 3.31.6) und die Beschränkung der Prozessorarchitekturen auf `arm64-v8a` und `x86_64` (Bauzeit von 2 h 48 min auf unter 2 Minuten).
+
+**Entscheidung**
+Ein eigenes Expo-Config-Plugin unter `plugins/withAndroidBuildConfig.js` setzt beide Werte bei jedem Erzeugen des Projekts.
+
+**Verworfene Alternativen**
+- *`expo-build-properties`*: das offizielle Plugin für Build-Einstellungen, bietet aber weder die CMake-Version noch die ABI-Liste an.
+- *`android/` versionieren*: würde die Werte festhalten, nimmt aber den Vorteil, das native Projekt jederzeit sauber neu erzeugen zu können, und erzeugt bei jedem SDK-Wechsel Konflikte.
+- *Projekt in einen kürzeren Ordner verschieben*: nachgerechnet nicht ausreichend – der Objektdateipfad bliebe bei 299 Zeichen, weil CMake den Quellpfad im Dateinamen nachbildet.
+- *CMake 4.x*: dort ist die Kompatibilität zu `cmake_minimum_required < 3.5` entfallen, woran mehrere native React-Native-Abhängigkeiten scheitern.
+
+**Konsequenz**
+Ein frisch erzeugtes Projekt baut ohne Handgriffe. Preis: eine selbst gepflegte Datei, die bei einem SDK-Wechsel zu prüfen ist. Vor der Store-Veröffentlichung ist zu entscheiden, ob `armeabi-v7a` für ältere Geräte wieder aufgenommen wird.
+
+---
+
+## ADR-024 – Zwei Theme-Systeme aus einer Farbquelle versorgen
+
+**Datum:** 2026-08-19 · **Status:** Angenommen
+
+**Kontext**
+Die App hat zwei unabhängige Theme-Systeme: React Native Paper färbt die Komponenten, der Navigator von Expo Router färbt den Hintergrund der Screens. Wird nur Paper versorgt, entsteht im Dark Mode heller Hintergrund mit heller Schrift – unlesbar. Der Fehler war weder durch Typecheck noch durch Lint noch durch Unit-Tests sichtbar, sondern nur durch die manuelle Abnahme in beiden Modi.
+
+**Entscheidung**
+`src/theme/index.ts` erzeugt beide Themes aus derselben Farbdefinition. Das Wurzel-Layout setzt `PaperProvider` und den `ThemeProvider` von **Expo Router**.
+
+**Verworfene Alternativen**
+- *`@react-navigation/native` direkt einbinden*: ab Expo SDK 56 ausdrücklich nicht mehr mit Expo Router verträglich – Metro bricht den Build mit einem entsprechenden Hinweis ab. Expo Router liefert eigene, vendorierte Varianten von `ThemeProvider`, `DefaultTheme` und `DarkTheme`.
+- *Hintergrundfarbe je Screen von Hand setzen*: müsste in jedem neuen Screen wiederholt werden und wird irgendwann vergessen.
+
+**Konsequenz**
+Farben stehen an genau einer Stelle. Neue Screens sind ohne Zutun in beiden Modi korrekt. Bestätigt zugleich die Regel aus `CLAUDE.md`, Material-3-Farbrollen nicht einzeln zu überschreiben.
+
+---
+
 ## Offene Entscheidungen (bewusst vertagt)
 
 | Thema | Wann zu entscheiden | Was dann abzuwägen ist |

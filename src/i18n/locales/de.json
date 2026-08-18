@@ -1,0 +1,59 @@
+{
+  "app": {
+    "name": "To-Shopping"
+  },
+  "units": {
+    "stueck": {
+      "short": "×",
+      "one": "Stück",
+      "other": "Stück"
+    },
+    "g": {
+      "short": "g",
+      "one": "Gramm",
+      "other": "Gramm"
+    },
+    "kg": {
+      "short": "kg",
+      "one": "Kilogramm",
+      "other": "Kilogramm"
+    },
+    "ml": {
+      "short": "ml",
+      "one": "Milliliter",
+      "other": "Milliliter"
+    },
+    "l": {
+      "short": "l",
+      "one": "Liter",
+      "other": "Liter"
+    },
+    "packung": {
+      "short": "Pck.",
+      "one": "Packung",
+      "other": "Packungen"
+    },
+    "bund": {
+      "short": "Bund",
+      "one": "Bund",
+      "other": "Bund"
+    },
+    "dose": {
+      "short": "Dose",
+      "one": "Dose",
+      "other": "Dosen"
+    }
+  },
+  "start": {
+    "loading": "Datenbank wird vorbereitet …",
+    "error": {
+      "title": "Die App konnte nicht starten",
+      "hint": "Bitte die App schließen und erneut öffnen. Bleibt der Fehler bestehen, hilft eine Neuinstallation.",
+      "details": "Technische Angaben"
+    }
+  },
+  "milestone": {
+    "current": "Meilenstein {{id}}",
+    "database": "{{products}} Produkte in {{categories}} Kategorien"
+  }
+}

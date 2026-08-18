@@ -22,7 +22,12 @@
     "ios": {
       "supportsTablet": false
     },
-    "plugins": ["expo-router", "./plugins/withAndroidBuildConfig"],
+    "plugins": [
+      "expo-router",
+      "./plugins/withAndroidBuildConfig",
+      "expo-sqlite",
+      "expo-localization"
+    ],
     "experiments": {
       "typedRoutes": true
     }

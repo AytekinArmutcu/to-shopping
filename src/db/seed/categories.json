@@ -1,0 +1,14 @@
+[
+  { "id": "obst-gemuese", "name": "Obst & Gemüse", "defaultPosition": 1 },
+  { "id": "brot-backwaren", "name": "Brot & Backwaren", "defaultPosition": 2 },
+  { "id": "kuehlregal", "name": "Kühlregal", "defaultPosition": 3 },
+  { "id": "fleisch-wurst", "name": "Fleisch & Wurst", "defaultPosition": 4 },
+  { "id": "tiefkuehl", "name": "Tiefkühl", "defaultPosition": 5 },
+  { "id": "trockenwaren", "name": "Trockenwaren", "defaultPosition": 6 },
+  { "id": "konserven", "name": "Konserven", "defaultPosition": 7 },
+  { "id": "suesses-snacks", "name": "Süßes & Snacks", "defaultPosition": 8 },
+  { "id": "getraenke", "name": "Getränke", "defaultPosition": 9 },
+  { "id": "drogerie", "name": "Drogerie", "defaultPosition": 10 },
+  { "id": "haushalt", "name": "Haushalt", "defaultPosition": 11 },
+  { "id": "sonstiges", "name": "Sonstiges", "defaultPosition": 12 }
+]
