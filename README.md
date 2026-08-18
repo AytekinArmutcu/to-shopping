@@ -14,7 +14,7 @@ Diese Datei richtet sich an jemanden, der das Projekt zum ersten Mal öffnet. Di
 | npm | ≥ 10 | `npm --version` |
 | Git | beliebig | `git --version` |
 | JDK | **17 oder 21** – nicht neuer (siehe unten) | `java -version` |
-| Android Studio | mit Android SDK Platform 35 und Build-Tools 35 | – |
+| Android Studio | mit Android SDK Platform 35 **und 36**, Build-Tools 35 | – |
 | Android-Gerät oder Emulator | Android 8.0 oder neuer | `adb devices` |
 
 Die Umgebungsvariable `ANDROID_HOME` muss auf das SDK zeigen, unter Windows üblicherweise
@@ -22,7 +22,8 @@ Die Umgebungsvariable `ANDROID_HOME` muss auf das SDK zeigen, unter Windows übl
 
 > **JDK-Version beachten.** Gradle und das Android Gradle Plugin unterstützen aktuell JDK 17 und 21.
 > Mit einem neueren JDK (z. B. 24) bricht der native Build ab. Android Studio bringt ein passendes
-> JDK mit; der Pfad dorthin lautet üblicherweise `C:\Program Files\Android\Android Studio\jbr`.
+> JDK 21 mit. Auf diesem Rechner liegt es unter `%LOCALAPPDATA%\Programs\Android Studio\jbr`,
+> je nach Installationsart auch unter `C:\Program Files\Android\Android Studio\jbr`.
 > Entweder `JAVA_HOME` darauf setzen oder in `android/gradle.properties` `org.gradle.java.home` eintragen.
 
 ## Einrichten
@@ -71,9 +72,25 @@ Der Ordner `android/` wird dabei erzeugt und ist bewusst **nicht** versioniert �
 
 ### Maestro für die E2E-Tests
 
-Maestro ist nicht Teil der npm-Abhängigkeiten und wird einmalig separat installiert –
-siehe die offizielle Installationsanleitung von Maestro. Danach muss `maestro` im `PATH` liegen.
-Die Flows liegen in [`e2e/`](e2e/).
+Maestro ist nicht Teil der npm-Abhängigkeiten, sondern wird einmalig separat installiert.
+Es liegt weder bei winget noch als vertrauenswürdiges npm-Paket vor; bezogen wird es als ZIP
+aus dem offiziellen Release-Bereich von `mobile-dev-inc/Maestro`.
+
+Auf diesem Rechner ist **Maestro 2.8.0** benutzerweit entpackt nach:
+
+```
+%USERPROFILE%\maestro
+```
+
+Damit `npm run e2e` funktioniert, muss `%USERPROFILE%\maestro\bin` in der PATH-Variable liegen.
+Einmalig in einer normalen PowerShell (keine Administratorrechte nötig, danach Terminal neu öffnen):
+
+```powershell
+setx PATH "$env:PATH;$env:USERPROFILE\maestro\bin"
+```
+
+Maestro braucht ein JDK. Wegen der JDK-Anmerkung oben sollte `JAVA_HOME` dabei auf das
+JDK 21 von Android Studio zeigen. Die Flows liegen in [`e2e/`](e2e/).
 
 ## Qualitätssicherung
 
@@ -122,3 +139,20 @@ docs/         Produkt- und Architekturdokumentation
   React `19.2.3`. Ohne die Overrides bricht `npm install` mit einem Peer-Dependency-Konflikt ab.
   Beim nächsten SDK-Wechsel prüfen, ob sie noch nötig sind.
 - **Markdown ist von Prettier ausgenommen**, damit die Tabellen in `docs/` unverändert bleiben.
+- **Windows-Pfadgrenze (MAX_PATH).** Der native C++-Build erzeugt Objektdateipfade, in denen der
+  Projektpfad zweimal steckt – bei `react-native-gesture-handler` überschreitet das die
+  260-Zeichen-Grenze von Windows, und der Build bricht mit
+  `ninja: error: ... Filename longer than 260 characters` ab. Das Projekt in einen kürzeren Ordner
+  zu verschieben genügt nicht. Nötig ist die Unterstützung langer Pfade, einmalig in einer
+  **PowerShell mit Administratorrechten**, danach neu starten:
+
+  ```powershell
+  New-ItemProperty -Path "HKLM:\SYSTEM\CurrentControlSet\Control\FileSystem" -Name LongPathsEnabled -Value 1 -PropertyType DWORD -Force
+  git config --system core.longpaths true
+  ```
+
+- **Android SDK Platform 36 wird benötigt**, nicht nur 35 – React Native 0.86 kompiliert dagegen.
+  Gradle installiert sie beim ersten Build selbst nach; schlägt das mit
+  `FileAlreadyExistsException` fehl, liegt eine Dateileiche in `%LOCALAPPDATA%\Android\Sdk\.temp`.
+  Ordner löschen und Build wiederholen, oder die Plattform in Android Studio unter
+  **Settings → Languages & Frameworks → Android SDK** installieren.
