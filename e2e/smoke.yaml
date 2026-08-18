@@ -1,0 +1,15 @@
+# E2E-Smoke-Test (M0).
+#
+# Prueft nur, dass die App auf einem echten Geraet startet und den
+# Startbildschirm zeigt. Wird in M3 auf den vollstaendigen Hauptweg
+# erweitert: hinzufuegen -> abhaken -> Einkauf abschliessen (T-12.4).
+#
+# Ausfuehren:  npm run e2e
+# Voraussetzung: Geraet per USB verbunden, USB-Debugging aktiv.
+appId: de.toshopping.app
+---
+- launchApp:
+    clearState: true
+- assertVisible:
+    id: 'home-screen'
+- assertVisible: 'To-Shopping'

@@ -1,0 +1,10 @@
+node_modules
+.expo
+android
+ios
+package-lock.json
+src/db/migrations
+
+# Markdown bleibt unangetastet: Prettier formatiert Tabellen um und erzeugt
+# damit Rauschen in der Dokumentation, ohne Nutzen fuer die Codequalitaet.
+*.md
