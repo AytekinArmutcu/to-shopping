@@ -1,0 +1,82 @@
+# E2E fuer M3: der Laden-Flow (PRD Flow 2).
+#
+# Abhaken -> Artikel verschwindet -> Fortschritt stimmt -> erledigte wieder
+# einblenden -> Einkauf abschliessen -> Abgehaktes ist weg, Offenes bleibt.
+#
+# Laeuft gegen einen Release-Build (ADR-025): npm run android:release
+# Hinweis zu den Zeitgrenzen: Die erste Interaktion nach clearState ist die
+# langsamste des ganzen Laufs - die App legt dabei Kategorien und 200 Produkte
+# neu an. Deshalb bekommt der erste Artikel 30 Sekunden statt 15. Ohne das
+# bricht der Lauf gelegentlich ab, obwohl die App fehlerfrei arbeitet.
+appId: de.toshopping.app
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: 'add-input'
+    timeout: 30000
+
+# Zwei Artikel auf die Liste
+- tapOn:
+    id: 'add-input'
+- inputText: 'Milch'
+- extendedWaitUntil:
+    visible:
+      id: 'suggestion-Milch'
+    timeout: 15000
+- tapOn:
+    id: 'suggestion-Milch'
+- extendedWaitUntil:
+    visible:
+      id: 'item-Milch'
+    timeout: 30000
+- inputText: 'Brot'
+- extendedWaitUntil:
+    visible:
+      id: 'suggestion-Brot'
+    timeout: 15000
+- tapOn:
+    id: 'suggestion-Brot'
+- extendedWaitUntil:
+    visible:
+      id: 'item-Brot'
+    timeout: 15000
+
+# Fortschritt zeigt beide als offen
+- assertVisible: '2 von 2 offen'
+
+# Abhaken ueber das Kaestchen - die Antipp-Alternative zur Wischgeste
+- tapOn: 'Milch abhaken'
+- extendedWaitUntil:
+    notVisible:
+      id: 'item-Milch'
+    timeout: 15000
+- assertVisible: '1 von 2 offen'
+
+# Erledigte wieder einblenden (FR-3.6)
+- tapOn:
+    id: 'toggle-checked'
+- extendedWaitUntil:
+    visible:
+      id: 'item-Milch'
+    timeout: 15000
+
+# Einkauf abschliessen: Rueckfrage erscheint, weil noch etwas offen ist
+- tapOn:
+    id: 'finish-shopping'
+- extendedWaitUntil:
+    visible:
+      id: 'finish-confirm'
+    timeout: 15000
+- tapOn:
+    id: 'finish-confirm'
+
+# Abgehaktes ist weg, Liegengebliebenes steht noch da (FR-3.8)
+- extendedWaitUntil:
+    notVisible:
+      id: 'item-Milch'
+    timeout: 15000
+- assertVisible:
+    id: 'item-Brot'
+- assertVisible: '1 von 1 offen'

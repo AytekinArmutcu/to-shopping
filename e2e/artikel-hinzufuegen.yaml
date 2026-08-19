@@ -4,6 +4,10 @@
 # Deckt zugleich die Repository-Schicht ab, die laut architecture.md Abschnitt
 # 11 bewusst keine eigenen Unit-Tests bekommt: Hier wird tatsaechlich in SQLite
 # geschrieben und wieder gelesen.
+# Hinweis zu den Zeitgrenzen: Die erste Interaktion nach clearState ist die
+# langsamste des ganzen Laufs - die App legt dabei Kategorien und 200 Produkte
+# neu an. Deshalb bekommt der erste Artikel 30 Sekunden statt 15. Ohne das
+# bricht der Lauf gelegentlich ab, obwohl die App fehlerfrei arbeitet.
 appId: de.toshopping.app
 ---
 # Jeder Lauf startet mit leerer Datenbank - sonst haengt das Ergebnis davon ab,
@@ -30,7 +34,7 @@ appId: de.toshopping.app
 - extendedWaitUntil:
     visible:
       id: 'item-Milch'
-    timeout: 15000
+    timeout: 30000
 
 # Ein zweiter Artikel, diesmal ueber einen Treffer in der Wortmitte
 - inputText: 'wasser'

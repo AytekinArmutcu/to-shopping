@@ -1,8 +1,10 @@
-import { and, eq, sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 
 import { db } from '@/db/client';
-import { listItems, products } from '@/db/schema';
+import { listItems, lists, products, purchaseHistory } from '@/db/schema';
 import { DEFAULT_UNIT, isUnit, type Unit } from '@/db/units';
+
+import { buildHistoryDrafts, idsToRemoveOnFinish } from './logic';
 
 /**
  * Datenzugriff fuer Listeneintraege.
@@ -86,4 +88,47 @@ export async function getOpenProductIds(listId: string): Promise<string[]> {
   return rows
     .map((row) => row.productId)
     .filter((productId): productId is string => productId !== null);
+}
+
+/** Hakt einen Artikel ab oder nimmt das Haken zurueck (FR-3.1, FR-3.3). */
+export async function setItemChecked(id: string, isChecked: boolean): Promise<void> {
+  await db
+    .update(listItems)
+    .set({ isChecked, checkedAt: isChecked ? Date.now() : null })
+    .where(eq(listItems.id, id));
+}
+
+/**
+ * Schliesst den Einkauf ab (FR-3.8): Abgehaktes wandert in die Historie und
+ * verschwindet von der Liste, Liegengebliebenes bleibt stehen.
+ *
+ * Alles in einer Transaktion (CLAUDE.md). Ohne sie koennte ein Abbruch
+ * zwischen Schreiben und Loeschen entweder Historie ohne Loeschung erzeugen
+ * (Artikel taucht doppelt in der Statistik auf) oder Loeschung ohne Historie
+ * (der Einkauf verschwindet spurlos).
+ *
+ * Rueckgabe: Anzahl der uebernommenen Artikel - die Oberflaeche meldet sie.
+ */
+export async function finishShopping(listId: string, now: number = Date.now()): Promise<number> {
+  const rows = await db.select().from(listItems).where(eq(listItems.listId, listId));
+
+  const drafts = buildHistoryDrafts(rows, now);
+  const removeIds = idsToRemoveOnFinish(rows);
+
+  if (removeIds.length === 0) {
+    return 0;
+  }
+
+  await db.transaction(async (tx) => {
+    await tx.insert(purchaseHistory).values(
+      drafts.map((draft, index) => ({
+        id: `h-${now.toString(36)}-${index}`,
+        ...draft,
+      })),
+    );
+    await tx.delete(listItems).where(inArray(listItems.id, removeIds));
+    await tx.update(lists).set({ lastOpenedAt: now }).where(eq(lists.id, listId));
+  });
+
+  return removeIds.length;
 }

@@ -60,11 +60,24 @@
     "count": {
       "one": "{{count}} Artikel",
       "other": "{{count}} Artikel"
-    }
+    },
+    "progress": "{{open}} von {{total}} offen",
+    "allDone": "Alles abgehakt",
+    "showChecked": "{{count}} erledigt anzeigen",
+    "hideChecked": "Erledigte ausblenden",
+    "finish": "Einkauf abschließen",
+    "finished": "{{count}} Artikel übernommen",
+    "finishOpenTitle": "Noch {{count}} Artikel offen",
+    "finishOpenHint": "Abgehakte Artikel wandern in die Historie, die offenen bleiben für den nächsten Einkauf auf der Liste.",
+    "finishConfirm": "Abschließen"
   },
   "item": {
     "remove": "{{name}} von der Liste entfernen",
-    "removed": "{{name}} entfernt"
+    "removed": "{{name}} entfernt",
+    "check": "{{name}} abhaken",
+    "uncheck": "Haken bei {{name}} entfernen",
+    "checked": "{{name}} abgehakt",
+    "swipeHint": "Zum Abhaken wischen"
   },
   "add": {
     "placeholder": "Artikel hinzufügen",
@@ -73,5 +86,9 @@
     "createHint": "Neues Produkt im Katalog anlegen und auf die Liste setzen",
     "suggestion": "{{name}} auf die Liste setzen",
     "added": "{{name}} hinzugefügt"
+  },
+  "common": {
+    "cancel": "Abbrechen",
+    "undo": "Rückgängig"
   }
 }

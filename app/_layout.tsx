@@ -4,6 +4,7 @@ import { Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect, useState, type ComponentProps } from 'react';
 import { useColorScheme } from 'react-native';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { PaperProvider } from 'react-native-paper';
 import type { IconProps } from 'react-native-paper/lib/typescript/components/MaterialCommunityIcon';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
@@ -75,22 +76,24 @@ export default function RootLayout() {
   const ready = migrated && seeded;
 
   return (
-    <SafeAreaProvider>
-      <PaperProvider theme={theme} settings={paperSettings}>
-        <ThemeProvider value={navigationTheme}>
-          <StatusBar style="auto" />
-          {ready && !error ? (
-            <Stack
-              screenOptions={{
-                headerShown: false,
-                contentStyle: { backgroundColor: theme.colors.background },
-              }}
-            />
-          ) : (
-            <StartupScreen error={error ?? null} />
-          )}
-        </ThemeProvider>
-      </PaperProvider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <PaperProvider theme={theme} settings={paperSettings}>
+          <ThemeProvider value={navigationTheme}>
+            <StatusBar style="auto" />
+            {ready && !error ? (
+              <Stack
+                screenOptions={{
+                  headerShown: false,
+                  contentStyle: { backgroundColor: theme.colors.background },
+                }}
+              />
+            ) : (
+              <StartupScreen error={error ?? null} />
+            )}
+          </ThemeProvider>
+        </PaperProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }
