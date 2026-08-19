@@ -469,6 +469,28 @@ Farben stehen an genau einer Stelle. Neue Screens sind ohne Zutun in beiden Modi
 
 ---
 
+## ADR-025 – E2E-Tests laufen gegen einen Release-Build, nicht gegen den Entwicklungsserver
+
+**Datum:** 2026-08-19 · **Status:** Angenommen
+
+**Kontext**
+Ein Entwicklungs-Build laedt sein JavaScript bei jedem Start vom Metro-Server. Auf dem Entwicklungsrechner dauert das gemessen **83 Sekunden** fuer ein 7,8-MB-Bundle. Maestro startet die App zu Beginn jedes Flows neu, wartet dann auf das Bundle und laeuft in Zeitgrenzen. Der Smoke-Test in M0 lief nur deshalb durch, weil Metros Zwischenspeicher zufaellig warm war – nach einem Neustart mit geleertem Cache scheiterte derselbe Test ohne jede Codeaenderung.
+
+**Entscheidung**
+E2E-Tests und die manuelle Abnahme laufen gegen einen **Release-Build mit eingebettetem JavaScript** (`npm run android:release`). Der Entwicklungs-Build bleibt fuer die tägliche Arbeit.
+
+**Verworfene Alternativen**
+- *Zeitgrenzen hochsetzen*: haette den Test von 25 Sekunden auf mehrere Minuten verlaengert und die Flakiness nur verschoben. Ein Test, dessen Ergebnis vom Zustand eines Zwischenspeichers abhaengt, ist kein Test.
+- *`launchApp` ohne Neustart*: setzt voraus, dass die App bereits geladen laeuft. Genau das kann ein automatischer Test nicht garantieren.
+- *Debug-Build mit eingebettetem Bundle*: bei React Native nicht ohne Eingriffe in die Gradle-Konfiguration moeglich; der Release-Build kann es ab Werk.
+
+**Konsequenz**
+E2E-Laeufe starten in Sekunden und haengen an keinem Serverzustand. Preis: Nach einer Codeaenderung ist vor dem E2E-Lauf ein Build noetig (rund zwei Minuten) – der Release-Build laedt keine Aenderungen nach. Fuer die Auslieferung an Tester ist derselbe Build-Weg ohnehin erforderlich, die Arbeit faellt also nicht zusaetzlich an.
+
+Zur Signierung: Expo signiert Release-Builds mit dem mitgelieferten Debug-Schluessel. Fuer interne Tests genuegt das; vor der Store-Veroeffentlichung ist ein eigener Schluessel noetig (Aufgabe fuer M12).
+
+---
+
 ## Offene Entscheidungen (bewusst vertagt)
 
 | Thema | Wann zu entscheiden | Was dann abzuwägen ist |

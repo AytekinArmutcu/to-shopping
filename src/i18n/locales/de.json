@@ -52,8 +52,26 @@
       "details": "Technische Angaben"
     }
   },
-  "milestone": {
-    "current": "Meilenstein {{id}}",
-    "database": "{{products}} Produkte in {{categories}} Kategorien"
+  "list": {
+    "empty": {
+      "title": "Noch nichts auf der Liste",
+      "hint": "Tippe unten ein, was du brauchst. Nach den ersten Buchstaben erscheinen Vorschläge."
+    },
+    "count": {
+      "one": "{{count}} Artikel",
+      "other": "{{count}} Artikel"
+    }
+  },
+  "item": {
+    "remove": "{{name}} von der Liste entfernen",
+    "removed": "{{name}} entfernt"
+  },
+  "add": {
+    "placeholder": "Artikel hinzufügen",
+    "label": "Artikel eingeben",
+    "create": "„{{name}}“ anlegen",
+    "createHint": "Neues Produkt im Katalog anlegen und auf die Liste setzen",
+    "suggestion": "{{name}} auf die Liste setzen",
+    "added": "{{name}} hinzugefügt"
   }
 }

@@ -1,9 +1,11 @@
+import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { useMigrations } from 'drizzle-orm/expo-sqlite/migrator';
 import { Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ComponentProps } from 'react';
 import { useColorScheme } from 'react-native';
 import { PaperProvider } from 'react-native-paper';
+import type { IconProps } from 'react-native-paper/lib/typescript/components/MaterialCommunityIcon';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { StartupScreen } from '@/components/StartupScreen';
@@ -12,6 +14,23 @@ import migrations from '@/db/migrations/migrations';
 import { seedIfEmpty } from '@/db/seed';
 import '@/i18n';
 import { navigationThemeFor, themeFor } from '@/theme';
+
+/**
+ * React Native Paper erwartet standardmaessig react-native-vector-icons.
+ * Unter Expo heisst das Paket @expo/vector-icons - ohne diese Zuweisung
+ * bleiben alle Symbole leere Kaestchen. Faellt weder im Typecheck noch im
+ * Lint noch in den Unit-Tests auf, nur beim Hinsehen.
+ */
+const paperSettings = {
+  icon: ({ name, color, size, ...rest }: IconProps) => (
+    <MaterialCommunityIcons
+      {...rest}
+      name={name as ComponentProps<typeof MaterialCommunityIcons>['name']}
+      color={color}
+      size={size}
+    />
+  ),
+};
 
 /**
  * Wurzel-Layout: haelt Theme, Texte und die Datenbank.
@@ -57,7 +76,7 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <PaperProvider theme={theme}>
+      <PaperProvider theme={theme} settings={paperSettings}>
         <ThemeProvider value={navigationTheme}>
           <StatusBar style="auto" />
           {ready && !error ? (

@@ -62,7 +62,8 @@ Der Ordner `android/` wird dabei erzeugt und ist bewusst **nicht** versioniert �
 | Kommando | Zweck |
 |---|---|
 | `npm start` | Expo-Entwicklungsserver |
-| `npm run android` | Nativer Build und Installation auf Gerät/Emulator |
+| `npm run android` | Nativer Build und Installation auf Gerät/Emulator (Entwicklung) |
+| `npm run android:release` | Release-Build mit eingebettetem JavaScript – **Voraussetzung für `npm run e2e`** |
 | `npm run typecheck` | TypeScript ohne Ausgabe prüfen |
 | `npm run lint` | ESLint und Prettier prüfen |
 | `npm run format` | Formatierung automatisch korrigieren |
@@ -91,6 +92,18 @@ setx PATH "$env:PATH;$env:USERPROFILE\maestro\bin"
 
 Maestro braucht ein JDK. Wegen der JDK-Anmerkung oben sollte `JAVA_HOME` dabei auf das
 JDK 21 von Android Studio zeigen. Die Flows liegen in [`e2e/`](e2e/).
+
+**Wichtig: E2E-Tests brauchen einen Release-Build**, keinen Entwicklungs-Build (ADR-025):
+
+```bash
+npm run android:release
+npm run e2e
+```
+
+Der Grund: Ein Entwicklungs-Build lädt sein JavaScript bei jedem Start vom Metro-Server – gemessen
+83 Sekunden für 7,8 MB. Maestro startet die App zu Beginn jedes Flows neu und läuft dadurch in
+Zeitgrenzen. Der Release-Build hat das JavaScript eingebettet und startet in Sekunden. Nach jeder
+Codeänderung ist vor dem E2E-Lauf also ein neuer Release-Build nötig.
 
 ## Qualitätssicherung
 

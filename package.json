@@ -12,9 +12,11 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "e2e": "maestro test e2e",
-    "db:generate": "drizzle-kit generate"
+    "db:generate": "drizzle-kit generate",
+    "android:release": "expo run:android --variant release --no-bundler"
   },
   "dependencies": {
+    "@expo/vector-icons": "^15.0.2",
     "drizzle-orm": "^0.45.2",
     "expo": "~57.0.14",
     "expo-constants": "~57.0.12",

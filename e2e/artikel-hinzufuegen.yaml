@@ -1,0 +1,55 @@
+# E2E fuer M2: Artikel ueber die Eingabe mit Vorschlaegen auf die Liste setzen
+# und wieder entfernen (FR-2.1, FR-2.7).
+#
+# Deckt zugleich die Repository-Schicht ab, die laut architecture.md Abschnitt
+# 11 bewusst keine eigenen Unit-Tests bekommt: Hier wird tatsaechlich in SQLite
+# geschrieben und wieder gelesen.
+appId: de.toshopping.app
+---
+# Jeder Lauf startet mit leerer Datenbank - sonst haengt das Ergebnis davon ab,
+# was ein frueherer Lauf hinterlassen hat.
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: 'add-input'
+    timeout: 60000
+
+# Tippen zeigt Vorschlaege aus dem Startkatalog
+- tapOn:
+    id: 'add-input'
+- inputText: 'Milch'
+- extendedWaitUntil:
+    visible:
+      id: 'suggestion-Milch'
+    timeout: 15000
+
+# Auswahl setzt den Artikel auf die Liste und leert das Eingabefeld
+- tapOn:
+    id: 'suggestion-Milch'
+- extendedWaitUntil:
+    visible:
+      id: 'item-Milch'
+    timeout: 15000
+
+# Ein zweiter Artikel, diesmal ueber einen Treffer in der Wortmitte
+- inputText: 'wasser'
+- extendedWaitUntil:
+    visible:
+      id: 'suggestion-Mineralwasser'
+    timeout: 15000
+- tapOn:
+    id: 'suggestion-Mineralwasser'
+- extendedWaitUntil:
+    visible:
+      id: 'item-Mineralwasser'
+    timeout: 15000
+
+# Entfernen wirkt sofort
+- tapOn: 'Milch von der Liste entfernen'
+- extendedWaitUntil:
+    notVisible:
+      id: 'item-Milch'
+    timeout: 15000
+- assertVisible:
+    id: 'item-Mineralwasser'
