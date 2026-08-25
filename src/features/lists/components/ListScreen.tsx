@@ -2,8 +2,9 @@ import { eq } from 'drizzle-orm';
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FlatList, KeyboardAvoidingView, Platform, StyleSheet, View } from 'react-native';
+import { FlatList, StyleSheet, View } from 'react-native';
 import { Appbar, Button, Dialog, Portal, Snackbar, Text, useTheme } from 'react-native-paper';
+import Animated, { useAnimatedKeyboard, useAnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { db } from '@/db/client';
@@ -47,6 +48,17 @@ export function ListScreen() {
   const [undoName, setUndoName] = useState('');
   const [finishedCount, setFinishedCount] = useState<number | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+
+  // Ab Android 15 erzwingt das System Edge-to-Edge: Das Fenster wird beim
+  // Oeffnen der Tastatur nicht mehr verkleinert, android:windowSoftInputMode
+  // "adjustResize" ist wirkungslos. Die Tastatur ist stattdessen ein Inset,
+  // um das sich die App selbst kuemmern muss - sonst liegt sie ueber dem
+  // Eingabefeld und man sieht weder die Eingabe noch die Vorschlaege.
+  //
+  // Bewusst ueber Reanimated statt KeyboardAvoidingView: Letzteres tut auf
+  // Android ohne "behavior" nichts, und die Hoehe aus useAnimatedKeyboard
+  // folgt der Tastatur ruckelfrei im selben Takt wie ihre Animation.
+  const keyboard = useAnimatedKeyboard();
 
   useEffect(() => {
     let cancelled = false;
@@ -158,6 +170,10 @@ export function ListScreen() {
     });
   }, [listId]);
 
+  const keyboardPadding = useAnimatedStyle(() => ({
+    paddingBottom: Math.max(keyboard.height.value, insets.bottom),
+  }));
+
   const canFinish = canFinishShopping(rows);
   const total = openCount + checkedCount;
 
@@ -167,10 +183,7 @@ export function ListScreen() {
         <Appbar.Content title={listName} />
       </Appbar.Header>
 
-      <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-      >
+      <View style={styles.container}>
         <FlatList
           data={visible}
           keyExtractor={(item) => item.id}
@@ -230,15 +243,15 @@ export function ListScreen() {
           </View>
         ) : null}
 
-        <View style={{ paddingBottom: insets.bottom }}>
+        <Animated.View style={keyboardPadding}>
           <AddItemBar
             products={products}
             productIdsOnList={productIdsOnList}
             onPickProduct={handlePick}
             onCreateProduct={handleCreate}
           />
-        </View>
-      </KeyboardAvoidingView>
+        </Animated.View>
+      </View>
 
       <Portal>
         {/* Rueckfrage nur, wenn noch etwas offen ist (PRD Flow 2.8). Ist alles

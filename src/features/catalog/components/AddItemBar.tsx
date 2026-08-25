@@ -103,7 +103,10 @@ const styles = StyleSheet.create({
     borderTopColor: 'rgba(0,0,0,0.12)',
   },
   panel: {
-    maxHeight: 280,
+    // Bewusst niedrig: Bei offener Tastatur teilen sich Vorschlaege und
+    // Artikelliste den Rest des Bildschirms. Mit 280 dp blieb auf einem
+    // grossen Telefon keine Zeile der Liste mehr uebrig.
+    maxHeight: 200,
   },
   suggestion: {
     minHeight: 48,

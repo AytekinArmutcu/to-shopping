@@ -43,6 +43,14 @@ appId: de.toshopping.app
       id: 'item-Brot'
     timeout: 15000
 
+# Tastatur schliessen, bevor es an die Knoepfe im unteren Bereich geht.
+# Ein Tipp in den leeren Bereich der Liste tut das (keyboardShouldPersistTaps
+# steht auf "handled"). Ohne diesen Schritt liegt die Tastatur ueber dem
+# Abschluss-Knopf, und ein Tipp landet in der Tastatur statt in der App -
+# auf einem echten Geraet oeffneten sich so die Tastatureinstellungen.
+- tapOn:
+    point: '50%,30%'
+
 # Fortschritt zeigt beide als offen
 - assertVisible: '2 von 2 offen'
 
