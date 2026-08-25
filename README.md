@@ -87,7 +87,18 @@ Damit `npm run e2e` funktioniert, muss `%USERPROFILE%\maestro\bin` in der PATH-V
 Einmalig in einer normalen PowerShell (keine Administratorrechte nötig, danach Terminal neu öffnen):
 
 ```powershell
-setx PATH "$env:PATH;$env:USERPROFILE\maestro\bin"
+[Environment]::SetEnvironmentVariable("Path", [Environment]::GetEnvironmentVariable("Path","User") + ";$env:USERPROFILE\maestro\bin", "User")
+```
+
+> **Nicht `setx PATH "$env:PATH;…"` verwenden.** `$env:PATH` ist die zusammengesetzte Variable aus
+> System- und Benutzer-PATH; `setx` schreibt sie komplett in den Benutzer-PATH, dupliziert damit
+> den System-PATH und **kappt bei 1024 Zeichen ohne Warnung**. Der Befehl oben fasst ausschließlich
+> den Benutzer-PATH an.
+
+Ebenfalls einmalig, damit Gradle das richtige JDK nimmt (siehe JDK-Hinweis oben):
+
+```powershell
+setx JAVA_HOME "$env:LOCALAPPDATA\Programs\Android Studio\jbr"
 ```
 
 Maestro braucht ein JDK. Wegen der JDK-Anmerkung oben sollte `JAVA_HOME` dabei auf das
@@ -197,3 +208,30 @@ docs/         Produkt- und Architekturdokumentation
   Version, bricht der Build mit `[CXX1300] CMake '3.31.6' was not found in SDK` ab. Installation
   in Android Studio unter **Settings → Languages & Frameworks → Android SDK → SDK Tools**,
   dort **„Show Package Details"** anhaken, sonst sind die Versionen nicht sichtbar.
+
+## Manuelle Abnahme auf einem echten Gerät
+
+Punkt 5 der Quality Gates lässt sich weder automatisieren noch auf dem Emulator erledigen:
+Haptik und Wischgefühl gibt es nur auf echter Hardware.
+
+### Handy einmalig vorbereiten
+
+1. **Einstellungen → Telefoninfo → Softwareinformationen** → siebenmal auf **Buildnummer** tippen.
+   Android meldet „Sie sind jetzt ein Entwickler".
+2. **Einstellungen → Entwickleroptionen** → **USB-Debugging** einschalten.
+3. Handy per USB anschließen, am Handy **„USB-Debugging zulassen"** bestätigen
+   (Häkchen bei „Von diesem Computer immer zulassen" setzen).
+4. Prüfen: `adb devices` muss das Gerät mit dem Status `device` zeigen – nicht `unauthorized`.
+
+### App installieren
+
+```bash
+npm run android:release
+```
+
+Baut den Release-Build und installiert ihn auf dem angeschlossenen Gerät. Danach kann das Kabel ab:
+Der Release-Build hat sein JavaScript eingebettet und braucht weder Metro noch den Rechner.
+Die App liegt im App-Menü und lässt sich zum echten Einkauf mitnehmen.
+
+Für die tägliche Entwicklung stattdessen `npm run android` – dieser Build lädt Änderungen sofort
+nach, braucht dafür aber einen laufenden `npm start` im selben WLAN.
