@@ -211,6 +211,11 @@ docs/         Produkt- und Architekturdokumentation
 
 ## Manuelle Abnahme auf einem echten Gerät
 
+Die Prüfliste steht in [`docs/abnahme.md`](docs/abnahme.md) – sie deckt ab, was
+die zwölf E2E-Flows nicht können: Tastaturverhalten, große Systemschrift, Dark
+Mode, Haptik, Daumenreichweite, Teilen an ein zweites Gerät und das
+Zurückspielen einer Sicherung.
+
 Punkt 5 der Quality Gates lässt sich weder automatisieren noch auf dem Emulator erledigen:
 Haptik und Wischgefühl gibt es nur auf echter Hardware.
 

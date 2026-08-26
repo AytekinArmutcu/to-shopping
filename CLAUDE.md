@@ -78,6 +78,7 @@ Vollständige Liste mit Begründungen: `docs/PRD.md`, Abschnitt 6.
 | `docs/decisions.md` | 40 ADRs: warum so, was wurde verworfen, was kostet es |
 | `docs/compliance.md` | Datenschutz, Play-Console-Pflichten, offene Aufgaben C-1 bis C-12 |
 | `docs/datenschutz.md` | Entwurf der Datenschutzerklärung (C-2), Lücken mit `[…]` markiert |
+| `docs/abnahme.md` | Prüfliste für die manuelle Abnahme (Gate 5) |
 | `docs/roadmap.md` | 13 Meilensteine, 68 Tasks mit Akzeptanzkriterien |
 
 Inhalte gehören in `docs/`. Diese Datei bleibt schlank und verweist.

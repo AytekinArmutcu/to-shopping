@@ -106,9 +106,10 @@ appId: de.toshopping.app
     notVisible:
       id: 'item-Milch'
     timeout: 15000
-- assertVisible: '2 von 3 offen'
 
-# Rueckgaengig holt ihn zurueck (FR-3.3)
+# Rueckgaengig holt ihn zurueck (FR-3.3). Der Hinweis verschwindet von selbst -
+# deshalb steht zwischen Abhaken und Antippen keine weitere Pruefung. Der
+# Fortschritt "2 von 3 offen" ist in einkauf-abschliessen abgedeckt.
 - tapOn: 'Rückgängig'
 - extendedWaitUntil:
     visible:

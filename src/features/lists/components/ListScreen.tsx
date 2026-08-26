@@ -609,10 +609,16 @@ export function ListScreen({ listId }: Props) {
         {message ?? ''}
       </Snackbar>
 
+      {/* Laenger als die uebrigen Meldungen: Dieser Hinweis will nicht gelesen,
+          sondern benutzt werden. Wer im Laden danebengewischt hat, muss den
+          Blick erst auf den Bildschirm richten, den Hinweis erfassen und
+          treffen - vier Sekunden reichten dafuer nachweislich nicht, der
+          E2E-Lauf kam auf dem Geraet zu spaet. Sieben Sekunden liegen im
+          Rahmen, den Material fuer Meldungen mit Aktion vorsieht. */}
       <Snackbar
         visible={undoItemId !== null}
         onDismiss={() => setUndoItemId(null)}
-        duration={4000}
+        duration={7000}
         action={{ label: t('common.undo'), onPress: handleUndo }}
         testID="undo-snackbar"
       >
