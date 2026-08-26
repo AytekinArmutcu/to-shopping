@@ -30,6 +30,7 @@ appId: de.toshopping.app
       id: 'item-Hafermilch'
     timeout: 30000
 - hideKeyboard
+- waitForAnimationToEnd
 
 # --- Produkt loeschen (T-7.3) ---
 - tapOn:
@@ -42,6 +43,10 @@ appId: de.toshopping.app
     timeout: 15000
 - tapOn:
     id: 'lists-menu'
+- extendedWaitUntil:
+    visible:
+      id: 'open-products'
+    timeout: 15000
 - tapOn:
     id: 'open-products'
 - extendedWaitUntil:
@@ -52,12 +57,17 @@ appId: de.toshopping.app
     id: 'products-search'
 - inputText: 'Hafermilch'
 - hideKeyboard
+- waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
       id: 'product-Hafermilch'
     timeout: 15000
 - tapOn:
     id: 'product-more-Hafermilch'
+- extendedWaitUntil:
+    visible:
+      id: 'product-delete'
+    timeout: 15000
 - tapOn:
     id: 'product-delete'
 - extendedWaitUntil:
@@ -97,6 +107,10 @@ appId: de.toshopping.app
     timeout: 15000
 - tapOn:
     id: 'lists-menu'
+- extendedWaitUntil:
+    visible:
+      id: 'open-products'
+    timeout: 15000
 - tapOn:
     id: 'open-products'
 - extendedWaitUntil:
@@ -117,6 +131,7 @@ appId: de.toshopping.app
     id: 'products-search'
 - inputText: 'Hafermilch'
 - hideKeyboard
+- waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
       id: 'product-Hafermilch'
@@ -128,6 +143,7 @@ appId: de.toshopping.app
     id: 'products-search'
 - eraseText: 20
 - hideKeyboard
+- waitForAnimationToEnd
 - tapOn:
     id: 'product-create'
 - extendedWaitUntil:
@@ -138,6 +154,7 @@ appId: de.toshopping.app
     id: 'product-name'
 - inputText: 'Kokoswasser'
 - hideKeyboard
+- waitForAnimationToEnd
 - tapOn:
     id: 'product-save'
 - extendedWaitUntil:
@@ -150,6 +167,7 @@ appId: de.toshopping.app
     id: 'products-search'
 - inputText: 'Kokoswasser'
 - hideKeyboard
+- waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
       id: 'product-Kokoswasser'
@@ -165,6 +183,7 @@ appId: de.toshopping.app
 - eraseText: 20
 - inputText: 'Kokosdrink'
 - hideKeyboard
+- waitForAnimationToEnd
 - tapOn:
     id: 'category-Kühlregal'
 - tapOn:
@@ -176,6 +195,7 @@ appId: de.toshopping.app
 - eraseText: 20
 - inputText: 'Kokosdrink'
 - hideKeyboard
+- waitForAnimationToEnd
 - extendedWaitUntil:
     visible:
       id: 'product-Kokosdrink'
@@ -194,6 +214,7 @@ appId: de.toshopping.app
 - eraseText: 20
 - inputText: 'Milch'
 - hideKeyboard
+- waitForAnimationToEnd
 # Der Knopf sperrt sich, solange der Name vergeben ist - der Hinweis steht
 # darueber im Feld.
 - assertVisible:

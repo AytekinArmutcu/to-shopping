@@ -27,6 +27,10 @@ appId: de.toshopping.app
 # --- Sicherung (FR-6.4) ---
 - tapOn:
     id: 'lists-menu'
+- extendedWaitUntil:
+    visible:
+      id: 'open-backup'
+    timeout: 15000
 - tapOn:
     id: 'open-backup'
 - extendedWaitUntil:
@@ -40,9 +44,16 @@ appId: de.toshopping.app
 
 - tapOn:
     id: 'backup-export'
-# Das Teilen-Menue gehoert dem System; hier wird es nur wieder geschlossen.
-# Erst danach steht fest, dass die Datei fertig ist.
+# Auf den Dateinamen im Teilen-Menue zu warten ist der eigentliche Beweis:
+# Die Sicherungsdatei wurde geschrieben und angehaengt. Ausserdem verhindert
+# es, dass "Zurueck" gedrueckt wird, bevor das Menue da ist.
+- extendedWaitUntil:
+    visible: '.*\.tsb'
+    timeout: 30000
 - back
+- extendedWaitUntil:
+    notVisible: '.*\.tsb'
+    timeout: 15000
 - extendedWaitUntil:
     visible: 'Zuletzt gesichert.*'
     timeout: 30000
@@ -55,6 +66,10 @@ appId: de.toshopping.app
     timeout: 15000
 - tapOn:
     id: 'lists-menu'
+- extendedWaitUntil:
+    visible:
+      id: 'open-diagnostics'
+    timeout: 15000
 - tapOn:
     id: 'open-diagnostics'
 - extendedWaitUntil:

@@ -13,10 +13,11 @@ import {
   Text,
   useTheme,
 } from 'react-native-paper';
-import Animated, { useAnimatedKeyboard, useAnimatedStyle } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { addProductsToList, listItemsQuery } from '@/features/items/repository';
+import { useKeyboardHeight } from '@/lib/useKeyboardHeight';
 
 import { buildCatalogSections, idsToAdd, type CatalogProduct } from '../logic';
 import { catalogProductsQuery, categoriesQuery } from '../repository';
@@ -41,7 +42,7 @@ export function CatalogScreen({ listId }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const keyboard = useAnimatedKeyboard();
+  const keyboardHeight = useKeyboardHeight();
 
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState<string[]>([]);
@@ -85,9 +86,12 @@ export function CatalogScreen({ listId }: Props) {
     });
   }, [listId, selected]);
 
-  const footerPadding = useAnimatedStyle(() => ({
-    paddingBottom: Math.max(keyboard.height.value, insets.bottom) + 12,
-  }));
+  // Siehe ADR-035: eine Quelle fuer die Tastaturhoehe, ueberall dieselbe.
+  const footerTarget = Math.max(keyboardHeight, insets.bottom) + 12;
+  const footerPadding = useAnimatedStyle(
+    () => ({ paddingBottom: withTiming(footerTarget, { duration: 220 }) }),
+    [footerTarget],
+  );
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>

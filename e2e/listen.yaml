@@ -57,11 +57,14 @@ appId: de.toshopping.app
     timeout: 15000
 - tapOn:
     id: 'suggestion-Zahnpasta'
+# Erst die Tastatur schliessen, dann pruefen. Auf einem hohen Tastaturfeld
+# liegt die erste Zeile sonst dahinter - und Maestro zaehlt Verdecktes als
+# unsichtbar, obwohl der Artikel laengst auf der Liste steht.
+- hideKeyboard
 - extendedWaitUntil:
     visible:
       id: 'item-Zahnpasta'
     timeout: 15000
-- hideKeyboard
 - tapOn:
     id: 'back-to-lists'
 

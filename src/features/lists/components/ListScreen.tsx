@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SectionList, StyleSheet, View } from 'react-native';
 import { Appbar, Button, Dialog, Menu, Portal, Snackbar, Text, useTheme } from 'react-native-paper';
-import Animated, { useAnimatedKeyboard, useAnimatedStyle } from 'react-native-reanimated';
+import Animated, { useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AddItemBar } from '@/features/catalog/components/AddItemBar';
@@ -43,6 +43,7 @@ import { buildShareText, SHARE_COPY_HINT_KEY } from '@/features/transfer/logic';
 import { buildSharedListForList } from '@/features/transfer/repository';
 import { shareList } from '@/features/transfer/share';
 import { getFlag, setFlag } from '@/db/appState';
+import { useKeyboardHeight } from '@/lib/useKeyboardHeight';
 
 /**
  * Der Haupt-Screen: eine Liste mit ihren Artikeln, Eingabefeld und Abschluss.
@@ -80,12 +81,13 @@ export function ListScreen({ listId }: Props) {
   // Oeffnen der Tastatur nicht mehr verkleinert, android:windowSoftInputMode
   // "adjustResize" ist wirkungslos. Die Tastatur ist stattdessen ein Inset,
   // um das sich die App selbst kuemmern muss - sonst liegt sie ueber dem
-  // Eingabefeld und man sieht weder die Eingabe noch die Vorschlaege.
+  // Eingabefeld und man sieht weder die Eingabe noch die Vorschlaege
+  // (ADR-026).
   //
-  // Bewusst ueber Reanimated statt KeyboardAvoidingView: Letzteres tut auf
-  // Android ohne "behavior" nichts, und die Hoehe aus useAnimatedKeyboard
-  // folgt der Tastatur ruckelfrei im selben Takt wie ihre Animation.
-  const keyboard = useAnimatedKeyboard();
+  // Die Hoehe kommt aus useKeyboardHeight und nicht mehr aus Reanimateds
+  // useAnimatedKeyboard - siehe ADR-035. Der weiche Uebergang bleibt, er
+  // entsteht jetzt aus withTiming statt aus dem Tastatur-Inset selbst.
+  const keyboardHeight = useKeyboardHeight();
 
   // Beim Oeffnen zwei Vermerke: Die Liste gilt als zuletzt benutzt, und die
   // App merkt sich diesen Screen als Startpunkt (FR-1.5).
@@ -187,9 +189,11 @@ export function ListScreen({ listId }: Props) {
     });
   }, [listId]);
 
-  const keyboardPadding = useAnimatedStyle(() => ({
-    paddingBottom: Math.max(keyboard.height.value, insets.bottom),
-  }));
+  const keyboardTarget = Math.max(keyboardHeight, insets.bottom);
+  const keyboardPadding = useAnimatedStyle(
+    () => ({ paddingBottom: withTiming(keyboardTarget, { duration: 220 }) }),
+    [keyboardTarget],
+  );
 
   /**
    * Teilen (FR-6.1, PRD Flow 3): Datei plus lesbarer Text ins Android-Menue.
@@ -251,16 +255,17 @@ export function ListScreen({ listId }: Props) {
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Appbar.Header elevated>
-        {/* Zurueck fuehrt immer zur Uebersicht - auch wenn die App direkt auf
-            dieser Liste gestartet ist und es gar keinen Schritt zurueck gibt. */}
+        {/* Zurueck fuehrt zur Uebersicht - als benanntes Ziel, nicht als
+            "einen Schritt zurueck".
+            router.back() war hier falsch: Startet die App direkt auf einer
+            Liste, liegt darunter die Einstiegsroute "/", und die leitet sofort
+            wieder auf dieselbe Liste. Der Knopf tat dann sichtbar nichts.
+            navigate springt zu einer schon vorhandenen Uebersicht zurueck und
+            legt sonst eine an. */}
         <Appbar.BackAction
           onPress={() => {
             void setLastRoute(ROUTE_OVERVIEW);
-            if (router.canGoBack()) {
-              router.back();
-            } else {
-              router.replace('/listen');
-            }
+            router.navigate('/listen');
           }}
           accessibilityLabel={t('list.back')}
           testID="back-to-lists"

@@ -689,6 +689,46 @@ Ausserdem: Der Zeitpunkt der letzten Sicherung wird gesetzt, sobald die Datei im
 
 ---
 
+## ADR-035 – Eine einzige Quelle fuer die Tastaturhoehe
+
+**Datum:** 2026-08-26 · **Status:** Angenommen · **Ersetzt einen Teil von ADR-026**
+
+**Kontext**
+Seit M3 holten die Screens die Tastaturhoehe aus Reanimateds `useAnimatedKeyboard`, seit M6 die Dialoge aus einem eigenen Haken auf Basis der `Keyboard`-Ereignisse von React Native. Zwei Wege fuer dieselbe Frage – mit der Begruendung, dass der Dialog von Paper kein animiertes Style entgegennimmt.
+
+Beim ersten Lauf auf einem **zweiten** Android-Geraet (Emulator, Android 15, 1080 × 2400) verschwand das Eingabefeld, sobald die Tastatur aufging. Die Messung: Fenster in voller Hoehe, Tastatur 883 px – also rund 336 dp. Der aufgetragene Abstand war aber so gross, dass die Leiste unter den Bildschirmrand rutschte. Der Wert kam als **Pixel** an und wurde als **dp** verwendet.
+
+**Entscheidung**
+`src/lib/useKeyboardHeight.ts` ist die einzige Stelle, an der die Tastaturhoehe herkommt. `endCoordinates.height` aus dem `keyboardDidShow`-Ereignis ist von React Native als dp dokumentiert und verhaelt sich ueber Android-Fassungen hinweg gleich.
+
+**Verworfene Alternativen**
+- *Beim Reanimated-Weg bleiben und die Dichte selbst herausrechnen.* Man muesste raten, wann umgerechnet werden muss und wann nicht – und jedes neue Geraet waere wieder ein Ratespiel.
+- *Ein fertiges Paket* (`react-native-keyboard-controller`). Loest das Problem, kostet aber eine Abhaengigkeit fuer etwas, das zwanzig Zeilen sind.
+
+**Konsequenz**
+Der weiche Uebergang bleibt, er entsteht jetzt aus `withTiming` statt aus dem Tastatur-Inset selbst – minimal spaeter, dafuer auf jedem Geraet an der richtigen Stelle. Der eigentliche Gewinn ist die Regel: **eine Frage, eine Quelle.** Zwei Wege zur selben Antwort heisst, dass einer davon unbemerkt falsch sein kann – genau das ist hier vier Meilensteine lang passiert.
+
+Und die Lehre zum Vorgehen: Der Fehler war auf dem Samsung Galaxy S24 nicht zu sehen. Ein zweites Geraet – und sei es ein Emulator – findet eine Klasse von Fehlern, die ein einzelnes Testgeraet strukturell verbirgt.
+
+---
+
+## ADR-036 – „Zurueck" ist ein benanntes Ziel, kein Schritt zurueck
+
+**Datum:** 2026-08-26 · **Status:** Angenommen
+
+**Kontext**
+Der Zurueck-Pfeil im Listen-Screen fuehrte `router.back()` aus, mit `router.replace('/listen')` als Ausweichweg, falls es nichts gibt, wohin man zurueckkann. Im E2E-Lauf tat der Knopf sporadisch **gar nichts**.
+
+Der Grund: Startet die App direkt auf einer Liste, liegt darunter die Einstiegsroute `/`. Die zeigt nichts an, sondern leitet auf die zuletzt genutzte Liste weiter (FR-1.5). Ein Schritt zurueck landet also auf `/` – und `/` schickt einen sofort dorthin zurueck, wo man herkam. Dasselbe gilt fuer die **System-Zurueck-Taste**.
+
+**Entscheidung**
+Der Zurueck-Pfeil navigiert zur Uebersicht als benanntem Ziel (`router.navigate('/listen')`), statt einen Schritt im Verlauf zurueckzugehen.
+
+**Konsequenz**
+Der Knopf tut immer dasselbe, unabhaengig davon, wie der Nutzer auf die Liste gekommen ist. Allgemeiner: Eine Route, die nur weiterleitet, darf kein Ziel im Verlauf sein – wer dorthin zurueckkehrt, dreht sich im Kreis.
+
+---
+
 ## Offene Entscheidungen (bewusst vertagt)
 
 | Thema | Wann zu entscheiden | Was dann abzuwägen ist |

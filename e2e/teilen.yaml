@@ -34,6 +34,13 @@ appId: de.toshopping.app
 # --- Der Hinweis kommt vor dem Teilen (FR-6.7) ---
 - tapOn:
     id: 'list-menu'
+# Das Menue klappt mit einer Animation auf. Ohne dieses Warten tippt Maestro
+# schneller, als der Eintrag da ist - auf einem langsamen Geraet zufaellig mal
+# so, mal so.
+- extendedWaitUntil:
+    visible:
+      id: 'menu-share'
+    timeout: 15000
 - tapOn:
     id: 'menu-share'
 - extendedWaitUntil:
@@ -50,6 +57,13 @@ appId: de.toshopping.app
     timeout: 15000
 - tapOn:
     id: 'list-menu'
+# Das Menue klappt mit einer Animation auf. Ohne dieses Warten tippt Maestro
+# schneller, als der Eintrag da ist - auf einem langsamen Geraet zufaellig mal
+# so, mal so.
+- extendedWaitUntil:
+    visible:
+      id: 'menu-share'
+    timeout: 15000
 - tapOn:
     id: 'menu-share'
 - extendedWaitUntil:
@@ -57,11 +71,20 @@ appId: de.toshopping.app
       id: 'share-hint-confirm'
     timeout: 15000
 
-# Bestaetigen oeffnet das Android-Teilen-Menue. Das gehoert dem System -
-# hier wird es nur wieder geschlossen.
+# Bestaetigen oeffnet das Android-Teilen-Menue mit der Datei im Anhang.
+# Auf den Dateinamen zu warten ist mehr als Geduld: Er ist der Beweis, dass
+# die .tsl-Datei geschrieben und angehaengt wurde (T-8.3). Ohne dieses Warten
+# drueckt Maestro "Zurueck", bevor das Menue ueberhaupt da ist - und schliesst
+# damit nichts, sondern loest im Zweifel etwas ganz anderes aus.
 - tapOn:
     id: 'share-hint-confirm'
+- extendedWaitUntil:
+    visible: '.*\.tsl'
+    timeout: 30000
 - back
+- extendedWaitUntil:
+    notVisible: '.*\.tsl'
+    timeout: 15000
 - extendedWaitUntil:
     visible:
       id: 'item-Milch'
@@ -70,13 +93,27 @@ appId: de.toshopping.app
 # --- Beim zweiten Mal kein Hinweis mehr (FR-6.7) ---
 - tapOn:
     id: 'list-menu'
+# Das Menue klappt mit einer Animation auf. Ohne dieses Warten tippt Maestro
+# schneller, als der Eintrag da ist - auf einem langsamen Geraet zufaellig mal
+# so, mal so.
+- extendedWaitUntil:
+    visible:
+      id: 'menu-share'
+    timeout: 15000
 - tapOn:
     id: 'menu-share'
 - extendedWaitUntil:
     notVisible:
       id: 'share-hint-confirm'
     timeout: 15000
+# Stattdessen geht es direkt ins Teilen-Menue.
+- extendedWaitUntil:
+    visible: '.*\.tsl'
+    timeout: 30000
 - back
+- extendedWaitUntil:
+    notVisible: '.*\.tsl'
+    timeout: 15000
 - extendedWaitUntil:
     visible:
       id: 'item-Milch'
