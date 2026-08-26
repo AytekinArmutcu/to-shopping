@@ -69,7 +69,11 @@
     "finished": "{{count}} Artikel übernommen",
     "finishOpenTitle": "Noch {{count}} Artikel offen",
     "finishOpenHint": "Abgehakte Artikel wandern in die Historie, die offenen bleiben für den nächsten Einkauf auf der Liste.",
-    "finishConfirm": "Abschließen"
+    "finishConfirm": "Abschließen",
+    "catalog": "Aus Produkten wählen",
+    "layout": "Ladenlayout",
+    "checked": "Erledigt",
+    "fallbackCategory": "Sonstiges"
   },
   "item": {
     "remove": "{{name}} von der Liste entfernen",
@@ -77,7 +81,8 @@
     "check": "{{name}} abhaken",
     "uncheck": "Haken bei {{name}} entfernen",
     "checked": "{{name}} abgehakt",
-    "swipeHint": "Zum Abhaken wischen"
+    "swipeHint": "Zum Abhaken wischen",
+    "edit": "{{name}} bearbeiten"
   },
   "add": {
     "placeholder": "Artikel hinzufügen",
@@ -90,5 +95,39 @@
   "common": {
     "cancel": "Abbrechen",
     "undo": "Rückgängig"
+  },
+  "catalog": {
+    "title": "Produkte",
+    "search": "Produkt suchen",
+    "uncategorized": "Ohne Kategorie",
+    "empty": "Kein Produkt gefunden",
+    "emptyHint": "Tippe weniger Buchstaben, oder lege das Produkt über das Eingabefeld der Liste an.",
+    "onList": "Steht schon auf der Liste",
+    "select": "{{name}} auswählen",
+    "deselect": "Auswahl von {{name}} aufheben",
+    "apply": "Übernehmen",
+    "applyCount": "{{count}} übernehmen",
+    "back": "Zurück zur Liste",
+    "added": "{{count}} Artikel hinzugefügt"
+  },
+  "detail": {
+    "quantity": "Menge",
+    "increase": "Menge erhöhen",
+    "decrease": "Menge verringern",
+    "unit": "Einheit",
+    "note": "Notiz",
+    "notePlaceholder": "z. B. laktosefrei",
+    "done": "Fertig"
+  },
+  "layout": {
+    "title": "Ladenlayout",
+    "hint": "Ordne die Abteilungen so, wie du durch deinen Laden läufst. Die Liste folgt dieser Reihenfolge.",
+    "drag": "{{name}} verschieben",
+    "moveUp": "{{name}} nach oben",
+    "moveDown": "{{name}} nach unten",
+    "position": "Platz {{position}} von {{total}}",
+    "reset": "Standardreihenfolge",
+    "resetDone": "Standardreihenfolge wiederhergestellt",
+    "back": "Zurück zur Liste"
   }
 }

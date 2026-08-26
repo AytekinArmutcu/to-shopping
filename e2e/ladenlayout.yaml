@@ -1,0 +1,105 @@
+# E2E fuer M5: Kategorien und Ladenreihenfolge.
+#
+# Liste zeigt Abschnitte in Standardreihenfolge -> Reihenfolge aendern ->
+# Liste folgt sofort -> ueberlebt den Neustart -> zuruecksetzen (FR-1.3).
+#
+# Geprueft wird ueber die Lage der Ueberschriften zueinander, nicht ueber ihre
+# blosse Sichtbarkeit: Sichtbar sind sie in jeder Reihenfolge - falsch sortiert
+# waere die Liste trotzdem.
+#
+# Laeuft gegen einen Release-Build (ADR-025): npm run android:release
+appId: de.toshopping.app
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: 'add-input'
+    timeout: 30000
+
+# Zwei Artikel aus zwei Kategorien: Milch liegt im Kuehlregal (Standardplatz 3),
+# Brot bei den Backwaren (Standardplatz 2).
+- tapOn:
+    id: 'add-input'
+- inputText: 'Milch'
+- extendedWaitUntil:
+    visible:
+      id: 'suggestion-Milch'
+    timeout: 15000
+- tapOn:
+    id: 'suggestion-Milch'
+- extendedWaitUntil:
+    visible:
+      id: 'item-Milch'
+    timeout: 30000
+- inputText: 'Brot'
+- extendedWaitUntil:
+    visible:
+      id: 'suggestion-Brot'
+    timeout: 15000
+- tapOn:
+    id: 'suggestion-Brot'
+- extendedWaitUntil:
+    visible:
+      id: 'item-Brot'
+    timeout: 15000
+- hideKeyboard
+
+# Standardreihenfolge: Backwaren vor Kuehlregal (T-5.4)
+- assertVisible:
+    text: 'Brot & Backwaren'
+    above:
+      text: 'Kühlregal'
+
+# --- Ladenlayout aendern ---
+- tapOn:
+    id: 'open-layout'
+- extendedWaitUntil:
+    visible:
+      id: 'layout-list'
+    timeout: 15000
+# Antipp-Alternative statt Ziehen: Die Geste laesst sich nicht zuverlaessig
+# automatisieren, das Ergebnis beider Wege ist dasselbe (moveCategory).
+- tapOn:
+    id: 'up-Kühlregal'
+- back
+
+# Die Liste folgt sofort
+- extendedWaitUntil:
+    visible:
+      id: 'item-Milch'
+    timeout: 15000
+- assertVisible:
+    text: 'Kühlregal'
+    above:
+      text: 'Brot & Backwaren'
+
+# Und die Reihenfolge ueberlebt den Neustart
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: 'item-Milch'
+    timeout: 30000
+- assertVisible:
+    text: 'Kühlregal'
+    above:
+      text: 'Brot & Backwaren'
+
+# --- Zuruecksetzen auf die Standardreihenfolge ---
+- tapOn:
+    id: 'open-layout'
+- extendedWaitUntil:
+    visible:
+      id: 'layout-list'
+    timeout: 15000
+- tapOn:
+    id: 'layout-reset'
+- back
+- extendedWaitUntil:
+    visible:
+      id: 'item-Milch'
+    timeout: 15000
+- assertVisible:
+    text: 'Brot & Backwaren'
+    above:
+      text: 'Kühlregal'

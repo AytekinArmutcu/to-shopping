@@ -44,12 +44,16 @@ appId: de.toshopping.app
     timeout: 15000
 
 # Tastatur schliessen, bevor es an die Knoepfe im unteren Bereich geht.
-# Ein Tipp in den leeren Bereich der Liste tut das (keyboardShouldPersistTaps
-# steht auf "handled"). Ohne diesen Schritt liegt die Tastatur ueber dem
-# Abschluss-Knopf, und ein Tipp landet in der Tastatur statt in der App -
-# auf einem echten Geraet oeffneten sich so die Tastatureinstellungen.
-- tapOn:
-    point: '50%,30%'
+# Ohne diesen Schritt liegt die Tastatur ueber dem Abschluss-Knopf, und ein
+# Tipp landet in der Tastatur statt in der App - auf einem echten Geraet
+# oeffneten sich so die Tastatureinstellungen.
+#
+# Frueher stand hier ein Tipp auf einen festen Bildschirmpunkt. Seit die Liste
+# nach Kategorien gegliedert ist (M5), liegt dort keine leere Flaeche mehr,
+# sondern womoeglich ein Artikel - und ein Tipp auf einen Artikel oeffnet
+# dessen Detailzeile. Ein Test darf nicht davon abhaengen, was zufaellig an
+# einer Bildschirmposition liegt.
+- hideKeyboard
 
 # Fortschritt zeigt beide als offen
 - assertVisible: '2 von 2 offen'

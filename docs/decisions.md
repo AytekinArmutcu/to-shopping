@@ -491,6 +491,88 @@ Zur Signierung: Expo signiert Release-Builds mit dem mitgelieferten Debug-Schlue
 
 ---
 
+## ADR-026 – Die Detailzeile sitzt unten am Bildschirmrand, nicht als Dialog in der Mitte
+
+**Datum:** 2026-08-26 · **Status:** Angenommen
+
+**Kontext**
+Menge, Einheit und Notiz brauchen eine Eingabeflaeche mit zwei Textfeldern. Der naheliegende Weg waere ein Dialog. Der Dialog von React Native Paper haengt aber im Portal – er ist Teil desselben Fensters und weiss nichts von der Tastatur. Auf Android 15 erzwingt das System Edge-to-Edge: Das Fenster wird beim Oeffnen der Tastatur nicht mehr verkleinert. Genau dieser Umstand hat in M3 bereits das Eingabefeld der Liste verdeckt; der Fehler wurde dort mit `useAnimatedKeyboard` behoben und auf dem Geraet geprueft.
+
+**Entscheidung**
+Die Detailzeile erscheint an derselben Stelle wie das Eingabefeld: unten, innerhalb des bereits tastaturbewussten Bereichs. Sie ersetzt das Eingabefeld, solange sie offen ist – unten steht nie beides.
+
+**Verworfene Alternativen**
+- *Dialog mit eigener Tastaturbehandlung*: haette einen zweiten Mechanismus neben `useAnimatedKeyboard` gebraucht, fuer denselben Zweck an anderer Stelle. Zwei Wege, dasselbe Problem zu loesen, sind einer zu viel.
+- *Aufklappende Zeile innerhalb der Liste*: die aufgeklappte Zeile kann hinter der Tastatur liegen, und die Liste muesste sie selbst in den sichtbaren Bereich scrollen. Mehr bewegliche Teile fuer dieselbe Funktion.
+- *Eigener Screen fuer den Artikel*: fuer drei Angaben ein Seitenwechsel. Der Weg zurueck kostet mehr als die Aenderung selbst.
+
+**Konsequenz**
+Die Detailzeile erbt das gepruefte Tastaturverhalten und liegt in Daumenreichweite – derselbe Grund, aus dem das Eingabefeld unten sitzt. Preis: Waehrend die Detailzeile offen ist, lassen sich keine neuen Artikel eintippen. Das ist ein Moduswechsel, und Moduswechsel sind erklaerungsbeduerftig; hier macht ihn die hervorgehobene Zeile in der Liste sichtbar.
+
+Aus demselben Grund gibt es keinen Abbrechen-Knopf: Jede Aenderung geht sofort in die Datenbank (FR-2.8), "Fertig" schliesst nur. Die Notiz wird deshalb bei jedem Buchstaben gespeichert und nicht erst beim Verlassen des Feldes – die Zeile verschwindet beim Schliessen, ohne dass das Feld je den Fokus abgibt.
+
+---
+
+## ADR-027 – Live-Abfragen kommen als Bauplan aus dem Repository
+
+**Datum:** 2026-08-26 · **Status:** Angenommen
+
+**Kontext**
+`CLAUDE.md` verlangt: Screens greifen nie direkt auf die Datenbank zu. `useLiveQuery` von Drizzle braucht aber die Abfrage selbst und kein fertiges Ergebnis – es fuehrt sie bei jeder Datenaenderung erneut aus. Ein `Promise` aus einer Repository-Funktion waere nur eine Momentaufnahme. In M2 und M3 stand die Abfrage deshalb im Screen: Tabellen, Spalten und Bedingungen lagen offen in `ListScreen.tsx`. Mit dem Katalog-Screen waeren es drei weitere Abfragen an einer zweiten Stelle geworden.
+
+**Entscheidung**
+Repositories exportieren neben ihren Funktionen auch **Abfrage-Bauplaene** (`listItemsQuery`, `catalogProductsQuery`, `categoriesQuery`). Der Screen uebergibt den Bauplan an `useLiveQuery` und kennt weiterhin keine Tabelle.
+
+**Verworfene Alternativen**
+- *So lassen wie in M2/M3*: haette die Regel mit jedem neuen Screen weiter ausgehoehlt. Eine Regel, die an drei Stellen nicht gilt, gilt nicht.
+- *Eigener Abo-Mechanismus im Repository* (Callback bei Aenderung): baut nach, was `useLiveQuery` bereits kann, und muesste den Aenderungs-Listener von expo-sqlite selbst verwalten.
+- *Daten in einen Zustand-Store spiegeln*: widerspricht ADR-020 – der Store haelt UI-Zustand, keine Daten.
+
+**Konsequenz**
+Die Schichtenregel gilt jetzt ohne Ausnahme. Der Preis ist eine Undichtigkeit auf Typebene: Der Rueckgabetyp des Bauplans stammt aus Drizzle, der Screen sieht also die Form der Zeilen. Das ist gewollt – er soll die Daten anzeigen –, aber es heisst auch, dass eine Schemaaenderung im Typecheck bis in den Screen durchschlaegt. Das ist ein Vorteil, kein Nachteil: Sie faellt beim Uebersetzen auf statt im Laden.
+
+---
+
+## ADR-028 – Drag-and-drop ohne neues Paket, mit Pfeilen als gleichwertigem Weg
+
+**Datum:** 2026-08-26 · **Status:** Angenommen
+
+**Kontext**
+FR-1.3 nennt ausdruecklich Drag-and-drop fuer die Kategorie-Reihenfolge. Der uebliche Weg dorthin ist ein fertiges Paket wie `react-native-draggable-flatlist`. Zugleich verlangt `CLAUDE.md` zu jeder Geste eine Antipp-Alternative – ein reines Ziehen waere fuer niemanden bedienbar, der nicht ziehen kann – und verbietet neue Abhaengigkeiten ohne Ruecksprache.
+
+**Entscheidung**
+Kein neues Paket. Das Ziehen entsteht aus `react-native-gesture-handler` und `react-native-reanimated`, die beide bereits im Projekt sind. Die eigentliche Rechnung – wo landet die Kategorie, wie sieht die Reihenfolge danach aus – steckt in zwei reinen Funktionen (`dropIndex`, `moveCategory`) und ist getestet. Daneben stehen Hoch/Runter-Pfeile, die dieselben Funktionen aufrufen.
+
+**Verworfene Alternativen**
+- *Fertiges Drag-Paket*: haette Arbeit gespart, aber die Antipp-Alternative waere trotzdem noetig gewesen – also zwei Wege, von denen nur einer im eigenen Code liegt. Dazu kommt das Kompatibilitaetsrisiko: Solche Pakete hinken neuen React-Native- und Reanimated-Versionen regelmaessig hinterher, und dieses Projekt laeuft auf React Native 0.86 mit Reanimated 4.
+- *Nur Pfeile, kein Ziehen*: haette FR-1.3 nicht erfuellt und zwoelf Kategorien umzusortieren zu einer Klickorgie gemacht.
+- *Nur Ziehen*: schliesst Nutzer aus und verstoesst gegen die Barrierefreiheitsregel in `CLAUDE.md`.
+
+**Konsequenz**
+Die Reihenfolge laesst sich auf zwei Wegen aendern, und der verlaessliche davon – die Pfeile – ist der, den auch der automatische Test benutzt. Die Geste beginnt nach kurzem Halten (200 ms): Das trennt sie sauber vom Scrollen, ohne beide Gesten ueber Referenzen verdrahten zu muessen.
+
+Preis: Beim Ziehen wird nicht automatisch gescrollt. Wer eine Kategorie ueber den sichtbaren Bereich hinaus verschieben will, zieht in zwei Etappen oder nimmt die Pfeile. Fuer zwoelf feste Kategorien ist das vertretbar; kaemen frei anlegbare Kategorien dazu, waere es neu zu bewerten.
+
+---
+
+## ADR-029 – Abgehakte Artikel bekommen einen eigenen Abschnitt statt zurueck in ihre Kategorie
+
+**Datum:** 2026-08-26 · **Status:** Angenommen
+
+**Kontext**
+Seit M5 ist die Liste nach Kategorien gegliedert. Der Schalter „erledigte anzeigen" aus M3 blendet abgehakte Artikel wieder ein – offen blieb, wo sie dann erscheinen. `architecture.md` 4.1 sagt dazu nichts.
+
+**Entscheidung**
+Abgehaktes sammelt sich in einem eigenen Abschnitt „Erledigt" am Ende der Liste.
+
+**Verworfene Alternative**
+*Zurueck in die eigene Kategorie, durchgestrichen.* Naeher an der Datenlage, aber schlechter im Laden: Wer nachsehen will, was schon im Wagen liegt, muesste dafuer durch zwoelf Abschnitte scrollen. Ausserdem mischt sich Durchgestrichenes dann unter das, was noch zu holen ist – genau die Trennung, auf die es zwischen den Regalen ankommt.
+
+**Konsequenz**
+Die offenen Abschnitte bleiben frei von Erledigtem. Preis: Ein abgehakter Artikel verliert beim Einblenden seine Kategorie-Zuordnung aus dem Blick. Das faellt nicht ins Gewicht, weil der Abschnitt nur zum Nachsehen da ist – gekauft wird nach den offenen Abschnitten.
+
+---
+
 ## Offene Entscheidungen (bewusst vertagt)
 
 | Thema | Wann zu entscheiden | Was dann abzuwägen ist |

@@ -110,3 +110,89 @@ export function formatQuantity(item: QuantityLike, unitShort: string): string | 
 function formatNumber(value: number): string {
   return Number.isInteger(value) ? String(value) : String(value).replace('.', ',');
 }
+
+/**
+ * Schrittweite der Plus-/Minus-Knoepfe je Einheit.
+ *
+ * Ein Gramm-Schritt waere unbrauchbar: Von 500 g auf 501 g zu kommen hilft
+ * niemandem. Was zaehlbar ist, geht in Einerschritten, Gewicht und Volumen in
+ * den Spruengen, in denen man tatsaechlich einkauft.
+ */
+export const QUANTITY_STEP: Record<string, number> = {
+  stueck: 1,
+  packung: 1,
+  bund: 1,
+  dose: 1,
+  g: 50,
+  ml: 50,
+  kg: 0.5,
+  l: 0.5,
+};
+
+/** Obergrenze, damit ein Vertipper wie "50000" nicht die Zeile sprengt. */
+export const MAX_QUANTITY = 9999;
+
+function round3(value: number): number {
+  return Math.round(value * 1000) / 1000;
+}
+
+/**
+ * Naechster Mengenwert beim Druck auf Plus oder Minus (FR-2.4).
+ *
+ * Verringern faellt nie unter die Schrittweite und wird dabei nie groesser:
+ * Wer 30 g eingetippt hat und auf Minus drueckt, bekommt weder 0 noch
+ * ploetzlich 50 g, sondern behaelt seine 30 g. Der Knopf tut dann nichts -
+ * das ist verstaendlicher als ein Sprung in die falsche Richtung.
+ */
+export function stepQuantity(quantity: number, unit: Unit | string, direction: 1 | -1): number {
+  const step = QUANTITY_STEP[unit] ?? 1;
+  const next = round3(quantity + direction * step);
+
+  if (direction < 0 && next < step) {
+    return Math.min(quantity, step);
+  }
+
+  return Math.min(next, MAX_QUANTITY);
+}
+
+/**
+ * Liest eine getippte Menge (FR-2.4).
+ *
+ * Deutsches Komma ist Pflicht: Auf der Zahlentastatur eines deutschen
+ * Telefons liegt das Komma, nicht der Punkt. Beides wird akzeptiert, damit
+ * eine importierte oder kopierte Zahl nicht abgelehnt wird.
+ *
+ * Rueckgabe null heisst "nicht uebernehmen" - der bisherige Wert bleibt
+ * stehen. Eine 0 waere keine Menge, sondern ein geloeschter Artikel, und
+ * loeschen tut man an anderer Stelle.
+ */
+export function parseQuantity(input: string): number | null {
+  const normalized = input.replace(',', '.').trim();
+
+  if (normalized.length === 0 || !/^\d*\.?\d+$/.test(normalized)) {
+    return null;
+  }
+
+  const value = round3(Number(normalized));
+
+  if (!Number.isFinite(value) || value <= 0) {
+    return null;
+  }
+
+  return Math.min(value, MAX_QUANTITY);
+}
+
+/** Laenge einer Notiz. Alles darueber ist keine Notiz mehr, sondern ein Text. */
+export const MAX_NOTE_LENGTH = 200;
+
+/**
+ * Bereinigt eine Notiz vor dem Speichern (FR-2.5).
+ *
+ * Leer heisst null und nicht "": Sonst haette die Zeile eine unsichtbare
+ * zweite Zeile, und jede Abfrage auf "hat eine Notiz" muesste zwei Faelle
+ * unterscheiden.
+ */
+export function cleanNote(value: string): string | null {
+  const trimmed = value.replace(/[ \t]+/g, ' ').trim();
+  return trimmed.length === 0 ? null : trimmed.slice(0, MAX_NOTE_LENGTH);
+}

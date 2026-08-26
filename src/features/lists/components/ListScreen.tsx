@@ -1,27 +1,34 @@
-import { eq } from 'drizzle-orm';
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
+import { router } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FlatList, StyleSheet, View } from 'react-native';
+import { SectionList, StyleSheet, View } from 'react-native';
 import { Appbar, Button, Dialog, Portal, Snackbar, Text, useTheme } from 'react-native-paper';
 import Animated, { useAnimatedKeyboard, useAnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { db } from '@/db/client';
-import { listItems, products as productsTable } from '@/db/schema';
 import { AddItemBar } from '@/features/catalog/components/AddItemBar';
 import type { CatalogProduct } from '@/features/catalog/logic';
-import { createProduct } from '@/features/catalog/repository';
+import {
+  catalogProductsQuery,
+  categoriesQuery,
+  createProduct,
+  FALLBACK_CATEGORY_ID,
+} from '@/features/catalog/repository';
+import { ItemDetailBar, type ItemDetailChange } from '@/features/items/components/ItemDetailBar';
 import { ItemRow } from '@/features/items/components/ItemRow';
-import { canFinishShopping, partitionItems } from '@/features/items/logic';
+import { canFinishShopping } from '@/features/items/logic';
 import {
   addItem,
   addProductToList,
   finishShopping,
+  listItemsQuery,
   removeItem,
   setItemChecked,
+  updateItemDetails,
 } from '@/features/items/repository';
-import { getOrCreateActiveList } from '@/features/lists/repository';
+import { buildListSections, CHECKED_SECTION_ID } from '@/features/lists/logic';
+import { categoryOrderQuery, getOrCreateActiveList } from '@/features/lists/repository';
 
 /**
  * Der Haupt-Screen: eine Liste mit ihren Artikeln, Eingabefeld und Abschluss.
@@ -48,6 +55,7 @@ export function ListScreen() {
   const [undoName, setUndoName] = useState('');
   const [finishedCount, setFinishedCount] = useState<number | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   // Ab Android 15 erzwingt das System Edge-to-Edge: Das Fenster wird beim
   // Oeffnen der Tastatur nicht mehr verkleinert, android:windowSoftInputMode
@@ -73,25 +81,13 @@ export function ListScreen() {
     };
   }, []);
 
-  const items = useLiveQuery(
-    db
-      .select()
-      .from(listItems)
-      .where(eq(listItems.listId, listId ?? ''))
-      .orderBy(listItems.position),
-    [listId],
-  );
-
-  const catalog = useLiveQuery(
-    db
-      .select({
-        id: productsTable.id,
-        name: productsTable.name,
-        categoryId: productsTable.categoryId,
-        defaultUnit: productsTable.defaultUnit,
-      })
-      .from(productsTable),
-  );
+  // Die Abfragen kommen aus den Repositories, damit der Screen keine Tabellen
+  // kennt (CLAUDE.md, Schichtenregel 1). Als Bauplan und nicht als Ergebnis,
+  // weil useLiveQuery sie bei jeder Datenaenderung erneut ausfuehrt.
+  const items = useLiveQuery(listItemsQuery(listId ?? ''), [listId]);
+  const catalog = useLiveQuery(catalogProductsQuery());
+  const categoryRows = useLiveQuery(categoriesQuery());
+  const orderRows = useLiveQuery(categoryOrderQuery(listId ?? ''), [listId]);
 
   const rows = useMemo(() => items.data ?? [], [items.data]);
   const products: CatalogProduct[] = catalog.data ?? [];
@@ -100,9 +96,18 @@ export function ListScreen() {
     .map((row) => row.productId)
     .filter((id): id is string => id !== null);
 
-  const { visible, openCount, checkedCount } = useMemo(
-    () => partitionItems(rows, showChecked),
-    [rows, showChecked],
+  // Die Gruppierung nach Kategorien in Ladenreihenfolge (architecture.md 4.1).
+  // Ob die Liste eine eigene Reihenfolge hat oder nicht, entscheidet sich in
+  // orderCategories - hier gibt es dafuer keine Verzweigung.
+  const { sections, openCount, checkedCount } = useMemo(
+    () =>
+      buildListSections(rows, categoryRows.data ?? [], orderRows.data ?? [], {
+        showChecked,
+        fallbackCategoryId: FALLBACK_CATEGORY_ID,
+        fallbackTitle: t('list.fallbackCategory'),
+        checkedTitle: t('list.checked'),
+      }),
+    [rows, categoryRows.data, orderRows.data, showChecked, t],
   );
 
   const handlePick = useCallback(
@@ -134,6 +139,12 @@ export function ListScreen() {
 
   const handleRemove = useCallback((id: string) => {
     void removeItem(id);
+    // Die Detailzeile darf keinen Artikel zeigen, den es nicht mehr gibt.
+    setEditingId((current) => (current === id ? null : current));
+  }, []);
+
+  const handleDetails = useCallback((id: string, details: ItemDetailChange) => {
+    void updateItemDetails(id, details);
   }, []);
 
   const handleToggle = useCallback(
@@ -174,6 +185,10 @@ export function ListScreen() {
     paddingBottom: Math.max(keyboard.height.value, insets.bottom),
   }));
 
+  // Die Detailzeile liest ihre Werte aus der Live-Abfrage, nicht aus einer
+  // Kopie: So zeigt sie immer, was tatsaechlich in der Datenbank steht.
+  const editingItem = rows.find((row) => row.id === editingId) ?? null;
+
   const canFinish = canFinishShopping(rows);
   const total = openCount + checkedCount;
 
@@ -181,20 +196,61 @@ export function ListScreen() {
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Appbar.Header elevated>
         <Appbar.Content title={listName} />
+        <Appbar.Action
+          icon="store-outline"
+          onPress={() => {
+            if (listId) {
+              router.push({ pathname: '/ladenlayout', params: { listId } });
+            }
+          }}
+          accessibilityLabel={t('list.layout')}
+          testID="open-layout"
+        />
+        <Appbar.Action
+          icon="playlist-plus"
+          onPress={() => {
+            if (listId) {
+              router.push({ pathname: '/katalog', params: { listId } });
+            }
+          }}
+          accessibilityLabel={t('list.catalog')}
+          testID="open-catalog"
+        />
       </Appbar.Header>
 
       <View style={styles.container}>
-        <FlatList
-          data={visible}
+        <SectionList
+          sections={sections}
           keyExtractor={(item) => item.id}
           keyboardShouldPersistTaps="handled"
+          stickySectionHeadersEnabled
           testID="item-list"
+          renderSectionHeader={({ section }) => (
+            <Text
+              variant="titleSmall"
+              testID={`section-${section.id}`}
+              style={[
+                styles.sectionHeader,
+                {
+                  backgroundColor: theme.colors.background,
+                  color:
+                    section.id === CHECKED_SECTION_ID
+                      ? theme.colors.onSurfaceVariant
+                      : theme.colors.primary,
+                },
+              ]}
+            >
+              {section.title}
+            </Text>
+          )}
           renderItem={({ item }) => (
             <ItemRow
               item={item}
               unitShort={t(`units.${item.unit}.short`)}
+              isEditing={item.id === editingId}
               onToggle={handleToggle}
               onRemove={handleRemove}
+              onOpenDetails={setEditingId}
             />
           )}
           ListEmptyComponent={
@@ -243,13 +299,27 @@ export function ListScreen() {
           </View>
         ) : null}
 
+        {/* Unten steht entweder das Eingabefeld oder die Detailzeile - nie
+            beides. Zwei Eingabebereiche uebereinander waeren bei offener
+            Tastatur kaum noch zu treffen, und die Detailzeile gehoert an
+            genau die Stelle, die der Daumen ohnehin ansteuert. */}
         <Animated.View style={keyboardPadding}>
-          <AddItemBar
-            products={products}
-            productIdsOnList={productIdsOnList}
-            onPickProduct={handlePick}
-            onCreateProduct={handleCreate}
-          />
+          {editingItem ? (
+            <ItemDetailBar
+              // Neuer Artikel, neuer Zustand: siehe ItemDetailBar.
+              key={editingItem.id}
+              item={editingItem}
+              onChange={handleDetails}
+              onClose={() => setEditingId(null)}
+            />
+          ) : (
+            <AddItemBar
+              products={products}
+              productIdsOnList={productIdsOnList}
+              onPickProduct={handlePick}
+              onCreateProduct={handleCreate}
+            />
+          )}
         </Animated.View>
       </View>
 
@@ -306,6 +376,11 @@ const styles = StyleSheet.create({
   },
   emptyHint: {
     opacity: 0.7,
+  },
+  sectionHeader: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 4,
   },
   footer: {
     borderTopWidth: StyleSheet.hairlineWidth,

@@ -1,7 +1,7 @@
 import { asc, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/db/client';
-import { products } from '@/db/schema';
+import { categories, products } from '@/db/schema';
 import { DEFAULT_UNIT } from '@/db/units';
 import { slugify } from '@/lib/slug';
 
@@ -56,4 +56,32 @@ export async function createProduct(
 
   const created = await db.select().from(products).where(eq(products.id, id)).limit(1);
   return created[0] ?? null;
+}
+
+/**
+ * Bauplaene fuer die Live-Abfragen des Katalogs.
+ *
+ * Warum Bauplaene statt fertiger Ergebnisse: useLiveQuery fuehrt die Abfrage bei
+ * jeder Datenaenderung erneut aus und braucht sie deshalb als Objekt. Die
+ * Screens kennen so weiterhin keine Tabellen (CLAUDE.md, Schichtenregel 1).
+ */
+export function catalogProductsQuery() {
+  return db
+    .select({
+      id: products.id,
+      name: products.name,
+      categoryId: products.categoryId,
+      defaultUnit: products.defaultUnit,
+    })
+    .from(products);
+}
+
+export function categoriesQuery() {
+  return db
+    .select({
+      id: categories.id,
+      name: categories.name,
+      defaultPosition: categories.defaultPosition,
+    })
+    .from(categories);
 }

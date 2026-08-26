@@ -4,6 +4,8 @@ import { db } from '@/db/client';
 import { listItems, lists, products, purchaseHistory } from '@/db/schema';
 import { DEFAULT_UNIT, isUnit, type Unit } from '@/db/units';
 
+import { idsToAdd } from '@/features/catalog/logic';
+
 import { buildHistoryDrafts, idsToRemoveOnFinish } from './logic';
 
 /**
@@ -131,4 +133,94 @@ export async function finishShopping(listId: string, now: number = Date.now()): 
   });
 
   return removeIds.length;
+}
+
+/**
+ * Abfrage der Artikel einer Liste - als Bauplan, nicht als Ergebnis.
+ *
+ * useLiveQuery braucht die Abfrage selbst, um sie bei jeder Aenderung erneut
+ * auszufuehren; ein fertiges Promise waere nur eine Momentaufnahme. Deshalb
+ * liefert diese Funktion den Drizzle-Bauplan. Der Screen bekommt so trotzdem
+ * keine Tabellen und keine Bedingungen zu sehen (CLAUDE.md, Schichtenregel 1).
+ */
+export function listItemsQuery(listId: string) {
+  return db
+    .select()
+    .from(listItems)
+    .where(eq(listItems.listId, listId))
+    .orderBy(listItems.position);
+}
+
+export type ItemDetails = {
+  quantity: number;
+  unit: Unit | string;
+  note: string | null;
+};
+
+/** Speichert Menge, Einheit und Notiz eines Artikels (FR-2.4, FR-2.5). */
+export async function updateItemDetails(id: string, details: ItemDetails): Promise<void> {
+  await db
+    .update(listItems)
+    .set({
+      quantity: details.quantity,
+      unit: isUnit(String(details.unit)) ? String(details.unit) : DEFAULT_UNIT,
+      note: details.note,
+    })
+    .where(eq(listItems.id, id));
+}
+
+/**
+ * Setzt mehrere Katalogprodukte auf einmal auf die Liste (FR-2.3, T-4.4).
+ *
+ * In einer Transaktion, weil aus einer Auswahl ein Vorgang wird: Entweder die
+ * ganze Auswahl landet auf der Liste oder keiner ihrer Artikel. Ein halb
+ * uebernommener Katalogbesuch waere fuer den Nutzer nicht erkennbar.
+ *
+ * Die Doppelt-Pruefung passiert hier und nicht im Screen: Zwischen dem Oeffnen
+ * des Katalogs und dem Uebernehmen kann sich die Liste geaendert haben.
+ *
+ * Rueckgabe: Anzahl der tatsaechlich eingefuegten Artikel.
+ */
+export async function addProductsToList(listId: string, productIds: string[]): Promise<number> {
+  if (productIds.length === 0) {
+    return 0;
+  }
+
+  const onList = await getOpenProductIds(listId);
+  const wanted = idsToAdd(productIds, onList);
+
+  if (wanted.length === 0) {
+    return 0;
+  }
+
+  const found = await db.select().from(products).where(inArray(products.id, wanted));
+  const byId = new Map(found.map((product) => [product.id, product]));
+
+  const [{ value: count } = { value: 0 }] = await db
+    .select({ value: sql<number>`count(*)` })
+    .from(listItems)
+    .where(eq(listItems.listId, listId));
+
+  const rows = wanted
+    .map((id) => byId.get(id))
+    .filter((product): product is (typeof found)[number] => product !== undefined)
+    .map((product, index) => ({
+      id: `${newId()}-${index}`,
+      listId,
+      productId: product.id,
+      name: product.name,
+      categoryId: product.categoryId,
+      unit: isUnit(product.defaultUnit) ? product.defaultUnit : DEFAULT_UNIT,
+      position: count + index,
+    }));
+
+  if (rows.length === 0) {
+    return 0;
+  }
+
+  await db.transaction(async (tx) => {
+    await tx.insert(listItems).values(rows);
+  });
+
+  return rows.length;
 }

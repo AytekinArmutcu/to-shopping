@@ -1,7 +1,7 @@
 import * as Haptics from 'expo-haptics';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import ReanimatedSwipeable, {
   type SwipeableMethods,
 } from 'react-native-gesture-handler/ReanimatedSwipeable';
@@ -20,14 +20,18 @@ export type ItemRowData = {
   name: string;
   quantity: number;
   unit: string;
+  note: string | null;
   isChecked: boolean;
 };
 
 type Props = {
   item: ItemRowData;
   unitShort: string;
+  /** true, solange die Detailzeile unten genau diesen Artikel zeigt. */
+  isEditing: boolean;
   onToggle: (id: string, isChecked: boolean) => void;
   onRemove: (id: string) => void;
+  onOpenDetails: (id: string) => void;
 };
 
 /**
@@ -40,7 +44,7 @@ type Props = {
  * Die Zeile entfernt sich nicht selbst aus der Liste. Sie meldet nur, dass
  * abgehakt wurde; was danach sichtbar bleibt, entscheidet partitionItems.
  */
-export function ItemRow({ item, unitShort, onToggle, onRemove }: Props) {
+export function ItemRow({ item, unitShort, isEditing, onToggle, onRemove, onOpenDetails }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
   const swipeable = useRef<SwipeableMethods>(null);
@@ -77,7 +81,12 @@ export function ItemRow({ item, unitShort, onToggle, onRemove }: Props) {
       }}
     >
       <View
-        style={[styles.row, { backgroundColor: theme.colors.background }]}
+        style={[
+          styles.row,
+          {
+            backgroundColor: isEditing ? theme.colors.surfaceVariant : theme.colors.background,
+          },
+        ]}
         testID={`item-${item.name}`}
       >
         <Checkbox.Android
@@ -89,13 +98,31 @@ export function ItemRow({ item, unitShort, onToggle, onRemove }: Props) {
               : t('item.check', { name: item.name })
           }
         />
-        <View style={styles.texts}>
+        {/* Antippen oeffnet die Detailzeile (PRD Flow 1.8). Die Flaeche ist
+            bewusst der ganze Textbereich und nicht nur der Name: Ein Ziel von
+            48 dp Hoehe trifft man auch im Gehen. */}
+        <Pressable
+          style={styles.texts}
+          onPress={() => onOpenDetails(item.id)}
+          accessibilityRole="button"
+          accessibilityLabel={t('item.edit', { name: item.name })}
+          testID={`edit-${item.name}`}
+        >
           <StrikethroughText
             strike={strike}
             text={item.name}
             color={item.isChecked ? theme.colors.onSurfaceVariant : theme.colors.onSurface}
           />
-        </View>
+          {item.note ? (
+            <Text
+              variant="bodySmall"
+              numberOfLines={2}
+              style={{ color: theme.colors.onSurfaceVariant }}
+            >
+              {item.note}
+            </Text>
+          ) : null}
+        </Pressable>
         {quantity ? (
           <Text variant="labelLarge" style={{ color: theme.colors.onSurfaceVariant }}>
             {quantity}
@@ -210,6 +237,8 @@ const styles = StyleSheet.create({
   },
   texts: {
     flex: 1,
+    justifyContent: 'center',
+    minHeight: 48,
   },
   name: {
     fontSize: 16,

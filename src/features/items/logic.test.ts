@@ -1,9 +1,16 @@
+import { UNITS } from '@/db/units';
+
 import {
   buildHistoryDrafts,
   canFinishShopping,
+  cleanNote,
   formatQuantity,
   idsToRemoveOnFinish,
+  MAX_NOTE_LENGTH,
+  MAX_QUANTITY,
+  parseQuantity,
   partitionItems,
+  stepQuantity,
   type ListItemLike,
 } from './logic';
 
@@ -148,5 +155,128 @@ describe('formatQuantity', () => {
 
   it('schreibt Kommazahlen mit Komma', () => {
     expect(formatQuantity({ quantity: 1.5, unit: 'kg' }, 'kg')).toBe('1,5 kg');
+  });
+});
+
+/**
+ * Alle acht Einheiten, jeweils mit Menge 1 und Menge 2 (T-4.2).
+ *
+ * Die Tabelle wird gegen UNITS geprueft: Kommt eine neue Einheit dazu, faellt
+ * dieser Test um, bis sie hier eingetragen ist. Ohne das waere eine neue
+ * Einheit ungetestet im Laden gelandet.
+ */
+describe('formatQuantity ueber alle Einheiten', () => {
+  const cases: { unit: string; short: string; one: string | null; two: string }[] = [
+    { unit: 'stueck', short: '×', one: null, two: '2×' },
+    { unit: 'g', short: 'g', one: '1 g', two: '2 g' },
+    { unit: 'kg', short: 'kg', one: '1 kg', two: '2 kg' },
+    { unit: 'ml', short: 'ml', one: '1 ml', two: '2 ml' },
+    { unit: 'l', short: 'l', one: '1 l', two: '2 l' },
+    { unit: 'packung', short: 'Pck.', one: '1 Pck.', two: '2 Pck.' },
+    { unit: 'bund', short: 'Bund', one: '1 Bund', two: '2 Bund' },
+    { unit: 'dose', short: 'Dose', one: '1 Dose', two: '2 Dose' },
+  ];
+
+  it('deckt jede Einheit aus UNITS ab', () => {
+    expect(cases.map((entry) => entry.unit).sort()).toEqual([...UNITS].sort());
+  });
+
+  it.each(cases)('formatiert $unit', ({ unit, short, one, two }) => {
+    expect(formatQuantity({ quantity: 1, unit }, short)).toBe(one);
+    expect(formatQuantity({ quantity: 2, unit }, short)).toBe(two);
+  });
+
+  it('zeigt auch grosse und gebrochene Mengen lesbar', () => {
+    expect(formatQuantity({ quantity: 1500, unit: 'g' }, 'g')).toBe('1500 g');
+    expect(formatQuantity({ quantity: 0.5, unit: 'kg' }, 'kg')).toBe('0,5 kg');
+    expect(formatQuantity({ quantity: 2.25, unit: 'l' }, 'l')).toBe('2,25 l');
+  });
+});
+
+describe('stepQuantity', () => {
+  it('zaehlt Stueck in Einerschritten', () => {
+    expect(stepQuantity(1, 'stueck', 1)).toBe(2);
+    expect(stepQuantity(3, 'stueck', -1)).toBe(2);
+  });
+
+  it('geht bei Gewicht und Volumen in brauchbaren Spruengen', () => {
+    expect(stepQuantity(500, 'g', 1)).toBe(550);
+    expect(stepQuantity(500, 'ml', -1)).toBe(450);
+    expect(stepQuantity(1, 'kg', 1)).toBe(1.5);
+    expect(stepQuantity(1.5, 'l', -1)).toBe(1);
+  });
+
+  it('faellt nie unter die Schrittweite', () => {
+    expect(stepQuantity(1, 'stueck', -1)).toBe(1);
+    expect(stepQuantity(50, 'g', -1)).toBe(50);
+    expect(stepQuantity(0.5, 'kg', -1)).toBe(0.5);
+  });
+
+  it('macht aus einem kleinen Wert beim Verringern keinen groesseren', () => {
+    expect(stepQuantity(30, 'g', -1)).toBe(30);
+  });
+
+  it('bleibt unter der Obergrenze', () => {
+    expect(stepQuantity(MAX_QUANTITY, 'stueck', 1)).toBe(MAX_QUANTITY);
+  });
+
+  it('behandelt eine unbekannte Einheit wie zaehlbar', () => {
+    expect(stepQuantity(2, 'kiste', 1)).toBe(3);
+  });
+
+  it('rechnet ohne Kommafehler', () => {
+    expect(stepQuantity(0.5, 'kg', 1)).toBe(1);
+    expect(stepQuantity(2.5, 'l', 1)).toBe(3);
+  });
+});
+
+describe('parseQuantity', () => {
+  it('liest ganze Zahlen', () => {
+    expect(parseQuantity('3')).toBe(3);
+    expect(parseQuantity(' 500 ')).toBe(500);
+  });
+
+  it('liest das deutsche Komma und den Punkt', () => {
+    expect(parseQuantity('1,5')).toBe(1.5);
+    expect(parseQuantity('1.5')).toBe(1.5);
+    expect(parseQuantity(',5')).toBe(0.5);
+  });
+
+  it('lehnt ab, was keine Menge ist', () => {
+    expect(parseQuantity('')).toBeNull();
+    expect(parseQuantity('   ')).toBeNull();
+    expect(parseQuantity('abc')).toBeNull();
+    expect(parseQuantity('2 Stueck')).toBeNull();
+    expect(parseQuantity('-2')).toBeNull();
+    expect(parseQuantity('0')).toBeNull();
+    expect(parseQuantity('0,0')).toBeNull();
+  });
+
+  it('deckelt Vertipper', () => {
+    expect(parseQuantity('50000')).toBe(MAX_QUANTITY);
+  });
+
+  it('rundet auf drei Nachkommastellen', () => {
+    expect(parseQuantity('1,23456')).toBe(1.235);
+  });
+});
+
+describe('cleanNote', () => {
+  it('macht aus leerem Text null', () => {
+    expect(cleanNote('')).toBeNull();
+    expect(cleanNote('   ')).toBeNull();
+  });
+
+  it('raeumt Leerzeichen auf', () => {
+    expect(cleanNote('  laktosefrei  ')).toBe('laktosefrei');
+    expect(cleanNote('ohne    Zucker')).toBe('ohne Zucker');
+  });
+
+  it('behaelt Zeilenumbrueche', () => {
+    expect(cleanNote('rot\ngross')).toBe('rot\ngross');
+  });
+
+  it('kuerzt zu lange Notizen', () => {
+    expect(cleanNote('a'.repeat(300))).toHaveLength(MAX_NOTE_LENGTH);
   });
 });
