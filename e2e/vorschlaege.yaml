@@ -1,0 +1,78 @@
+# E2E fuer M10: Vorschlaege aus der Historie (FR-5.2).
+#
+# Der Kern des Versprechens dieser App - sie merkt sich, was DIESER Nutzer
+# kauft. Geprueft wird an einem Fall, in dem Ranking und Alphabet einander
+# widersprechen: "Hafermilch" ist bei der Suche nach "milch" nur ein Treffer in
+# der Wortmitte und stuende ohne Historie hinter "Milch". Nach einem Einkauf
+# muss es davor stehen.
+#
+# Laeuft gegen einen Release-Build (ADR-025): npm run android:release
+appId: de.toshopping.app
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: 'add-input'
+    timeout: 30000
+
+# --- Ohne Historie zeigt das leere Feld nichts (T-10.4) ---
+# Acht zufaellige Produkte in alphabetischer Reihenfolge waeren Laerm, der die
+# Liste verdeckt. Wer noch nichts gekauft hat, hat keine ueblichen Verdaechtigen.
+- tapOn:
+    id: 'add-input'
+# Die Tastatur faehrt hoch und die Leiste rueckt nach - erst danach steht
+# fest, was sichtbar ist.
+- waitForAnimationToEnd
+- assertNotVisible:
+    id: 'suggestions'
+
+# --- Einen Einkauf taetigen, damit es Historie gibt ---
+- inputText: 'Hafermilch'
+- extendedWaitUntil:
+    visible:
+      id: 'suggestion-Hafermilch'
+    timeout: 30000
+- tapOn:
+    id: 'suggestion-Hafermilch'
+- hideKeyboard
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: 'item-Hafermilch'
+    timeout: 30000
+
+# Abhaken und abschliessen - erst dadurch entsteht ein Historieneintrag
+# (FR-3.8 schreibt beim Abschliessen in purchase_history).
+- tapOn: 'Hafermilch abhaken'
+- extendedWaitUntil:
+    notVisible:
+      id: 'item-Hafermilch'
+    timeout: 15000
+# Es ist alles abgehakt, also kommt keine Rueckfrage (PRD Flow 2.8).
+- tapOn:
+    id: 'finish-shopping'
+- extendedWaitUntil:
+    visible:
+      id: 'list-empty'
+    timeout: 15000
+
+# --- Jetzt schlaegt die Historie das Alphabet (FR-5.2) ---
+- tapOn:
+    id: 'add-input'
+- inputText: 'milch'
+- extendedWaitUntil:
+    visible:
+      id: 'suggestion-Hafermilch'
+    timeout: 15000
+- assertVisible:
+    id: 'suggestion-Hafermilch'
+    above:
+      id: 'suggestion-Milch'
+
+# --- Und das leere Feld zeigt die ueblichen Verdaechtigen (T-10.4) ---
+- eraseText: 10
+- extendedWaitUntil:
+    visible:
+      id: 'suggestion-Hafermilch'
+    timeout: 15000

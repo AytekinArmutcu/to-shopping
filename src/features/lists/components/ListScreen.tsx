@@ -39,6 +39,8 @@ import {
   setLastRoute,
   touchList,
 } from '@/features/lists/repository';
+import { toProductStats } from '@/features/suggestions/logic';
+import { currentStatsQuery } from '@/features/suggestions/repository';
 import { buildShareText, SHARE_COPY_HINT_KEY } from '@/features/transfer/logic';
 import { buildSharedListForList } from '@/features/transfer/repository';
 import { shareList } from '@/features/transfer/share';
@@ -105,8 +107,11 @@ export function ListScreen({ listId }: Props) {
   const categoryRows = useLiveQuery(categoriesQuery());
   const orderRows = useLiveQuery(categoryOrderQuery(listId), [listId]);
 
+  const historyRows = useLiveQuery(currentStatsQuery());
+
   const rows = useMemo(() => items.data ?? [], [items.data]);
   const products: CatalogProduct[] = catalog.data ?? [];
+  const stats = useMemo(() => toProductStats(historyRows.data ?? []), [historyRows.data]);
   const productIdsOnList = rows
     .filter((row) => !row.isChecked)
     .map((row) => row.productId)
@@ -406,6 +411,7 @@ export function ListScreen({ listId }: Props) {
             <AddItemBar
               products={products}
               productIdsOnList={productIdsOnList}
+              stats={stats}
               onPickProduct={handlePick}
               onCreateProduct={handleCreate}
             />

@@ -729,6 +729,26 @@ Der Knopf tut immer dasselbe, unabhaengig davon, wie der Nutzer auf die Liste ge
 
 ---
 
+## ADR-037 – Bei leerer Eingabe erscheint nur, was schon einmal gekauft wurde
+
+**Datum:** 2026-08-26 · **Status:** Angenommen
+
+**Kontext**
+T-10.4 verlangt Vorschlaege auch bei leerem Eingabefeld – „die ueblichen Verdaechtigen". Naheliegend waere: bei leerer Eingabe den ganzen Katalog ranken und die besten acht zeigen.
+
+**Entscheidung**
+Bei leerer Eingabe erscheinen **nur Produkte mit Kaufhistorie**. Gibt es keine, bleibt das Feld ohne Vorschlagsliste. Ausserdem erscheint die Liste nur, solange das Eingabefeld den Fokus hat.
+
+**Verworfene Alternative**
+*Den ganzen Katalog ranken.* Ohne Historie haben alle 200 Produkte denselben Wert, und die Sortierung faellt auf das Alphabet zurueck. Ein neuer Nutzer bekaeme beim Antippen des Feldes „Ananas, Apfelmus, Äpfel …" vorgesetzt – acht zufaellige Produkte, die die halbe Liste verdecken. Wer noch nichts gekauft hat, hat keine ueblichen Verdaechtigen; nichts anzuzeigen ist dann die ehrlichste Antwort.
+
+**Konsequenz**
+Die Funktion waechst mit der Nutzung: In der ersten Woche unsichtbar, nach einem Monat der schnellste Weg auf die Liste. Das passt zum Meilenstein – die Wirkung ist ohnehin erst nach Wochen beurteilbar, deshalb liegt M10 spaet.
+
+**Nebenentscheidung: ein fester Zeitpunkt je Sitzung.** Das Ranking braucht ein „jetzt", um die Aktualitaet zu bewerten. `Date.now()` waehrend des Renderns waere unrein – und faktisch falsch: Jeder Tastendruck bekaeme eine minimal andere Bewertung, und an einer Gleichstandsgrenze wuerde die Vorschlagsliste springen, ohne dass sich etwas geaendert hat. Der Zeitpunkt wird deshalb einmal beim Laden bestimmt (`SESSION_START`). Dass er waehrend einer Sitzung altert, ist ohne Bedeutung: Die Halbwertszeit betraegt 30 Tage, eine Sitzung ein paar Minuten.
+
+---
+
 ## Offene Entscheidungen (bewusst vertagt)
 
 | Thema | Wann zu entscheiden | Was dann abzuwägen ist |
