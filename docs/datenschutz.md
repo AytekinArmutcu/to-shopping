@@ -6,13 +6,11 @@
 > (Compliance-Aufgabe **C-1**): Name, Anschrift und Kontakt-E-Mail. Sie sind
 > unten als `[…]` markiert.
 >
-> Ein weiterer Punkt ist offen (**C-4**): Abschnitt 3 beschreibt die
-> automatischen Updates. Ob und in welcher Form die Update-Abfrage im
-> Data-Safety-Formular als Datenerhebung zu deklarieren ist, hängt von der
-> aktuellen Expo-Dokumentation ab. **Solange OTA-Updates nicht eingerichtet
-> sind, ist Abschnitt 3 ersatzlos zu streichen** – eine Datenschutzerklärung,
-> die mehr behauptet, als geschieht, ist genauso falsch wie eine, die
-> verschweigt.
+> V1 wird **ohne OTA-Updates** ausgeliefert (ADR-040). Damit gibt es keine
+> einzige Stelle, an der diese App von sich aus mit einem Server spricht. Der
+> frühere Abschnitt zu automatischen Updates ist deshalb entfallen. Käme OTA
+> später dazu, wäre er wieder aufzunehmen – zusammen mit Compliance-Aufgabe
+> C-4.
 >
 > Dieser Entwurf ist keine Rechtsberatung. Er folgt der Gliederung aus
 > `compliance.md`, Abschnitt 3.2.
@@ -45,27 +43,7 @@ Entwickler und nicht an Dritte übertragen.
 
 Es gibt keine Registrierung, keine Anmeldung und kein Benutzerkonto.
 
-## 3. Automatische Updates
-
-> *Dieser Abschnitt gilt nur, wenn OTA-Updates eingerichtet sind. Andernfalls
-> ersatzlos streichen.*
-
-Die App prüft beim Start, ob eine neue Fassung ihres Programmcodes vorliegt.
-Diese Abfrage geht an einen Dienst des Anbieters **Expo** (Expo, Inc., USA).
-
-- **Übertragen werden:** die installierte App-Version, die Plattform
-  (Android), die Version des Betriebssystems und – technisch unvermeidbar –
-  deine IP-Adresse.
-- **Nicht übertragen werden:** Listeninhalte, Produktnamen, Notizen oder
-  irgendetwas anderes, das du in der App eingegeben hast.
-- **Zweck:** Fehlerbehebungen und Verbesserungen ausliefern, ohne dass du ein
-  Update aus dem Play Store installieren musst.
-- **Rechtsgrundlage:** Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an
-  der Fehlerfreiheit und Sicherheit der App).
-- **Drittlandbezug:** Die Verarbeitung findet in den USA statt. Die
-  Übertragung erfolgt verschlüsselt (HTTPS).
-
-## 4. Fehlerberichte
+## 3. Fehlerberichte
 
 Stürzt die App ab, schreibt sie einen technischen Bericht **auf dein Gerät**.
 Er enthält den Zeitpunkt, die App-Version, die Android-Version, das
@@ -82,7 +60,7 @@ Die Berichte enthalten **keine Listeninhalte und keine Produktnamen**.
 
 Es wird kein Fehlerdienst eines Drittanbieters eingesetzt.
 
-## 5. Teilen und Sichern
+## 4. Teilen und Sichern
 
 Die App kann Listen und vollständige Sicherungen als Datei erzeugen und an das
 Teilen-Menü deines Telefons übergeben.
@@ -92,16 +70,20 @@ erhält sie nicht. Sobald du die Datei über eine andere App verschickst – etw
 einen Messenger, eine E-Mail-App oder einen Cloud-Speicher – gilt für diesen
 Vorgang die Datenschutzerklärung der jeweiligen App.
 
-## 6. Berechtigungen
+## 5. Berechtigungen
 
 Die App fordert **keine Laufzeitberechtigungen** an. Kein Zugriff auf
 Standort, Kamera, Kontakte, Mikrofon oder Dateien.
 
-Im Android-Manifest stehen lediglich zwei technische Einträge: Internetzugang
-(für die Update-Abfrage aus Abschnitt 3) und Vibration (für die kurze
-Rückmeldung beim Abhaken).
+Im Android-Manifest stehen lediglich zwei technische Einträge: Vibration (für
+die kurze Rückmeldung beim Abhaken) und Internetzugang.
 
-## 7. Keine Werbung, kein Tracking
+Der Internetzugang wird von der App **nicht genutzt**. Er steht im Manifest,
+weil eine der eingesetzten Programmbibliotheken ihn dort einträgt. Die App
+baut von sich aus keine Verbindung auf – es gibt keinen Server, keine
+Update-Abfrage und keine Statistik.
+
+## 6. Keine Werbung, kein Tracking
 
 Die App enthält:
 
@@ -111,7 +93,7 @@ Die App enthält:
 - keine In-App-Käufe,
 - keine Weitergabe von Daten an Dritte zu Werbezwecken.
 
-## 8. Deine Rechte
+## 7. Deine Rechte
 
 Nach der DSGVO hast du das Recht auf Auskunft, Berichtigung, Löschung,
 Einschränkung der Verarbeitung, Datenübertragbarkeit und Widerspruch.
@@ -128,7 +110,10 @@ In der Praxis sieht das bei dieser App so aus:
 Für Anliegen erreichst du den Verantwortlichen unter der in Abschnitt 1
 genannten E-Mail-Adresse.
 
-## 9. Google Play als Vertriebsweg
+Der Verantwortliche hat keinen Zugriff auf deine Daten und kann dir deshalb
+auch keine Auskunft darüber geben – es liegt schlicht nichts vor.
+
+## 8. Google Play als Vertriebsweg
 
 Die App wird über Google Play verteilt. Google verarbeitet dabei eigenständig
 Daten – etwa zu Installation, Aktualisierung und Absturzstatistik des
@@ -137,7 +122,7 @@ Play-Store-Dienstes. Darauf hat der Entwickler dieser App keinen Einfluss.
 Es gilt die Datenschutzerklärung von Google:
 <https://policies.google.com/privacy>
 
-## 10. Stand und Änderungen
+## 9. Stand und Änderungen
 
 Diese Datenschutzerklärung hat den Stand **[Datum der Veröffentlichung]**.
 

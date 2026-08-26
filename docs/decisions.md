@@ -797,10 +797,40 @@ Zwei Absicherungen statt einer: Die Umrechnung trifft den bekannten Fall, die Be
 
 ---
 
+## ADR-040 – V1 wird ohne OTA-Updates ausgeliefert
+
+**Datum:** 2026-08-26 · **Status:** Angenommen · **Verschiebt FR-8.4**
+
+**Kontext**
+FR-8.4 sieht OTA-Updates vor, und der Auftraggeber hatte dem in der Erhebung zugestimmt. Umgesetzt wird das mit `expo-updates`: Die App fragt beim Start bei einem Dienst von Expo (USA) nach einer neuen Fassung ihres Programmcodes und uebertraegt dabei App-Version, Android-Version und – technisch unvermeidbar – die IP-Adresse. Listeninhalte nicht.
+
+Vor dem Hinzufuegen des Pakets wurde die Frage noch einmal gestellt, weil sie den Ausgangspunkt des ganzen Projekts beruehrt: „Ich moechte nicht meine Daten an einem Unternehmen geben."
+
+**Entscheidung**
+V1 geht **ohne** OTA in den internen Test. `expo-updates` wird nicht hinzugefuegt.
+
+**Begruendung**
+OTA waere die **einzige** Stelle in V1 gewesen, an der die App von sich aus mit einem Server spricht. Ohne sie stimmt die Datenschutzerklaerung ohne jede Einschraenkung, das Data-Safety-Formular ist durchgehend mit „nein" zu beantworten (Aufgabe C-4 schrumpft von 45 auf 15 Minuten), und es gibt keinen Drittlandbezug.
+
+Dem steht ein Nutzen gegenueber, der bei **zehn Testern aus Freundes- und Familienkreis** kaum ins Gewicht faellt: Der interne Play-Store-Test verteilt Aktualisierungen ohnehin innerhalb von Minuten bis Stunden. OTAs eigentlicher Vorteil – die Store-Pruefung zu umgehen – zaehlt erst bei vielen Nutzern und haeufigen Korrekturen.
+
+**Verworfene Alternative**
+*Wie geplant einrichten.* Waere vertretbar gewesen und ist ausdruecklich nicht falsch. Der Ausschlag gab, dass der Preis (eine Verbindung in die USA bei jedem Start, ein zusaetzlicher Abschnitt in der Datenschutzerklaerung, eine offene Compliance-Frage) fuer diese Nutzerzahl in keinem Verhaeltnis zum Gewinn steht.
+
+**Konsequenz**
+Aktualisierungen laufen ueber den internen Play-Store-Test. Ein Fehler, der einem Tester begegnet, braucht also einen neuen Build und einen neuen Upload.
+
+Wiedervorlage nach den vier Wochen echter Nutzung: Zeigt sich, dass haeufig nachgebessert werden muss und der Store-Weg dabei stoert, ist die Abwaegung neu zu treffen – dann mit dem Wissen aus dem Alltag statt mit einer Vermutung.
+
+Der Internetzugang bleibt im Manifest, weil eine Programmbibliothek ihn eintraegt. Ihn zu sperren wuerde die Entwicklungs-Builds unbrauchbar machen, die ihren Code vom Metro-Server laden. Die Datenschutzerklaerung nennt das ausdruecklich: Der Zugang steht im Manifest und wird nicht benutzt.
+
+---
+
 ## Offene Entscheidungen (bewusst vertagt)
 
 | Thema | Wann zu entscheiden | Was dann abzuwägen ist |
 |---|---|---|
+| OTA-Updates (FR-8.4) | nach vier Wochen Nutzung | siehe ADR-040: Wie oft wird nachgebessert, stoert der Store-Weg dabei? |
 | Live-Sync und Backend | nach V1 | Anbieterwahl, anonyme Identität vs. Konto, Selbsthosting, Kontolöschungspflicht, laufende Kosten |
 | iOS-Portierung | wenn Gerät und Budget vorhanden | Cloud-Build-Kosten, Share Extension, App-Store-Review |
 | Crash-Reporting (Sentry EU) | bei öffentlicher Veröffentlichung | AVV, Datenschutzerklärung, Einwilligung |

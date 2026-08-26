@@ -239,7 +239,7 @@ Die Anforderungen sind durchnummeriert und werden in `roadmap.md` auf Meilenstei
 | FR-8.1 | Lokaler Fehlerspeicher bei Abstürzen |
 | FR-8.2 | „Fehlerbericht senden" über das Teilen-Menü, kein Drittanbieter |
 | FR-8.3 | Auslieferung über internen Play-Store-Test |
-| FR-8.4 | OTA-Updates für Änderungen am App-Code |
+| FR-8.4 | OTA-Updates für Änderungen am App-Code – **in V1 vertagt, siehe ADR-040** |
 
 ---
 

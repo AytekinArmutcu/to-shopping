@@ -195,7 +195,7 @@ Fälligkeit: **IT** = vor dem internen Test · **ÖV** = vor öffentlicher Verö
 | **C-1** | Verantwortlichen-Angaben festlegen (Name, Anschrift, Kontakt-E-Mail für die Datenschutzerklärung) | IT | 15 min |
 | **C-2** | Datenschutzerklärung nach der Gliederung in 3.2 verfassen – **Entwurf liegt in [`datenschutz.md`](datenschutz.md)**, es fehlen nur die Angaben aus C-1 | IT | 1–2 h |
 | **C-3** | Datenschutzerklärung auf GitHub Pages veröffentlichen, URL in die Play Console eintragen | IT | 30 min |
-| **C-4** | Expo-Dokumentation zum Datenumfang von EAS Update prüfen und das Data-Safety-Formular danach ausfüllen | IT | 45 min |
+| **C-4** | Data-Safety-Formular ausfüllen. **Vereinfacht seit ADR-040:** V1 liefert ohne OTA aus, es gibt keine Übertragung. Antwort auf „Werden Daten erhoben oder geteilt?" ist durchgehend **nein**. Kommt OTA später dazu, ist diese Aufgabe neu zu stellen | IT | 15 min |
 | **C-5** | IARC-Fragebogen zur Altersfreigabe ausfüllen | IT | 20 min |
 | **C-6** | Erzeugtes Android-Manifest auf ungewollte Berechtigungen prüfen und bereinigen – **durchgeführt in M12**: `READ_/WRITE_EXTERNAL_STORAGE` (aus expo-file-system) und `SYSTEM_ALERT_WINDOW` (aus der Expo-Vorlage) sind über `android.blockedPermissions` entfernt. Im Release-Manifest stehen nur noch `INTERNET`, `VIBRATE` und eine app-interne Signaturberechtigung. Vor jedem Upload und nach jedem neuen Paket zu wiederholen – Befehl im README | IT | 20 min |
 | **C-7** | Händlerstatus in der Play Console als Nicht-Händler erklären | IT | 10 min |

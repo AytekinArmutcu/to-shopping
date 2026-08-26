@@ -240,7 +240,12 @@ Die beiden zuletzt geplanten Meilensteine **M10 (Vorschläge) und M11 (Vorlagen)
 | T-12.3 | App-Icon und Startbildschirm | – | 1 | Icon in allen Größen vorhanden |
 | T-12.4 | E2E-Flow auf den vollständigen Hauptweg erweitern | – | 1 | Maestro fährt hinzufügen → abhaken → abschließen ab |
 | T-12.5 | Compliance-Aufgaben C-1 bis C-7 abarbeiten | – | 2 | Datenschutzerklärung ist online, Formulare ausgefüllt |
-| T-12.6 | Erstes Bundle in den internen Test, EAS Update einrichten, Tester einladen | FR-8.3, FR-8.4 | 1 | Ein Tester installiert erfolgreich über den Play Store |
+| T-12.6 | Erstes Bundle in den internen Test, Tester einladen | FR-8.3 | 1 | Ein Tester installiert erfolgreich über den Play Store |
+
+> **OTA-Updates (FR-8.4) sind vertagt** – siehe ADR-040. Sie wären die einzige
+> Stelle in V1, an der die App von sich aus mit einem Server spricht; bei zehn
+> Testern verteilt der interne Play-Store-Test ohnehin schnell genug. Wiedervorlage
+> nach den vier Wochen echter Nutzung.
 
 **Abnahme V1:** Zehn Tester haben die App installiert. Der Entwickler benutzt sie bei jedem Einkauf – die vier Wochen des Erfolgskriteriums beginnen zu laufen.
 
