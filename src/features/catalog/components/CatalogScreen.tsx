@@ -159,6 +159,10 @@ export function CatalogScreen({ listId }: Props) {
                   status={isSelected || isOnList ? 'checked' : 'unchecked'}
                   disabled={isOnList}
                   onPress={() => toggle(item.id)}
+                  // Bedienelement ist die ganze Zeile - sie traegt die Ansage
+                  // und den Zustand. Waere das Kaestchen zusaetzlich
+                  // ansteuerbar, laege es unbeschriftet im Vorlesefluss.
+                  importantForAccessibility="no"
                 />
               )}
               style={[styles.row, isOnList ? styles.rowOnList : null]}

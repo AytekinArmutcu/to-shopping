@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react';
-import { Keyboard } from 'react-native';
+import { Keyboard, PixelRatio, useWindowDimensions } from 'react-native';
+
+import { keyboardHeightInDp } from './keyboard';
 
 /**
  * Hoehe der Tastatur in dp, 0 wenn sie geschlossen ist.
@@ -18,16 +20,22 @@ import { Keyboard } from 'react-native';
  * Noetig ist das Ganze, weil das Fenster seit Android 15 beim Oeffnen der
  * Tastatur nicht mehr verkleinert wird - die Tastatur liegt sonst einfach
  * ueber dem Eingabefeld (siehe ADR-026).
+ *
+ * Der gemeldete Wert wird nicht ungeprueft uebernommen: Er kam auf dem Geraet
+ * gelegentlich in Pixeln statt in dp an und schob die Eingabeleiste unter den
+ * Bildschirmrand. Die Umrechnung und die Begrenzung stehen in keyboard.ts und
+ * sind dort getestet (ADR-039).
  */
 export function useKeyboardHeight(): number {
-  const [height, setHeight] = useState(0);
+  const [reported, setReported] = useState(0);
+  const { height: windowHeight } = useWindowDimensions();
 
   useEffect(() => {
     const shown = Keyboard.addListener('keyboardDidShow', (event) => {
-      setHeight(event.endCoordinates.height);
+      setReported(event.endCoordinates.height);
     });
     const hidden = Keyboard.addListener('keyboardDidHide', () => {
-      setHeight(0);
+      setReported(0);
     });
 
     return () => {
@@ -36,5 +44,5 @@ export function useKeyboardHeight(): number {
     };
   }, []);
 
-  return height;
+  return keyboardHeightInDp(reported, windowHeight, PixelRatio.get());
 }

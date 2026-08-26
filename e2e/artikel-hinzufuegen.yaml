@@ -22,11 +22,16 @@ appId: de.toshopping.app
 # Tippen zeigt Vorschlaege aus dem Startkatalog
 - tapOn:
     id: 'add-input'
+# Die Tastatur faehrt hoch, und die Eingabeleiste rueckt darueber. Bis das
+# geschehen ist, liegt die Vorschlagsliste hinter der Tastatur und zaehlt fuer
+# Maestro als unsichtbar. Auf einem langsamen Geraet dauert das laenger als
+# die sonst ueblichen 15 Sekunden.
+- waitForAnimationToEnd
 - inputText: 'Milch'
 - extendedWaitUntil:
     visible:
       id: 'suggestion-Milch'
-    timeout: 15000
+    timeout: 30000
 
 # Auswahl setzt den Artikel auf die Liste und leert das Eingabefeld
 - tapOn:

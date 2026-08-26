@@ -326,6 +326,7 @@ export function ListsScreen() {
       <FAB
         icon="plus"
         label={t('lists.create')}
+        accessibilityLabel={t('lists.create')}
         onPress={() => {
           setNameDraft('');
           setCreateOpen(true);

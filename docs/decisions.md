@@ -773,6 +773,30 @@ Der Namensvergleich als zweiter Weg neben der Produkt-ID ist kein Luxus: Wird ei
 
 ---
 
+## ADR-039 – Die gemeldete Tastaturhoehe wird nachgerechnet, nicht geglaubt
+
+**Datum:** 2026-08-26 · **Status:** Angenommen · **Ergaenzt ADR-035**
+
+**Kontext**
+Seit ADR-035 kommt die Tastaturhoehe aus dem `keyboardDidShow`-Ereignis von React Native. Dort ist sie als **dp** dokumentiert. Auf dem Emulator kam sie mehrfach in **Pixeln** an: 883 statt 336 bei einer Pixeldichte von 2,625. Als Abstand aufgetragen schob dieser Wert die Eingabeleiste unter den unteren Bildschirmrand – das Eingabefeld war weg, sobald die Tastatur aufging. Die App war damit in ihrer Hauptfunktion unbedienbar.
+
+**Entscheidung**
+Der gemeldete Wert wird nicht ungeprueft uebernommen. `keyboardHeightInDp` rechnet nach: Ein Wert, der mehr als 60 Prozent der Fensterhoehe beansprucht, kann keine dp-Angabe sein – dann sind es Pixel, und die Pixeldichte macht daraus wieder dp. Anschliessend wird auf dieselben 60 Prozent begrenzt.
+
+**Verworfene Alternativen**
+- *Dem Wert glauben.* Die Dokumentation sagt dp, das Geraet sagt manchmal etwas anderes. Wer sich hier auf die Dokumentation verlaesst, liefert eine App aus, die auf unbekannten Geraeten kein Eingabefeld zeigt.
+- *Immer durch die Pixeldichte teilen.* Waere auf Geraeten, die korrekt dp liefern, um den Faktor der Dichte zu klein.
+- *Ein fertiges Paket* (`react-native-keyboard-controller`). Loest das Problem, kostet aber eine Abhaengigkeit fuer zwanzig Zeilen.
+
+**Konsequenz**
+Zwei Absicherungen statt einer: Die Umrechnung trifft den bekannten Fall, die Begrenzung faengt jeden unbekannten. Im schlimmsten Fall sitzt die Leiste etwas zu hoch – sie verschwindet nie.
+
+60 Prozent gelten nur, weil die App auf Hochformat festgelegt ist. Kaeme Querformat dazu, waere der Wert neu zu bestimmen.
+
+**Was damit nicht behoben ist:** Auf dem Emulator feuert `keyboardDidShow` gelegentlich verzoegert. Bis dahin liegt die Leiste hinter der Tastatur. Auf dem Samsung Galaxy S24 trat das nie auf; die E2E-Flows warten deshalb an den betroffenen Stellen laenger, statt den Fehler zu verdecken. Sollte ein Tester das auf seinem Geraet sehen, ist das der Punkt, an dem weiterzusuchen ist.
+
+---
+
 ## Offene Entscheidungen (bewusst vertagt)
 
 | Thema | Wann zu entscheiden | Was dann abzuwägen ist |

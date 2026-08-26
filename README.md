@@ -235,3 +235,83 @@ Die App liegt im App-Menü und lässt sich zum echten Einkauf mitnehmen.
 
 Für die tägliche Entwicklung stattdessen `npm run android` – dieser Build lädt Änderungen sofort
 nach, braucht dafür aber einen laufenden `npm start` im selben WLAN.
+
+## Auslieferung in den Play Store
+
+Bis hierher wurde jeder Release-Build mit dem **Debug-Schlüssel** signiert, den
+Expo mitliefert (ADR-025). Für den Play Store braucht es einen eigenen. Diesen
+Schlüssel erzeugst du selbst – er darf niemanden sonst erreichen, und er darf
+**nicht ins Repository**.
+
+### 1. Schlüssel erzeugen (einmalig)
+
+```bash
+keytool -genkeypair -v -storetype PKCS12 -keystore to-shopping-upload.keystore -alias to-shopping -keyalg RSA -keysize 2048 -validity 10000
+```
+
+`keytool` liegt im JDK von Android Studio, unter Windows hier:
+`%LOCALAPPDATA%\Programs\Android Studio\jbr\bin\keytool.exe`
+
+Der Befehl fragt nach einem Passwort und ein paar Angaben zur Person. Lege die
+entstandene Datei **außerhalb des Projektordners** ab und sichere sie – geht sie
+verloren, lässt sich die App im Play Store nicht mehr aktualisieren.
+
+### 2. Dem Build sagen, wo der Schlüssel liegt
+
+Trage die vier Werte in deine persönliche Gradle-Datei ein – **nicht** in das
+Projekt:
+
+`%USERPROFILE%\.gradle\gradle.properties`
+
+```properties
+TOSHOPPING_UPLOAD_STORE_FILE=C:/Pfad/ausserhalb/des/Projekts/to-shopping-upload.keystore
+TOSHOPPING_UPLOAD_STORE_PASSWORD=dein-passwort
+TOSHOPPING_UPLOAD_KEY_ALIAS=to-shopping
+TOSHOPPING_UPLOAD_KEY_PASSWORD=dein-passwort
+```
+
+Der Build prüft, ob diese Eigenschaften existieren. Fehlen sie, signiert er
+weiter mit dem Debug-Schlüssel – E2E-Läufe und die manuelle Abnahme laufen also
+unverändert, auch ohne eingerichteten Schlüssel.
+
+### 3. Das Bundle bauen
+
+Der Play Store nimmt kein APK, sondern ein **Android App Bundle**:
+
+```bash
+cd android && ./gradlew bundleRelease
+```
+
+Das Ergebnis liegt in `android/app/build/outputs/bundle/release/app-release.aab`.
+
+### 4. Vor dem ersten Upload
+
+Diese Punkte stehen in `docs/compliance.md` und sind **nicht** vom Code
+abgedeckt:
+
+| Aufgabe | Was zu tun ist |
+|---|---|
+| C-1 | Name, Anschrift, Kontakt-E-Mail für die Datenschutzerklärung festlegen |
+| C-2 | `docs/datenschutz.md` ausfüllen – die Lücken sind mit `[…]` markiert |
+| C-3 | Datenschutzerklärung veröffentlichen, URL in der Play Console eintragen |
+| C-4 | Data-Safety-Formular ausfüllen (hängt davon ab, ob OTA eingerichtet wird) |
+| C-5 | IARC-Fragebogen zur Altersfreigabe |
+| C-6 | Manifest auf Berechtigungen prüfen – siehe unten |
+| C-7 | Händlerstatus als Nicht-Händler erklären |
+
+**C-6 nachprüfen** – nach jedem neuen Paket zu wiederholen:
+
+```bash
+grep -o 'uses-permission android:name="[^"]*"' android/app/build/intermediates/merged_manifest/release/*/AndroidManifest.xml | sort -u
+```
+
+Erwartet werden genau drei Einträge: `INTERNET`, `VIBRATE` und die app-interne
+`DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION`. Alles andere gehört geprüft und in
+`app.json` unter `android.blockedPermissions` entfernt.
+
+### 5. Architekturen prüfen
+
+Der Build erzeugt derzeit nur `arm64-v8a` und `x86_64` (siehe
+`plugins/withAndroidBuildConfig.js`). Das deckt alle Telefone der letzten Jahre
+ab. Sollen sehr alte Geräte unterstützt werden, ist `armeabi-v7a` wieder
+aufzunehmen – zum Preis einer deutlich längeren Bauzeit.

@@ -234,6 +234,7 @@ export function ProductsScreen() {
       <FAB
         icon="plus"
         label={t('products.create')}
+        accessibilityLabel={t('products.create')}
         onPress={() => setDraft({ id: null, name: query, categoryId: FALLBACK_CATEGORY_ID })}
         testID="product-create"
         style={styles.fab}

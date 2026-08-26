@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import * as Haptics from 'expo-haptics';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Gesture, GestureDetector } from 'react-native-gesture-handler';
 import { Appbar, Button, Divider, Icon, IconButton, Text, useTheme } from 'react-native-paper';
 import Animated, {
@@ -24,11 +24,15 @@ type Props = {
 };
 
 /**
- * Feste Zeilenhoehe. Das Ziehen rechnet in Zeilen, nicht in Pixeln - ohne
+ * Grundhoehe einer Zeile. Das Ziehen rechnet in Zeilen, nicht in Pixeln - ohne
  * einen festen Wert waere jede Zeile anders hoch und der Zielplatz nicht
  * berechenbar. 64 dp liegen ueber den geforderten 48 dp Mindestgroesse.
+ *
+ * Der Wert waechst mit der Systemschrift (FR-7.3): Bei grosser Schrift wuerde
+ * ein Kategoriename in 64 dp abgeschnitten. Weil dieselbe Zahl auch in die
+ * Zielplatz-Rechnung geht, bleibt das Ziehen dabei stimmig.
  */
-const ROW_HEIGHT = 64;
+const BASE_ROW_HEIGHT = 64;
 
 /**
  * Das Ladenlayout: die Kategorie-Reihenfolge dieser Liste (FR-1.3, T-5.3).
@@ -46,6 +50,8 @@ export function StoreLayoutScreen({ listId }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
+  const { fontScale } = useWindowDimensions();
+  const rowHeight = BASE_ROW_HEIGHT * Math.max(1, fontScale);
 
   const categoryRows = useLiveQuery(categoriesQuery());
   const orderRows = useLiveQuery(categoryOrderQuery(listId), [listId]);
@@ -145,6 +151,7 @@ export function StoreLayoutScreen({ listId }: Props) {
             category={category}
             index={index}
             count={visible.length}
+            rowHeight={rowHeight}
             activeIndex={activeIndex}
             offsetY={offsetY}
             onBeginDrag={beginDrag}
@@ -169,6 +176,7 @@ type RowProps = {
   category: CategoryLike;
   index: number;
   count: number;
+  rowHeight: number;
   activeIndex: SharedValue<number>;
   offsetY: SharedValue<number>;
   onBeginDrag: (index: number) => void;
@@ -181,6 +189,7 @@ function LayoutRow({
   category,
   index,
   count,
+  rowHeight,
   activeIndex,
   offsetY,
   onBeginDrag,
@@ -207,7 +216,7 @@ function LayoutRow({
       onUpdateDrag(event.translationY);
     })
     .onEnd(() => {
-      runOnJS(onMove)(index, dropIndex(index, offsetY.value, ROW_HEIGHT, count));
+      runOnJS(onMove)(index, dropIndex(index, offsetY.value, rowHeight, count));
     })
     .onFinalize(() => {
       onEndDrag();
@@ -236,13 +245,13 @@ function LayoutRow({
       return { transform: [{ translateY: offsetY.value }], elevation: 8, opacity: 0.95 };
     }
 
-    const target = dropIndex(active, offsetY.value, ROW_HEIGHT, count);
+    const target = dropIndex(active, offsetY.value, rowHeight, count);
 
     if (active < index && index <= target) {
-      return { transform: [{ translateY: -ROW_HEIGHT }], elevation: 0, opacity: 1 };
+      return { transform: [{ translateY: -rowHeight }], elevation: 0, opacity: 1 };
     }
     if (target <= index && index < active) {
-      return { transform: [{ translateY: ROW_HEIGHT }], elevation: 0, opacity: 1 };
+      return { transform: [{ translateY: rowHeight }], elevation: 0, opacity: 1 };
     }
 
     return { transform: [{ translateY: 0 }], elevation: 0, opacity: 1 };
@@ -250,7 +259,11 @@ function LayoutRow({
 
   return (
     <Animated.View
-      style={[styles.row, rowStyle, { backgroundColor: theme.colors.background }]}
+      style={[
+        styles.row,
+        rowStyle,
+        { height: rowHeight, backgroundColor: theme.colors.background },
+      ]}
       testID={`layout-${category.name}`}
     >
       <Text variant="labelLarge" style={[styles.number, { color: theme.colors.primary }]}>
@@ -305,13 +318,12 @@ const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: ROW_HEIGHT,
     paddingLeft: 16,
     paddingRight: 4,
     gap: 4,
   },
   number: {
-    width: 24,
+    minWidth: 24,
   },
   name: {
     flex: 1,

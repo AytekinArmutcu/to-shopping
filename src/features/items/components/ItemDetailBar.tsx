@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Button, Chip, IconButton, Text, TextInput, useTheme } from 'react-native-paper';
 
 import { UNITS } from '@/db/units';
@@ -44,6 +44,10 @@ type Props = {
 export function ItemDetailBar({ item, onChange, onClose }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
+  // Das Mengenfeld hat eine feste Breite, damit die Reihe nicht wandert. Sie
+  // muss mit der Systemschrift wachsen, sonst schneidet "1500" bei grosser
+  // Schrift ab (FR-7.3).
+  const { fontScale } = useWindowDimensions();
 
   // Die Menge braucht einen eigenen Textzustand: Waehrend des Tippens steht
   // dort zwischendurch "1," - das ist keine Zahl, soll das Feld aber auch
@@ -114,7 +118,7 @@ export function ItemDetailBar({ item, onChange, onClose }: Props) {
           keyboardType="numeric"
           accessibilityLabel={t('detail.quantity')}
           testID="detail-quantity"
-          style={styles.quantityInput}
+          style={[styles.quantityInput, { width: 76 * fontScale }]}
         />
         <IconButton
           icon="plus"
@@ -204,7 +208,6 @@ const styles = StyleSheet.create({
     height: 48,
   },
   quantityInput: {
-    width: 76,
     textAlign: 'center',
   },
   units: {

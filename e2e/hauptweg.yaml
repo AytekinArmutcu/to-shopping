@@ -1,0 +1,177 @@
+# E2E fuer M12: der vollstaendige Hauptweg (T-12.4).
+#
+# Die anderen Flows pruefen je einen Meilenstein. Dieser prueft, ob das Ganze
+# in einer Sitzung zusammenhaelt: von der frischen Installation ueber das
+# Zusammenstellen der Liste (PRD Flow 1) und den Einkauf (PRD Flow 2) bis zu
+# dem Punkt, an dem die App gelernt hat, was gekauft wurde.
+#
+# Laeuft gegen einen Release-Build (ADR-025): npm run android:release
+appId: de.toshopping.app
+---
+# --- Erster Start: die Standardliste entsteht und oeffnet sich (PRD Flow 1.1)
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: 'add-input'
+    timeout: 60000
+- assertVisible:
+    id: 'list-empty'
+
+# --- Zusammenstellen ueber die Eingabe (PRD Flow 1.3 bis 1.5) ---
+- tapOn:
+    id: 'add-input'
+- inputText: 'Milch'
+- extendedWaitUntil:
+    visible:
+      id: 'suggestion-Milch'
+    timeout: 30000
+- tapOn:
+    id: 'suggestion-Milch'
+# Das Feld behaelt den Fokus - der naechste Artikel geht ohne erneutes Zielen.
+- inputText: 'Brot'
+- extendedWaitUntil:
+    visible:
+      id: 'suggestion-Brot'
+    timeout: 15000
+- tapOn:
+    id: 'suggestion-Brot'
+- hideKeyboard
+- waitForAnimationToEnd
+
+# --- Der zweite Weg: aus dem Katalog waehlen (PRD Flow 1.7) ---
+- tapOn:
+    id: 'open-catalog'
+- extendedWaitUntil:
+    visible:
+      id: 'catalog-search'
+    timeout: 15000
+- tapOn:
+    id: 'catalog-search'
+- inputText: 'Bananen'
+- hideKeyboard
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: 'catalog-Bananen'
+    timeout: 15000
+- tapOn:
+    id: 'catalog-Bananen'
+- tapOn:
+    id: 'catalog-apply'
+- extendedWaitUntil:
+    visible:
+      id: 'item-Bananen'
+    timeout: 15000
+- assertVisible: '3 von 3 offen'
+
+# --- Menge anpassen (PRD Flow 1.8) ---
+- tapOn:
+    id: 'edit-Brot'
+- extendedWaitUntil:
+    visible:
+      id: 'item-detail'
+    timeout: 15000
+- tapOn:
+    id: 'detail-plus'
+- extendedWaitUntil:
+    visible: '2×'
+    timeout: 15000
+- tapOn:
+    id: 'detail-done'
+
+# --- Ladenlayout: Kuehlregal nach vorn (FR-1.3) ---
+- tapOn:
+    id: 'open-layout'
+- extendedWaitUntil:
+    visible:
+      id: 'layout-list'
+    timeout: 15000
+- tapOn:
+    id: 'up-Kühlregal'
+- back
+- extendedWaitUntil:
+    visible:
+      id: 'item-Milch'
+    timeout: 15000
+- assertVisible:
+    text: 'Kühlregal'
+    above:
+      text: 'Brot & Backwaren'
+
+# --- Einkaufen (PRD Flow 2) ---
+# Abhaken laesst den Artikel verschwinden und meldet "Rueckgaengig".
+- tapOn: 'Milch abhaken'
+- extendedWaitUntil:
+    notVisible:
+      id: 'item-Milch'
+    timeout: 15000
+- assertVisible: '2 von 3 offen'
+
+# Rueckgaengig holt ihn zurueck (FR-3.3)
+- tapOn: 'Rückgängig'
+- extendedWaitUntil:
+    visible:
+      id: 'item-Milch'
+    timeout: 15000
+- assertVisible: '3 von 3 offen'
+
+# Jetzt wirklich einkaufen
+- tapOn: 'Milch abhaken'
+- extendedWaitUntil:
+    notVisible:
+      id: 'item-Milch'
+    timeout: 15000
+- tapOn: 'Brot abhaken'
+- extendedWaitUntil:
+    notVisible:
+      id: 'item-Brot'
+    timeout: 15000
+
+# Erledigte wieder einblenden (FR-3.6)
+- tapOn:
+    id: 'toggle-checked'
+- extendedWaitUntil:
+    visible:
+      id: 'item-Milch'
+    timeout: 15000
+
+# Einkauf abschliessen - Bananen bleiben liegen, also kommt die Rueckfrage
+- tapOn:
+    id: 'finish-shopping'
+- extendedWaitUntil:
+    visible:
+      id: 'finish-confirm'
+    timeout: 15000
+- tapOn:
+    id: 'finish-confirm'
+
+# Abgehaktes ist weg, Liegengebliebenes steht noch da (FR-3.8)
+- extendedWaitUntil:
+    notVisible:
+      id: 'item-Milch'
+    timeout: 15000
+- assertVisible:
+    id: 'item-Bananen'
+- assertVisible: '1 von 1 offen'
+
+# --- Und die App hat gelernt (FR-5.2) ---
+# Milch und Brot sind jetzt in der Historie. Beim leeren Feld erscheinen sie
+# als "die ueblichen Verdaechtigen" - vorher zeigte es nichts.
+- tapOn:
+    id: 'add-input'
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: 'suggestion-Milch'
+    timeout: 15000
+- assertVisible:
+    id: 'suggestion-Brot'
+
+# --- Neustart: alles ist noch da (FR-1.5, FR-2.8) ---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: 'item-Bananen'
+    timeout: 30000
+- assertVisible: '1 von 1 offen'
