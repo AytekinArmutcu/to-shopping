@@ -298,18 +298,16 @@ To-Shopping/
 ├── app/                          # Expo Router: eine Datei = eine Route
 │   ├── _layout.tsx               # Theme, i18n, DB-Initialisierung, Migrationen
 │   ├── index.tsx                 # Einstieg: leitet auf die zuletzt genutzte Route
-│   ├── lists/
-│   │   ├── index.tsx             # Listenübersicht
-│   │   ├── [id].tsx              # Eine Liste (Haupt-Screen)
-│   │   ├── [id]/settings.tsx     # Name + Ladenlayout
-│   │   └── [id]/catalog.tsx      # Katalog-Auswahl mit Mehrfachauswahl
-│   ├── templates/
-│   ├── settings/
-│   │   ├── index.tsx
-│   │   ├── products.tsx          # Katalogpflege
-│   │   ├── backup.tsx            # Export / Wiederherstellen
-│   │   └── diagnostics.tsx       # Fehlerspeicher, Bericht senden
+│   ├── listen.tsx                # Listenübersicht
+│   ├── liste.tsx                 # Eine Liste (Haupt-Screen)      ?listId=
+│   ├── katalog.tsx               # Katalog mit Mehrfachauswahl    ?listId=
+│   ├── ladenlayout.tsx           # Kategorie-Reihenfolge          ?listId=
+│   ├── vorlagen.tsx
+│   ├── einstellungen.tsx         # Katalogpflege, Sicherung, Diagnose
 │   └── import.tsx                # Ziel des Teilen-Intents, Vorschau
+│
+│   Routen sind flach und tragen die Listen-ID als Parameter statt im
+│   Pfad – Begründung in ADR-030.
 │
 ├── src/
 │   ├── db/

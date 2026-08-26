@@ -1,0 +1,133 @@
+# E2E fuer M6: mehrere Listen nebeneinander.
+#
+# Uebersicht -> anlegen -> zaehlen -> umbenennen -> loeschen -> duplizieren ->
+# Start auf dem zuletzt genutzten Screen (FR-1.2, FR-1.4, FR-1.5).
+#
+# Hinweis zu den Bezeichnern: Maestro liest Selektoren als regulaeren Ausdruck.
+# Deshalb kommt in diesem Flow kein Name mit Klammern vor - "(Kopie)" wuerde
+# als Gruppe gelesen und traefe den Eintrag nicht. Die Kopie wird ueber ihren
+# sichtbaren Text geprueft, nicht ueber ihren Bezeichner.
+#
+# Laeuft gegen einen Release-Build (ADR-025): npm run android:release
+appId: de.toshopping.app
+---
+# Erster Start: keine gemerkte Route, also entsteht die Standardliste und
+# oeffnet sich direkt (PRD Flow 1.1).
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: 'add-input'
+    timeout: 30000
+
+# --- Uebersicht ---
+- tapOn:
+    id: 'back-to-lists'
+- extendedWaitUntil:
+    visible:
+      id: 'list-Einkauf'
+    timeout: 15000
+- assertVisible: 'Alles erledigt'
+
+# --- Neue Liste anlegen (FR-1.2) ---
+- tapOn:
+    id: 'list-create'
+- extendedWaitUntil:
+    visible:
+      id: 'list-name'
+    timeout: 15000
+- tapOn:
+    id: 'list-name'
+- inputText: 'Drogerie'
+- hideKeyboard
+- tapOn:
+    id: 'list-create-confirm'
+
+# Sie oeffnet sich sofort - wer eine Liste anlegt, will etwas hineinschreiben.
+- extendedWaitUntil:
+    visible:
+      id: 'add-input'
+    timeout: 15000
+- tapOn:
+    id: 'add-input'
+- inputText: 'Zahnpasta'
+- extendedWaitUntil:
+    visible:
+      id: 'suggestion-Zahnpasta'
+    timeout: 15000
+- tapOn:
+    id: 'suggestion-Zahnpasta'
+- extendedWaitUntil:
+    visible:
+      id: 'item-Zahnpasta'
+    timeout: 15000
+- hideKeyboard
+- tapOn:
+    id: 'back-to-lists'
+
+# --- Die Uebersicht zaehlt die offenen Artikel (FR-1.4) ---
+- extendedWaitUntil:
+    visible:
+      id: 'list-Drogerie'
+    timeout: 15000
+- assertVisible: '1 offen'
+
+# --- Umbenennen ---
+- tapOn:
+    id: 'more-Drogerie'
+- tapOn:
+    id: 'menu-rename'
+- extendedWaitUntil:
+    visible:
+      id: 'list-rename-input'
+    timeout: 15000
+- tapOn:
+    id: 'list-rename-input'
+- eraseText: 20
+- inputText: 'Drogeriemarkt'
+- hideKeyboard
+- tapOn:
+    id: 'list-rename-confirm'
+- extendedWaitUntil:
+    visible:
+      id: 'list-Drogeriemarkt'
+    timeout: 15000
+# Der Artikel gehoert weiter dazu - umbenennen ist kein Neuanfang.
+- assertVisible: '1 offen'
+
+# --- Loeschen, mit Rueckfrage ---
+- tapOn:
+    id: 'more-Drogeriemarkt'
+- tapOn:
+    id: 'menu-delete'
+- extendedWaitUntil:
+    visible:
+      id: 'list-delete-confirm'
+    timeout: 15000
+- tapOn:
+    id: 'list-delete-confirm'
+- extendedWaitUntil:
+    notVisible:
+      id: 'list-Drogeriemarkt'
+    timeout: 15000
+- assertVisible:
+    id: 'list-Einkauf'
+
+# --- Duplizieren (T-6.3) ---
+- tapOn:
+    id: 'more-Einkauf'
+- tapOn:
+    id: 'menu-duplicate'
+- extendedWaitUntil:
+    visible: 'Kopie'
+    timeout: 15000
+
+# --- Start auf dem zuletzt genutzten Screen (FR-1.5) ---
+# Zuletzt war die Uebersicht offen, also erscheint sie auch nach dem Neustart.
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: 'list-Einkauf'
+    timeout: 30000
+- assertVisible:
+    id: 'lists'

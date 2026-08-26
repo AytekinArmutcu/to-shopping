@@ -573,6 +573,26 @@ Die offenen Abschnitte bleiben frei von Erledigtem. Preis: Ein abgehakter Artike
 
 ---
 
+## ADR-030 – Flache Routen mit der Listen-ID als Parameter
+
+**Datum:** 2026-08-26 · **Status:** Angenommen
+
+**Kontext**
+`architecture.md` Abschnitt 7 sah verschachtelte Routen vor: `app/lists/[id].tsx`, darunter `[id]/settings.tsx` und `[id]/catalog.tsx`. Mit M6 gibt es erstmals mehrere Listen, die Routen mussten also ohnehin angefasst werden.
+
+**Entscheidung**
+Die Routen bleiben flach und tragen die Listen-ID als Parameter: `/listen`, `/liste?listId=…`, `/katalog?listId=…`, `/ladenlayout?listId=…`. `architecture.md` Abschnitt 7 wurde entsprechend nachgezogen.
+
+**Verworfene Alternative**
+*Die geplante Verschachtelung.* Sie ist ausdrucksstaerker – die Zugehoerigkeit steht im Pfad statt in einem Parameter – und waere bei vielen Unterseiten die bessere Wahl. Dagegen sprach der Zeitpunkt: Fuer eine Verschachtelung muss eine Datei `[id].tsx` neben einem gleichnamigen Ordner `[id]/` liegen, und beides zusammen wollte geprueft sein. Das Handy war waehrend dieser Arbeit nicht erreichbar, ein Geraetetest also nicht moeglich. Die flache Form ist in diesem Projekt seit M4 im Einsatz und funktioniert nachweislich.
+
+**Konsequenz**
+Eine Route hat genau eine Datei, und die Listen-ID wird ueberall gleich uebergeben. Preis: Die Zugehoerigkeit ist nicht am Pfad ablesbar, und ein fehlender Parameter ist ein Fall, den jede Route selbst abfangen muss – `/liste` und `/katalog` leiten dann zur Uebersicht weiter beziehungsweise zeigen nichts an.
+
+Zwei Ausdrucksformen derselben Route sind der zweite Preis: Der Router bekommt sie getippt als Objekt, das Gedaechtnis fuer den Startbildschirm als Zeichenkette (`listRoute`). Das ist Absicht – so bleibt die Routenpruefung durch TypeScript erhalten, ohne dass die reine Logik den Router kennen muss.
+
+---
+
 ## Offene Entscheidungen (bewusst vertagt)
 
 | Thema | Wann zu entscheiden | Was dann abzuwägen ist |

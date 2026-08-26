@@ -1,9 +1,17 @@
 import {
+  buildListOverview,
   buildListSections,
   CHECKED_SECTION_ID,
+  cleanListName,
+  copyName,
   dropIndex,
+  listRoute,
+  MAX_LIST_NAME_LENGTH,
   moveCategory,
   orderCategories,
+  parseListRoute,
+  resolveStartRoute,
+  ROUTE_OVERVIEW,
   type CategoryLike,
   type SectionItem,
 } from './logic';
@@ -247,5 +255,118 @@ describe('dropIndex', () => {
 
   it('kommt mit einer leeren Liste zurecht', () => {
     expect(dropIndex(0, 100, 64, 0)).toBe(0);
+  });
+});
+
+describe('buildListOverview', () => {
+  const listen = [
+    { id: 'l-2', name: 'Drogerie', position: 1 },
+    { id: 'l-1', name: 'Wocheneinkauf', position: 0 },
+  ];
+
+  it('sortiert nach der Reihenfolge des Anlegens', () => {
+    const rows = buildListOverview(listen, []);
+    expect(rows.map((row) => row.name)).toEqual(['Wocheneinkauf', 'Drogerie']);
+  });
+
+  it('haengt die Anzahl offener Artikel an', () => {
+    const rows = buildListOverview(listen, [{ listId: 'l-1', openCount: 7 }]);
+    expect(rows[0]).toEqual({ id: 'l-1', name: 'Wocheneinkauf', openCount: 7 });
+  });
+
+  it('zeigt Listen ohne Artikel mit null statt gar nicht', () => {
+    const rows = buildListOverview(listen, [{ listId: 'l-1', openCount: 3 }]);
+    expect(rows[1]?.openCount).toBe(0);
+  });
+
+  it('ignoriert Zaehlungen zu geloeschten Listen', () => {
+    const rows = buildListOverview(listen, [{ listId: 'l-weg', openCount: 9 }]);
+    expect(rows).toHaveLength(2);
+    expect(rows.every((row) => row.openCount === 0)).toBe(true);
+  });
+
+  it('sortiert bei gleicher Position nach Name und dann id', () => {
+    const gleichauf = [
+      { id: 'l-b', name: 'Aldi', position: 0 },
+      { id: 'l-a', name: 'Aldi', position: 0 },
+      { id: 'l-c', name: 'Edeka', position: 0 },
+    ];
+    expect(buildListOverview(gleichauf, []).map((row) => row.id)).toEqual(['l-a', 'l-b', 'l-c']);
+  });
+
+  it('kommt ohne Listen zurecht', () => {
+    expect(buildListOverview([], [])).toEqual([]);
+  });
+});
+
+describe('cleanListName', () => {
+  it('raeumt Leerzeichen auf', () => {
+    expect(cleanListName('  Wochen   einkauf ')).toBe('Wochen einkauf');
+  });
+
+  it('macht aus leerer Eingabe null', () => {
+    expect(cleanListName('')).toBeNull();
+    expect(cleanListName('   ')).toBeNull();
+  });
+
+  it('kuerzt zu lange Namen', () => {
+    expect(cleanListName('x'.repeat(200))).toHaveLength(MAX_LIST_NAME_LENGTH);
+  });
+});
+
+describe('copyName', () => {
+  it('haengt den Zusatz an', () => {
+    expect(copyName('Wocheneinkauf', ['Wocheneinkauf'], 'Kopie')).toBe('Wocheneinkauf (Kopie)');
+  });
+
+  it('zaehlt hoch, wenn der Name schon vergeben ist', () => {
+    const vorhanden = ['Wocheneinkauf', 'Wocheneinkauf (Kopie)'];
+    expect(copyName('Wocheneinkauf', vorhanden, 'Kopie')).toBe('Wocheneinkauf (Kopie 2)');
+  });
+
+  it('zaehlt weiter, solange belegt ist', () => {
+    const vorhanden = ['A (Kopie)', 'A (Kopie 2)', 'A (Kopie 3)'];
+    expect(copyName('A', vorhanden, 'Kopie')).toBe('A (Kopie 4)');
+  });
+
+  it('vergleicht ohne Ruecksicht auf Gross- und Kleinschreibung', () => {
+    expect(copyName('A', ['a (kopie)'], 'Kopie')).toBe('A (Kopie 2)');
+  });
+
+  it('bleibt innerhalb der Namenslaenge', () => {
+    expect(copyName('x'.repeat(80), [], 'Kopie').length).toBeLessThanOrEqual(MAX_LIST_NAME_LENGTH);
+  });
+});
+
+describe('listRoute und parseListRoute', () => {
+  it('bauen und lesen dieselbe Route', () => {
+    expect(parseListRoute(listRoute('l-abc'))).toBe('l-abc');
+  });
+
+  it('erkennen andere Routen nicht als Listenroute', () => {
+    expect(parseListRoute(ROUTE_OVERVIEW)).toBeNull();
+    expect(parseListRoute('/katalog?listId=l-abc')).toBeNull();
+    expect(parseListRoute('')).toBeNull();
+    expect(parseListRoute('/liste')).toBeNull();
+    expect(parseListRoute('/liste?listId=')).toBeNull();
+  });
+});
+
+describe('resolveStartRoute', () => {
+  it('startet ohne gespeicherte Route in der Uebersicht', () => {
+    expect(resolveStartRoute(null)).toBe(ROUTE_OVERVIEW);
+  });
+
+  it('nimmt die Uebersicht, wenn sie gespeichert ist', () => {
+    expect(resolveStartRoute(ROUTE_OVERVIEW)).toBe(ROUTE_OVERVIEW);
+  });
+
+  it('nimmt eine gespeicherte Listenroute', () => {
+    expect(resolveStartRoute('/liste?listId=l-abc')).toBe('/liste?listId=l-abc');
+  });
+
+  it('faellt bei unbekannten Routen auf die Uebersicht zurueck', () => {
+    expect(resolveStartRoute('/gibtsnicht')).toBe(ROUTE_OVERVIEW);
+    expect(resolveStartRoute('kaputt')).toBe(ROUTE_OVERVIEW);
   });
 });

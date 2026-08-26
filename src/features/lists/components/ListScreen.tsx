@@ -27,8 +27,18 @@ import {
   setItemChecked,
   updateItemDetails,
 } from '@/features/items/repository';
-import { buildListSections, CHECKED_SECTION_ID } from '@/features/lists/logic';
-import { categoryOrderQuery, getOrCreateActiveList } from '@/features/lists/repository';
+import {
+  buildListSections,
+  CHECKED_SECTION_ID,
+  listRoute,
+  ROUTE_OVERVIEW,
+} from '@/features/lists/logic';
+import {
+  categoryOrderQuery,
+  listQuery,
+  setLastRoute,
+  touchList,
+} from '@/features/lists/repository';
 
 /**
  * Der Haupt-Screen: eine Liste mit ihren Artikeln, Eingabefeld und Abschluss.
@@ -40,12 +50,14 @@ import { categoryOrderQuery, getOrCreateActiveList } from '@/features/lists/repo
  * Alle Datenbankzugriffe laufen ueber Repository-Funktionen (CLAUDE.md,
  * Schichtenregel 1), alles Rechnende steckt in features/items/logic.ts.
  */
-export function ListScreen() {
+type Props = {
+  listId: string;
+};
+
+export function ListScreen({ listId }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
   const insets = useSafeAreaInsets();
-  const [listId, setListId] = useState<string | null>(null);
-  const [listName, setListName] = useState('');
 
   // UI-Zustand, bewusst lokal: Er gehoert zu genau diesem Screen und ueberlebt
   // dessen Verlassen nicht. Ein globaler Store waere hier Aufwand ohne Nutzen
@@ -68,26 +80,21 @@ export function ListScreen() {
   // folgt der Tastatur ruckelfrei im selben Takt wie ihre Animation.
   const keyboard = useAnimatedKeyboard();
 
+  // Beim Oeffnen zwei Vermerke: Die Liste gilt als zuletzt benutzt, und die
+  // App merkt sich diesen Screen als Startpunkt (FR-1.5).
   useEffect(() => {
-    let cancelled = false;
-    void getOrCreateActiveList().then((list) => {
-      if (!cancelled && list) {
-        setListId(list.id);
-        setListName(list.name);
-      }
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+    void touchList(listId);
+    void setLastRoute(listRoute(listId));
+  }, [listId]);
 
   // Die Abfragen kommen aus den Repositories, damit der Screen keine Tabellen
   // kennt (CLAUDE.md, Schichtenregel 1). Als Bauplan und nicht als Ergebnis,
   // weil useLiveQuery sie bei jeder Datenaenderung erneut ausfuehrt.
-  const items = useLiveQuery(listItemsQuery(listId ?? ''), [listId]);
+  const listRows = useLiveQuery(listQuery(listId), [listId]);
+  const items = useLiveQuery(listItemsQuery(listId), [listId]);
   const catalog = useLiveQuery(catalogProductsQuery());
   const categoryRows = useLiveQuery(categoriesQuery());
-  const orderRows = useLiveQuery(categoryOrderQuery(listId ?? ''), [listId]);
+  const orderRows = useLiveQuery(categoryOrderQuery(listId), [listId]);
 
   const rows = useMemo(() => items.data ?? [], [items.data]);
   const products: CatalogProduct[] = catalog.data ?? [];
@@ -112,18 +119,13 @@ export function ListScreen() {
 
   const handlePick = useCallback(
     (product: CatalogProduct) => {
-      if (listId) {
-        void addProductToList(listId, product.id);
-      }
+      void addProductToList(listId, product.id);
     },
     [listId],
   );
 
   const handleCreate = useCallback(
     (name: string) => {
-      if (!listId) {
-        return;
-      }
       void createProduct(name).then((product) => {
         if (product) {
           void addProductToList(listId, product.id);
@@ -171,9 +173,6 @@ export function ListScreen() {
   }, [undoItemId]);
 
   const handleFinish = useCallback(() => {
-    if (!listId) {
-      return;
-    }
     setConfirmOpen(false);
     void finishShopping(listId).then((count) => {
       setUndoItemId(null);
@@ -195,13 +194,25 @@ export function ListScreen() {
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Appbar.Header elevated>
-        <Appbar.Content title={listName} />
+        {/* Zurueck fuehrt immer zur Uebersicht - auch wenn die App direkt auf
+            dieser Liste gestartet ist und es gar keinen Schritt zurueck gibt. */}
+        <Appbar.BackAction
+          onPress={() => {
+            void setLastRoute(ROUTE_OVERVIEW);
+            if (router.canGoBack()) {
+              router.back();
+            } else {
+              router.replace('/listen');
+            }
+          }}
+          accessibilityLabel={t('list.back')}
+          testID="back-to-lists"
+        />
+        <Appbar.Content title={listRows.data?.[0]?.name ?? ''} />
         <Appbar.Action
           icon="store-outline"
           onPress={() => {
-            if (listId) {
-              router.push({ pathname: '/ladenlayout', params: { listId } });
-            }
+            router.push({ pathname: '/ladenlayout', params: { listId } });
           }}
           accessibilityLabel={t('list.layout')}
           testID="open-layout"
@@ -209,9 +220,7 @@ export function ListScreen() {
         <Appbar.Action
           icon="playlist-plus"
           onPress={() => {
-            if (listId) {
-              router.push({ pathname: '/katalog', params: { listId } });
-            }
+            router.push({ pathname: '/katalog', params: { listId } });
           }}
           accessibilityLabel={t('list.catalog')}
           testID="open-catalog"

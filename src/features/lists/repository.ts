@@ -1,7 +1,9 @@
 import { asc, eq, sql } from 'drizzle-orm';
 
 import { db } from '@/db/client';
-import { listCategoryOrder, lists } from '@/db/schema';
+import { appState, listCategoryOrder, listItems, lists } from '@/db/schema';
+
+import { copyName, parseListRoute, resolveStartRoute } from './logic';
 
 /**
  * Datenzugriff fuer Listen. Screens rufen ausschliesslich diese Funktionen
@@ -30,10 +32,6 @@ export async function createList(name: string): Promise<string> {
   });
 
   return id;
-}
-
-export async function getLists() {
-  return db.select().from(lists).orderBy(asc(lists.position));
 }
 
 /**
@@ -116,4 +114,184 @@ export async function saveCategoryOrder(listId: string, categoryIds: string[]): 
       );
     }
   });
+}
+
+/* ------------------------------------------------------------------ *
+ * M6: mehrere Listen nebeneinander
+ * ------------------------------------------------------------------ */
+
+/** Bauplaene fuer die Uebersicht (ADR-027). */
+export function listsQuery() {
+  return db
+    .select({ id: lists.id, name: lists.name, position: lists.position })
+    .from(lists)
+    .orderBy(asc(lists.position));
+}
+
+/**
+ * Offene Artikel je Liste - gezaehlt in der Datenbank, nicht in der App.
+ *
+ * Die Alternative waere, alle Artikel aller Listen zu laden und zu zaehlen.
+ * Bei einer Handvoll Listen faellt das nicht auf, aber es waere die falsche
+ * Gewohnheit: Zaehlen ist genau das, wofuer eine Datenbank da ist.
+ */
+export function openCountsQuery() {
+  return db
+    .select({ listId: listItems.listId, openCount: sql<number>`count(*)` })
+    .from(listItems)
+    .where(eq(listItems.isChecked, false))
+    .groupBy(listItems.listId);
+}
+
+export async function getList(id: string) {
+  const found = await db.select().from(lists).where(eq(lists.id, id)).limit(1);
+  return found[0] ?? null;
+}
+
+/**
+ * Dupliziert eine Liste samt Artikeln und Ladenlayout (T-6.3).
+ *
+ * Die Haken werden dabei zurueckgesetzt. Eine Kopie entsteht, um denselben
+ * Einkauf noch einmal zu machen - abgehakte Artikel waeren dann von Anfang an
+ * unsichtbar, und der Nutzer haette eine halb leere Liste vor sich, ohne zu
+ * verstehen, warum.
+ *
+ * Alles in einer Transaktion (CLAUDE.md): Eine Kopie ohne ihre Artikel waere
+ * nicht als Fehler erkennbar - sie saehe aus wie eine leere neue Liste.
+ *
+ * Rueckgabe: die ID der Kopie, oder null, wenn es die Vorlage nicht gibt.
+ */
+export async function duplicateList(listId: string, copySuffix: string): Promise<string | null> {
+  const source = await getList(listId);
+
+  if (!source) {
+    return null;
+  }
+
+  const existing = await db.select({ name: lists.name }).from(lists);
+  const name = copyName(
+    source.name,
+    existing.map((entry) => entry.name),
+    copySuffix,
+  );
+
+  const id = newId();
+  const now = Date.now();
+
+  const items = await db
+    .select()
+    .from(listItems)
+    .where(eq(listItems.listId, listId))
+    .orderBy(asc(listItems.position));
+
+  const order = await db
+    .select()
+    .from(listCategoryOrder)
+    .where(eq(listCategoryOrder.listId, listId));
+
+  await db.transaction(async (tx) => {
+    await tx.insert(lists).values({
+      id,
+      name,
+      position: existing.length,
+      lastOpenedAt: now,
+    });
+
+    if (items.length > 0) {
+      await tx.insert(listItems).values(
+        items.map((item, index) => ({
+          id: `${id}-i${index}`,
+          listId: id,
+          productId: item.productId,
+          name: item.name,
+          categoryId: item.categoryId,
+          quantity: item.quantity,
+          unit: item.unit,
+          note: item.note,
+          isChecked: false,
+          checkedAt: null,
+          position: item.position,
+        })),
+      );
+    }
+
+    if (order.length > 0) {
+      await tx.insert(listCategoryOrder).values(
+        order.map((entry) => ({
+          listId: id,
+          categoryId: entry.categoryId,
+          position: entry.position,
+        })),
+      );
+    }
+  });
+
+  return id;
+}
+
+/* ------------------------------------------------------------------ *
+ * Zuletzt genutzte Route (FR-1.5)
+ * ------------------------------------------------------------------ */
+
+export const LAST_ROUTE_KEY = 'last_route';
+
+export async function getLastRoute(): Promise<string | null> {
+  const found = await db.select().from(appState).where(eq(appState.key, LAST_ROUTE_KEY)).limit(1);
+
+  return found[0]?.value ?? null;
+}
+
+/**
+ * Merkt sich den zuletzt gesehenen Screen.
+ *
+ * In app_state und nicht im Zustand-Store: Der Store haelt nur UI-Zustand und
+ * ueberlebt das Beenden der App nicht (ADR-020) - genau das ist hier aber der
+ * Sinn der Sache.
+ */
+export async function setLastRoute(route: string): Promise<void> {
+  await db
+    .insert(appState)
+    .values({ key: LAST_ROUTE_KEY, value: route })
+    .onConflictDoUpdate({ target: appState.key, set: { value: route } });
+}
+
+/** Bauplan fuer eine einzelne Liste - damit eine Umbenennung sofort ankommt. */
+export function listQuery(listId: string) {
+  return db.select({ id: lists.id, name: lists.name }).from(lists).where(eq(lists.id, listId));
+}
+
+/**
+ * Womit startet die App (FR-1.5)?
+ *
+ * Die reine Entscheidung steckt in resolveStartRoute und ist getestet; hier
+ * kommt nur dazu, was ohne Datenbank nicht zu beantworten ist: Gibt es die
+ * Liste hinter der gemerkten Route ueberhaupt noch? Wer seine zuletzt genutzte
+ * Liste geloescht hat, soll nicht auf einem leeren Bildschirm landen.
+ *
+ * Beim allerersten Start gibt es keine gemerkte Route. Dann entsteht die
+ * Standardliste und die App oeffnet sie direkt - der Nutzer soll nicht mit
+ * einer leeren Uebersicht beginnen, sondern mit etwas, das er benutzen kann
+ * (PRD Flow 1.1).
+ */
+export type StartTarget = {
+  /** null bedeutet: die Uebersicht. */
+  listId: string | null;
+};
+
+export async function resolveStartTarget(): Promise<StartTarget> {
+  const stored = await getLastRoute();
+
+  if (stored !== null) {
+    const id = parseListRoute(resolveStartRoute(stored));
+
+    if (id === null) {
+      return { listId: null };
+    }
+
+    const list = await getList(id);
+    return { listId: list ? id : null };
+  }
+
+  const active = await getOrCreateActiveList();
+  return { listId: active?.id ?? null };
 }

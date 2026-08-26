@@ -73,7 +73,8 @@
     "catalog": "Aus Produkten wählen",
     "layout": "Ladenlayout",
     "checked": "Erledigt",
-    "fallbackCategory": "Sonstiges"
+    "fallbackCategory": "Sonstiges",
+    "back": "Zurück zur Übersicht"
   },
   "item": {
     "remove": "{{name}} von der Liste entfernen",
@@ -129,5 +130,30 @@
     "reset": "Standardreihenfolge",
     "resetDone": "Standardreihenfolge wiederhergestellt",
     "back": "Zurück zur Liste"
+  },
+  "lists": {
+    "title": "Meine Listen",
+    "emptyTitle": "Noch keine Liste",
+    "emptyHint": "Lege eine Liste an – zum Beispiel eine je Laden.",
+    "open": "{{count}} offen",
+    "allDone": "Alles erledigt",
+    "openList": "{{name}} öffnen",
+    "more": "Weitere Aktionen für {{name}}",
+    "create": "Neue Liste",
+    "createTitle": "Neue Liste",
+    "createConfirm": "Anlegen",
+    "nameLabel": "Name der Liste",
+    "namePlaceholder": "z. B. Wocheneinkauf",
+    "rename": "Umbenennen",
+    "renameTitle": "Liste umbenennen",
+    "renameConfirm": "Speichern",
+    "duplicate": "Duplizieren",
+    "copySuffix": "Kopie",
+    "duplicated": "„{{name}}“ angelegt",
+    "delete": "Löschen",
+    "deleteTitle": "„{{name}}“ löschen?",
+    "deleteHint": "Die Liste und alle ihre Artikel werden entfernt. Das lässt sich nicht rückgängig machen.",
+    "deleteConfirm": "Löschen",
+    "deleted": "„{{name}}“ gelöscht"
   }
 }
