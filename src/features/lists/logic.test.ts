@@ -169,7 +169,7 @@ describe('buildListSections', () => {
 
     expect(titlesOf(result)).toEqual(['Obst', 'Erledigt']);
     const last = result.sections[result.sections.length - 1];
-    expect(last?.id).toBe(CHECKED_SECTION_ID);
+    expect(last?.key).toBe(CHECKED_SECTION_ID);
     expect(last?.data.map((entry) => entry.id)).toEqual(['b', 'c']);
   });
 

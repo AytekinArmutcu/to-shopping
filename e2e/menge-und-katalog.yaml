@@ -76,7 +76,14 @@ appId: de.toshopping.app
     visible:
       id: 'catalog-Milch'
     timeout: 15000
-- assertVisible: 'Steht schon auf der Liste'
+# Geprueft wird der Zustand der Zeile, nicht ihr Text: Android fasst eine
+# gesperrte Zeile zu einem Knoten zusammen, ihre Beschriftung taucht in der
+# Ansichtshierarchie gar nicht mehr auf. "checked und nicht bedienbar" sagt
+# ohnehin genauer, worum es geht - das Produkt ist schon auf der Liste.
+- assertVisible:
+    id: 'catalog-Milch'
+    enabled: false
+    checked: true
 - hideKeyboard
 - back
 
@@ -92,20 +99,25 @@ appId: de.toshopping.app
       id: 'item-detail'
     timeout: 15000
 
-# Zweimal Plus: 1 -> 3 Stueck. Die 1 wird nicht angezeigt (FR-2.6), ab 2 schon.
-- tapOn:
-    id: 'detail-plus'
+# Milch kommt aus dem Katalog mit der Einheit Liter. Liter zaehlen in halben
+# Schritten - ein Literschritt von 1 auf 2 waere beim Einkaufen zu grob, ein
+# Milliliterschritt zu fein (QUANTITY_STEP).
 - tapOn:
     id: 'detail-plus'
 - extendedWaitUntil:
-    visible: '3×'
+    visible: '1,5 l'
+    timeout: 15000
+- tapOn:
+    id: 'detail-plus'
+- extendedWaitUntil:
+    visible: '2 l'
     timeout: 15000
 
 # Einheit wechseln - die Anzeige folgt sofort
 - tapOn:
-    id: 'unit-l'
+    id: 'unit-kg'
 - extendedWaitUntil:
-    visible: '3 l'
+    visible: '2 kg'
     timeout: 15000
 
 # Notiz eintragen (FR-2.5)
@@ -120,11 +132,11 @@ appId: de.toshopping.app
 - extendedWaitUntil:
     visible: 'laktosefrei'
     timeout: 15000
-- assertVisible: '3 l'
+- assertVisible: '2 kg'
 
 # Und sie ueberleben einen Neustart (FR-2.8, kein Speichern-Knopf)
 - launchApp
 - extendedWaitUntil:
     visible: 'laktosefrei'
     timeout: 30000
-- assertVisible: '3 l'
+- assertVisible: '2 kg'

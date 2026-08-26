@@ -109,7 +109,8 @@
     "apply": "Übernehmen",
     "applyCount": "{{count}} übernehmen",
     "back": "Zurück zur Liste",
-    "added": "{{count}} Artikel hinzugefügt"
+    "added": "{{count}} Artikel hinzugefügt",
+    "onListLabel": "{{name}} steht schon auf der Liste"
   },
   "detail": {
     "quantity": "Menge",

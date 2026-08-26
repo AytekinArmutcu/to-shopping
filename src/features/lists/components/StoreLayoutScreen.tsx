@@ -132,7 +132,13 @@ export function StoreLayoutScreen({ listId }: Props) {
         {t('layout.hint')}
       </Text>
 
-      <ScrollView testID="layout-list">
+      {/* Kein Wegschneiden unsichtbarer Zeilen. Android macht das in einer
+          ScrollView von sich aus, und der zustaendige Manager haengt beim
+          Umsortieren Views um - bei zwoelf Zeilen, die beim Zuruecksetzen die
+          Plaetze tauschen, endete das in einem Absturz:
+          "The specified child already has a parent". Fuer zwoelf Zeilen
+          spart das Wegschneiden ohnehin nichts. */}
+      <ScrollView testID="layout-list" removeClippedSubviews={false}>
         {visible.map((category, index) => (
           <LayoutRow
             key={category.id}
@@ -211,28 +217,35 @@ function LayoutRow({
    * Die gezogene Zeile folgt dem Finger, die uebersprungenen Zeilen weichen um
    * genau eine Zeilenhoehe aus. Erst dadurch sieht man vor dem Loslassen, wo
    * die Kategorie landen wird.
+   *
+   * Nach oben gehoben wird ueber "elevation" und nicht ueber "zIndex". zIndex
+   * laesst React Native die Kind-Views im nativen Container umsortieren, und
+   * genau daran ist die App abgestuertzt (siehe removeClippedSubviews oben).
+   * elevation hebt die Zeile in der Z-Achse, ohne die Reihenfolge anzufassen -
+   * und wirft nebenbei den Schatten, den Material fuer eine aufgenommene
+   * Zeile ohnehin vorsieht.
    */
   const rowStyle = useAnimatedStyle(() => {
     const active = activeIndex.value;
 
     if (active === -1) {
-      return { transform: [{ translateY: 0 }], zIndex: 0, opacity: 1 };
+      return { transform: [{ translateY: 0 }], elevation: 0, opacity: 1 };
     }
 
     if (active === index) {
-      return { transform: [{ translateY: offsetY.value }], zIndex: 2, opacity: 0.9 };
+      return { transform: [{ translateY: offsetY.value }], elevation: 8, opacity: 0.95 };
     }
 
     const target = dropIndex(active, offsetY.value, ROW_HEIGHT, count);
 
     if (active < index && index <= target) {
-      return { transform: [{ translateY: -ROW_HEIGHT }], zIndex: 0, opacity: 1 };
+      return { transform: [{ translateY: -ROW_HEIGHT }], elevation: 0, opacity: 1 };
     }
     if (target <= index && index < active) {
-      return { transform: [{ translateY: ROW_HEIGHT }], zIndex: 0, opacity: 1 };
+      return { transform: [{ translateY: ROW_HEIGHT }], elevation: 0, opacity: 1 };
     }
 
-    return { transform: [{ translateY: 0 }], zIndex: 0, opacity: 1 };
+    return { transform: [{ translateY: 0 }], elevation: 0, opacity: 1 };
   });
 
   return (

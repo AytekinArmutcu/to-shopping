@@ -31,8 +31,18 @@ export type CategoryOrderEntry = {
 };
 
 export type ListSection<T> = {
-  /** Kategorie-ID, oder CHECKED_SECTION_ID fuer die Erledigten. */
-  id: string;
+  /**
+   * Kategorie-ID, oder CHECKED_SECTION_ID fuer die Erledigten.
+   *
+   * Das Feld heisst "key" und nicht "id", weil SectionList genau diesen Namen
+   * liest. Fehlt er, nimmt die Liste die Position als Schluessel - und wenn
+   * dann zwei Abschnitte die Plaetze tauschen, behalten beide ihren
+   * Schluessel. React haelt sie fuer dieselben Abschnitte, haengt die Views
+   * um, und die App stuerzt ab ("The specified child already has a parent").
+   * Genau das ist auf dem Geraet passiert, als das Ladenlayout zurueckgesetzt
+   * wurde.
+   */
+  key: string;
   title: string;
   data: T[];
 };
@@ -139,7 +149,7 @@ export function buildListSections<T extends SectionItem>(
   for (const category of ordered) {
     const data = byCategory.get(category.id);
     if (data && data.length > 0) {
-      sections.push({ id: category.id, title: category.name, data: sortWithinSection(data) });
+      sections.push({ key: category.id, title: category.name, data: sortWithinSection(data) });
       byCategory.delete(category.id);
     }
   }
@@ -149,7 +159,7 @@ export function buildListSections<T extends SectionItem>(
   const orphans = byCategory.get(options.fallbackCategoryId);
   if (orphans && orphans.length > 0) {
     sections.push({
-      id: options.fallbackCategoryId,
+      key: options.fallbackCategoryId,
       title: options.fallbackTitle,
       data: sortWithinSection(orphans),
     });
@@ -157,7 +167,7 @@ export function buildListSections<T extends SectionItem>(
 
   if (checked.length > 0) {
     sections.push({
-      id: CHECKED_SECTION_ID,
+      key: CHECKED_SECTION_ID,
       title: options.checkedTitle,
       data: sortWithinSection(checked),
     });

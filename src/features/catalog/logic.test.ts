@@ -153,7 +153,7 @@ describe('buildCatalogSections', () => {
   it('sammelt Produkte ohne und mit unbekannter Kategorie am Ende', () => {
     const sections = buildCatalogSections(sortiment, kategorien, '', 'Ohne Kategorie');
     const last = sections[sections.length - 1];
-    expect(last?.id).toBe('');
+    expect(last?.key).toBe('');
     expect(last?.data.map((entry) => entry.name)).toEqual(['Dübel', 'Kerze']);
   });
 

@@ -118,8 +118,11 @@ appId: de.toshopping.app
     id: 'more-Einkauf'
 - tapOn:
     id: 'menu-duplicate'
+# Der Eintrag heisst "Einkauf (Kopie)". Maestro vergleicht den Text
+# vollstaendig, nicht als Teilzeichenkette - ohne die Platzhalter trifft
+# "Kopie" den Eintrag nicht.
 - extendedWaitUntil:
-    visible: 'Kopie'
+    visible: '.*Kopie.*'
     timeout: 15000
 
 # --- Start auf dem zuletzt genutzten Screen (FR-1.5) ---

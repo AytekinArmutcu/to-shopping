@@ -237,13 +237,13 @@ export function ListScreen({ listId }: Props) {
           renderSectionHeader={({ section }) => (
             <Text
               variant="titleSmall"
-              testID={`section-${section.id}`}
+              testID={`section-${section.key}`}
               style={[
                 styles.sectionHeader,
                 {
                   backgroundColor: theme.colors.background,
                   color:
-                    section.id === CHECKED_SECTION_ID
+                    section.key === CHECKED_SECTION_ID
                       ? theme.colors.onSurfaceVariant
                       : theme.colors.primary,
                 },

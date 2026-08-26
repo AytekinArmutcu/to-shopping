@@ -129,8 +129,13 @@ export type CatalogCategory = {
 };
 
 export type CatalogSection = {
-  /** Kategorie-ID, oder '' fuer den Sammelabschnitt ohne Kategorie. */
-  id: string;
+  /**
+   * Kategorie-ID, oder '' fuer den Sammelabschnitt ohne Kategorie.
+   *
+   * Heisst "key", weil SectionList diesen Namen liest - siehe die
+   * ausfuehrliche Begruendung an ListSection in features/lists/logic.ts.
+   */
+  key: string;
   title: string;
   data: CatalogProduct[];
 };
@@ -189,13 +194,13 @@ export function buildCatalogSections(
   for (const category of ordered) {
     const data = byCategory.get(category.id);
     if (data && data.length > 0) {
-      sections.push({ id: category.id, title: category.name, data: sortByName(data) });
+      sections.push({ key: category.id, title: category.name, data: sortByName(data) });
     }
   }
 
   const orphans = byCategory.get('');
   if (orphans && orphans.length > 0) {
-    sections.push({ id: '', title: fallbackTitle, data: sortByName(orphans) });
+    sections.push({ key: '', title: fallbackTitle, data: sortByName(orphans) });
   }
 
   return sections;

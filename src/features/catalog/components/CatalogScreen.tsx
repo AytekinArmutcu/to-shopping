@@ -135,10 +135,17 @@ export function CatalogScreen({ listId }: Props) {
               description={isOnList ? t('catalog.onList') : undefined}
               disabled={isOnList}
               onPress={() => toggle(item.id)}
+              // Eine gesperrte Zeile fasst Android in der Bedienungshilfe zu
+              // einem einzigen Knoten zusammen - ihre Beschriftung "Steht
+              // schon auf der Liste" wird dann nicht mehr vorgelesen. Deshalb
+              // muss die Ansage der Zeile selbst sie enthalten, sonst hoert
+              // man "auswaehlen" bei etwas, das nicht waehlbar ist.
               accessibilityLabel={
-                isSelected
-                  ? t('catalog.deselect', { name: item.name })
-                  : t('catalog.select', { name: item.name })
+                isOnList
+                  ? t('catalog.onListLabel', { name: item.name })
+                  : isSelected
+                    ? t('catalog.deselect', { name: item.name })
+                    : t('catalog.select', { name: item.name })
               }
               accessibilityState={{ disabled: isOnList, checked: isSelected || isOnList }}
               testID={`catalog-${item.name}`}
