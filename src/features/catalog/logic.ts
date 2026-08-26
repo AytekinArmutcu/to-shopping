@@ -236,3 +236,90 @@ export function idsToAdd(selectedIds: string[], productIdsOnList: string[]): str
 
   return result;
 }
+
+/* ------------------------------------------------------------------ *
+ * M7: Katalogpflege
+ * ------------------------------------------------------------------ */
+
+export type NamedProduct = {
+  id: string;
+  name: string;
+};
+
+/**
+ * Traegt ein anderes Produkt diesen Namen schon (FR-4.2)?
+ *
+ * Verglichen wird ohne Ruecksicht auf Gross- und Kleinschreibung, weil der
+ * eindeutige Index in der Datenbank es genauso haelt (siehe schema.ts). Ohne
+ * diese Pruefung liefe der Nutzer in einen Datenbankfehler statt in eine
+ * verstaendliche Meldung.
+ *
+ * "ignoreId" ist das Produkt, das gerade bearbeitet wird - es darf seinen
+ * eigenen Namen behalten, sonst waere jede Aenderung der Kategorie blockiert.
+ */
+export function hasNameConflict(
+  name: string,
+  products: NamedProduct[],
+  ignoreId?: string,
+): boolean {
+  const needle = cleanProductName(name).toLowerCase();
+
+  if (needle.length === 0) {
+    return false;
+  }
+
+  return products.some(
+    (product) => product.id !== ignoreId && product.name.toLowerCase() === needle,
+  );
+}
+
+export type ResettableProduct = {
+  id: string;
+  name: string;
+};
+
+export type CatalogResetPlan<T> = {
+  /** Wird auf den Auslieferungszustand zurueckgesetzt oder neu angelegt. */
+  restore: T[];
+  /**
+   * Bleibt aussen vor, weil ein anderes Produkt diesen Namen traegt. Ohne die
+   * Trennung liefe das Zuruecksetzen in den eindeutigen Index und schluege
+   * ganz fehl - eine einzelne Namenskollision darf nicht den ganzen Katalog
+   * blockieren.
+   */
+  blocked: T[];
+};
+
+/**
+ * Plant das Zuruecksetzen des Katalogs (FR-4.4, T-7.4).
+ *
+ * Mitgelieferte Produkte kehren in den Auslieferungszustand zurueck, geloeschte
+ * kommen wieder. Eigene Produkte werden nicht angefasst - sie sind die Arbeit
+ * des Nutzers, und "zuruecksetzen" bezieht sich auf das, was die App
+ * mitgebracht hat (ADR-031).
+ *
+ * Reine Funktion ohne Datenbankzugriff (ADR-008).
+ */
+export function planCatalogReset<T extends ResettableProduct>(
+  seed: T[],
+  existing: ResettableProduct[],
+): CatalogResetPlan<T> {
+  // Wer haelt welchen Namen? Nur fremde Halter sind ein Hindernis; traegt das
+  // mitgelieferte Produkt seinen Namen selbst, ist alles in Ordnung.
+  const holderByName = new Map(existing.map((product) => [product.name.toLowerCase(), product.id]));
+
+  const restore: T[] = [];
+  const blocked: T[] = [];
+
+  for (const product of seed) {
+    const holder = holderByName.get(product.name.toLowerCase());
+
+    if (holder === undefined || holder === product.id) {
+      restore.push(product);
+    } else {
+      blocked.push(product);
+    }
+  }
+
+  return { restore, blocked };
+}

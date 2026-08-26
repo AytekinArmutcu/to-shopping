@@ -155,6 +155,36 @@
     "deleteTitle": "„{{name}}“ löschen?",
     "deleteHint": "Die Liste und alle ihre Artikel werden entfernt. Das lässt sich nicht rückgängig machen.",
     "deleteConfirm": "Löschen",
-    "deleted": "„{{name}}“ gelöscht"
+    "deleted": "„{{name}}“ gelöscht",
+    "products": "Produkte verwalten"
+  },
+  "products": {
+    "title": "Produkte",
+    "back": "Zurück",
+    "search": "Produkt suchen",
+    "empty": "Kein Produkt gefunden",
+    "emptyHint": "Tippe weniger Buchstaben, oder lege das Produkt neu an.",
+    "more": "Weitere Aktionen für {{name}}",
+    "create": "Neues Produkt",
+    "createTitle": "Neues Produkt",
+    "createConfirm": "Anlegen",
+    "editTitle": "Produkt bearbeiten",
+    "editConfirm": "Speichern",
+    "edit": "Bearbeiten",
+    "nameLabel": "Name",
+    "namePlaceholder": "z. B. Hafermilch",
+    "categoryLabel": "Kategorie",
+    "duplicate": "Es gibt schon ein Produkt mit diesem Namen",
+    "delete": "Löschen",
+    "deleteTitle": "„{{name}}“ löschen?",
+    "deleteHint": "Das Produkt verschwindet aus dem Katalog. Artikel, die schon auf einer Liste stehen, bleiben erhalten.",
+    "deleteConfirm": "Löschen",
+    "deleted": "„{{name}}“ gelöscht",
+    "reset": "Katalog zurücksetzen",
+    "resetTitle": "Katalog zurücksetzen?",
+    "resetHint": "Die mitgelieferten Produkte kehren in den Auslieferungszustand zurück, gelöschte kommen wieder. Deine eigenen Produkte bleiben unangetastet.",
+    "resetConfirm": "Zurücksetzen",
+    "resetDone": "{{count}} mitgelieferte Produkte wiederhergestellt",
+    "resetBlocked": "{{count}} übersprungen – ein anderes Produkt trägt den Namen"
   }
 }

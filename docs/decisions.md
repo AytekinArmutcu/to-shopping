@@ -593,6 +593,26 @@ Zwei Ausdrucksformen derselben Route sind der zweite Preis: Der Router bekommt s
 
 ---
 
+## ADR-031 – Mitgelieferte Produkte sind veraenderbar; die Sicherung heisst „Zuruecksetzen"
+
+**Datum:** 2026-08-26 · **Status:** Angenommen
+
+**Kontext**
+Die App liefert 200 Produkte mit. FR-4.2 verlangt, dass Produkte angelegt, umbenannt, umsortiert und geloescht werden koennen – „auch mitgelieferte". Damit stellt sich die Frage, was passiert, wenn jemand den Startkatalog zerlegt.
+
+**Entscheidung**
+Mitgelieferte Produkte sind genauso veraenderbar wie eigene. Der Schutz dagegen ist kein Verbot, sondern „Katalog zuruecksetzen" (FR-4.4): Mitgeliefertes kehrt in den Auslieferungszustand zurueck, Geloeschtes kommt wieder, **eigene Produkte bleiben unangetastet**.
+
+**Verworfene Alternativen**
+- *Mitgelieferte Produkte sperren.* Waere nach zwei Wochen im Weg: Wer nie Quark kauft, aber immer Skyr, soll das aendern duerfen. Ein Katalog, der sich nicht an den Nutzer anpasst, wird zum Ballast – und die App wirbt gerade damit, sich zu merken, was **dieser** Nutzer kauft.
+- *Zuruecksetzen loescht alles und saet neu.* Einfacher zu bauen, aber es wuerde die Arbeit des Nutzers vernichten. „Zuruecksetzen" bezieht sich auf das, was die App mitgebracht hat, nicht auf das, was der Nutzer angelegt hat.
+- *Kein Zuruecksetzen anbieten.* Dann waere jede Loeschung endgueltig, und die Freiheit aus dem ersten Punkt waere eine Falle.
+
+**Konsequenz**
+Das Kennzeichen `is_builtin` bleibt auch nach einer Umbenennung erhalten – nur dadurch findet das Zuruecksetzen das Produkt spaeter wieder. Der Preis ist ein Sonderfall: Traegt ein **eigenes** Produkt inzwischen den Namen eines mitgelieferten, laesst sich dieses eine nicht wiederherstellen, weil Namen eindeutig sein muessen. Es wird uebersprungen und gezaehlt, statt das ganze Zuruecksetzen scheitern zu lassen; die Meldung nennt die Zahl. Welche Zeilen betroffen sind, entscheidet die reine Funktion `planCatalogReset` – damit ist der Sonderfall testbar, ohne dass ein Katalog dafuer zerlegt werden muss.
+
+---
+
 ## Offene Entscheidungen (bewusst vertagt)
 
 | Thema | Wann zu entscheiden | Was dann abzuwägen ist |

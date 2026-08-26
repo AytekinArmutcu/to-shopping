@@ -2,7 +2,9 @@ import {
   buildCatalogSections,
   cleanProductName,
   findSuggestions,
+  hasNameConflict,
   idsToAdd,
+  planCatalogReset,
   type CatalogCategory,
   type CatalogProduct,
 } from './logic';
@@ -212,5 +214,80 @@ describe('idsToAdd', () => {
 
   it('liefert nichts bei leerer Auswahl', () => {
     expect(idsToAdd([], ['p-a'])).toEqual([]);
+  });
+});
+
+describe('hasNameConflict', () => {
+  const vorhanden = [
+    { id: 'p-milch', name: 'Milch' },
+    { id: 'p-brot', name: 'Brot' },
+  ];
+
+  it('erkennt einen vergebenen Namen', () => {
+    expect(hasNameConflict('Milch', vorhanden)).toBe(true);
+  });
+
+  it('achtet nicht auf Gross- und Kleinschreibung', () => {
+    expect(hasNameConflict('milch', vorhanden)).toBe(true);
+    expect(hasNameConflict('MILCH', vorhanden)).toBe(true);
+  });
+
+  it('uebersieht Leerzeichen am Rand', () => {
+    expect(hasNameConflict('  Milch  ', vorhanden)).toBe(true);
+  });
+
+  it('laesst ein Produkt seinen eigenen Namen behalten', () => {
+    expect(hasNameConflict('Milch', vorhanden, 'p-milch')).toBe(false);
+  });
+
+  it('meldet freie Namen als frei', () => {
+    expect(hasNameConflict('Hafermilch', vorhanden)).toBe(false);
+  });
+
+  it('haelt einen leeren Namen nicht fuer einen Konflikt', () => {
+    expect(hasNameConflict('', vorhanden)).toBe(false);
+    expect(hasNameConflict('   ', vorhanden)).toBe(false);
+  });
+});
+
+describe('planCatalogReset', () => {
+  const seed = [
+    { id: 'p-milch', name: 'Milch' },
+    { id: 'p-brot', name: 'Brot' },
+  ];
+
+  it('stellt alles wieder her, wenn der Katalog leer ist', () => {
+    const plan = planCatalogReset(seed, []);
+    expect(plan.restore).toHaveLength(2);
+    expect(plan.blocked).toEqual([]);
+  });
+
+  it('stellt ein Produkt wieder her, das seinen eigenen Namen noch traegt', () => {
+    const plan = planCatalogReset(seed, [{ id: 'p-milch', name: 'Milch' }]);
+    expect(plan.restore.map((entry) => entry.id)).toEqual(['p-milch', 'p-brot']);
+  });
+
+  it('stellt ein umbenanntes mitgeliefertes Produkt zurueck', () => {
+    const plan = planCatalogReset(seed, [{ id: 'p-milch', name: 'Vollmilch' }]);
+    expect(plan.restore.map((entry) => entry.id)).toContain('p-milch');
+    expect(plan.blocked).toEqual([]);
+  });
+
+  it('laesst ein Produkt aus, dessen Name einem anderen gehoert', () => {
+    const plan = planCatalogReset(seed, [{ id: 'p-eigen', name: 'Milch' }]);
+    expect(plan.blocked.map((entry) => entry.id)).toEqual(['p-milch']);
+    expect(plan.restore.map((entry) => entry.id)).toEqual(['p-brot']);
+  });
+
+  it('vergleicht Namen ohne Gross- und Kleinschreibung', () => {
+    const plan = planCatalogReset(seed, [{ id: 'p-eigen', name: 'milch' }]);
+    expect(plan.blocked.map((entry) => entry.id)).toEqual(['p-milch']);
+  });
+
+  it('kommt mit leerem Startkatalog zurecht', () => {
+    expect(planCatalogReset([], [{ id: 'p-eigen', name: 'Kerze' }])).toEqual({
+      restore: [],
+      blocked: [],
+    });
   });
 });

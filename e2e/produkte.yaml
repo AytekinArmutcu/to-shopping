@@ -1,0 +1,193 @@
+# E2E fuer M7: Katalogpflege.
+#
+# Produkt loeschen -> der Listeneintrag bleibt (ADR-007) -> Katalog
+# zuruecksetzen bringt es zurueck -> eigenes Produkt anlegen, umbenennen,
+# Kategorie aendern -> doppelter Name wird abgelehnt
+# (FR-4.2, FR-4.3, FR-4.4).
+#
+# Laeuft gegen einen Release-Build (ADR-025): npm run android:release
+appId: de.toshopping.app
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: 'add-input'
+    timeout: 30000
+
+# Ein mitgeliefertes Produkt auf die Liste setzen
+- tapOn:
+    id: 'add-input'
+- inputText: 'Hafermilch'
+- extendedWaitUntil:
+    visible:
+      id: 'suggestion-Hafermilch'
+    timeout: 30000
+- tapOn:
+    id: 'suggestion-Hafermilch'
+- extendedWaitUntil:
+    visible:
+      id: 'item-Hafermilch'
+    timeout: 30000
+- hideKeyboard
+
+# --- Produkt loeschen (T-7.3) ---
+- tapOn:
+    id: 'back-to-lists'
+- extendedWaitUntil:
+    visible:
+      id: 'open-products'
+    timeout: 15000
+- tapOn:
+    id: 'open-products'
+- extendedWaitUntil:
+    visible:
+      id: 'products-search'
+    timeout: 15000
+- tapOn:
+    id: 'products-search'
+- inputText: 'Hafermilch'
+- hideKeyboard
+- extendedWaitUntil:
+    visible:
+      id: 'product-Hafermilch'
+    timeout: 15000
+- tapOn:
+    id: 'product-more-Hafermilch'
+- tapOn:
+    id: 'product-delete'
+- extendedWaitUntil:
+    visible:
+      id: 'product-delete-confirm'
+    timeout: 15000
+- tapOn:
+    id: 'product-delete-confirm'
+- extendedWaitUntil:
+    notVisible:
+      id: 'product-Hafermilch'
+    timeout: 15000
+
+# Der Listeneintrag steht weiter da - er traegt den Namen als Kopie (ADR-007).
+# Das ist die Zusage, die im Laden zaehlt: Aufraeumen im Katalog nimmt
+# niemandem den Zettel weg.
+- back
+- extendedWaitUntil:
+    visible:
+      id: 'list-Einkauf'
+    timeout: 15000
+- tapOn:
+    id: 'list-Einkauf'
+- extendedWaitUntil:
+    visible:
+      id: 'item-Hafermilch'
+    timeout: 15000
+
+# --- Katalog zuruecksetzen (T-7.4) ---
+- tapOn:
+    id: 'back-to-lists'
+- extendedWaitUntil:
+    visible:
+      id: 'open-products'
+    timeout: 15000
+- tapOn:
+    id: 'open-products'
+- extendedWaitUntil:
+    visible:
+      id: 'catalog-reset'
+    timeout: 15000
+- tapOn:
+    id: 'catalog-reset'
+- extendedWaitUntil:
+    visible:
+      id: 'catalog-reset-confirm'
+    timeout: 15000
+- tapOn:
+    id: 'catalog-reset-confirm'
+
+# Das geloeschte mitgelieferte Produkt ist zurueck
+- tapOn:
+    id: 'products-search'
+- inputText: 'Hafermilch'
+- hideKeyboard
+- extendedWaitUntil:
+    visible:
+      id: 'product-Hafermilch'
+    timeout: 15000
+
+# --- Eigenes Produkt anlegen (T-7.2) ---
+# Das Suchfeld leeren, sonst uebernimmt der Entwurf den Suchtext als Namen.
+- tapOn:
+    id: 'products-search'
+- eraseText: 20
+- hideKeyboard
+- tapOn:
+    id: 'product-create'
+- extendedWaitUntil:
+    visible:
+      id: 'product-name'
+    timeout: 15000
+- tapOn:
+    id: 'product-name'
+- inputText: 'Kokoswasser'
+- hideKeyboard
+- tapOn:
+    id: 'product-save'
+- extendedWaitUntil:
+    visible:
+      id: 'products-search'
+    timeout: 15000
+
+# --- Umbenennen und Kategorie aendern ---
+- tapOn:
+    id: 'products-search'
+- inputText: 'Kokoswasser'
+- hideKeyboard
+- extendedWaitUntil:
+    visible:
+      id: 'product-Kokoswasser'
+    timeout: 15000
+- tapOn:
+    id: 'product-Kokoswasser'
+- extendedWaitUntil:
+    visible:
+      id: 'product-name'
+    timeout: 15000
+- tapOn:
+    id: 'product-name'
+- eraseText: 20
+- inputText: 'Kokosdrink'
+- hideKeyboard
+- tapOn:
+    id: 'category-Kühlregal'
+- tapOn:
+    id: 'product-save'
+
+# Der neue Name steht unter der neuen Kategorie
+- tapOn:
+    id: 'products-search'
+- eraseText: 20
+- inputText: 'Kokosdrink'
+- hideKeyboard
+- extendedWaitUntil:
+    visible:
+      id: 'product-Kokosdrink'
+    timeout: 15000
+- assertVisible: 'Kühlregal'
+
+# --- Doppelter Name wird abgelehnt (T-7.2) ---
+- tapOn:
+    id: 'product-Kokosdrink'
+- extendedWaitUntil:
+    visible:
+      id: 'product-name'
+    timeout: 15000
+- tapOn:
+    id: 'product-name'
+- eraseText: 20
+- inputText: 'Milch'
+- hideKeyboard
+# Der Knopf sperrt sich, solange der Name vergeben ist - der Hinweis steht
+# darueber im Feld.
+- assertVisible:
+    id: 'product-save'
+    enabled: false

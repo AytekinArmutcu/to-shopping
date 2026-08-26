@@ -302,8 +302,9 @@ To-Shopping/
 │   ├── liste.tsx                 # Eine Liste (Haupt-Screen)      ?listId=
 │   ├── katalog.tsx               # Katalog mit Mehrfachauswahl    ?listId=
 │   ├── ladenlayout.tsx           # Kategorie-Reihenfolge          ?listId=
+│   ├── produkte.tsx              # Katalogpflege
 │   ├── vorlagen.tsx
-│   ├── einstellungen.tsx         # Katalogpflege, Sicherung, Diagnose
+│   ├── einstellungen.tsx         # Sicherung, Diagnose
 │   └── import.tsx                # Ziel des Teilen-Intents, Vorschau
 │
 │   Routen sind flach und tragen die Listen-ID als Parameter statt im

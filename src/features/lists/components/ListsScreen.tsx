@@ -129,6 +129,15 @@ export function ListsScreen() {
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Appbar.Header elevated>
         <Appbar.Content title={t('lists.title')} />
+        {/* Der Katalog haengt an der Uebersicht und nicht an einer einzelnen
+            Liste: Er gilt fuer alle. Eine eigene Einstellungsseite bekommt er
+            in M9, wenn Sicherung und Diagnose dazukommen. */}
+        <Appbar.Action
+          icon="tag-multiple-outline"
+          onPress={() => router.push('/produkte')}
+          accessibilityLabel={t('lists.products')}
+          testID="open-products"
+        />
       </Appbar.Header>
 
       <FlatList
