@@ -1,8 +1,26 @@
-import { and, asc, eq } from 'drizzle-orm';
+import { and, asc, eq, getTableColumns } from 'drizzle-orm';
 
+import { getAppState, setAppState } from '@/db/appState';
 import { db } from '@/db/client';
-import { categories, listCategoryOrder, listItems, lists, products } from '@/db/schema';
+import migrations from '@/db/migrations/migrations';
+import {
+  categories,
+  listCategoryOrder,
+  listItems,
+  lists,
+  products,
+  purchaseHistory,
+  templateItems,
+  templates,
+} from '@/db/schema';
 
+import {
+  BACKUP_TABLES,
+  buildBackup,
+  type BackupData,
+  type BackupFile,
+  type BackupTable,
+} from './backup';
 import { buildSharedList, planImport, type SharedItem, type SharedListFile } from './logic';
 
 /**
@@ -150,4 +168,117 @@ export async function importSharedList(
     itemCount: plan.items.length,
     newProductCount: plan.newProducts.length,
   };
+}
+
+/* ------------------------------------------------------------------ *
+ * M9: Vollsicherung (FR-6.4, FR-6.5)
+ * ------------------------------------------------------------------ */
+
+/**
+ * Der Datenbankstand, wie ihn die Migrationen zaehlen.
+ *
+ * Aus dem Journal gelesen statt als Zahl gepflegt: Eine handgepflegte Konstante
+ * waere genau die Sorte Angabe, die man beim naechsten Schemawechsel vergisst.
+ */
+export function currentSchemaVersion(): number {
+  return migrations.journal.entries.length;
+}
+
+const BACKUP_SOURCES = {
+  categories,
+  products,
+  lists,
+  listCategoryOrder,
+  listItems,
+  templates,
+  templateItems,
+  purchaseHistory,
+} as const;
+
+/** Reihenfolge zum Loeschen: erst das, was auf anderes zeigt. */
+const DELETE_ORDER = [
+  'purchaseHistory',
+  'templateItems',
+  'templates',
+  'listItems',
+  'listCategoryOrder',
+  'lists',
+  'products',
+  'categories',
+] as const satisfies readonly BackupTable[];
+
+/** Liest den gesamten Datenbestand fuer die Vollsicherung (FR-6.4). */
+export async function collectBackup(): Promise<BackupFile> {
+  const data = {} as BackupData;
+
+  for (const table of BACKUP_TABLES) {
+    data[table] = await db.select().from(BACKUP_SOURCES[table]);
+  }
+
+  return buildBackup(data, currentSchemaVersion());
+}
+
+/**
+ * Spielt eine Vollsicherung zurueck (FR-6.5).
+ *
+ * **Ersetzt** den Bestand, ergaenzt ihn nicht (architecture.md 5.2). Ergaenzen
+ * waere unmoeglich: Die Sicherung enthaelt echte IDs, und dieselbe Liste zweimal
+ * mit derselben Kennung gibt es nicht. Deshalb steht davor eine ausdrueckliche
+ * Warnung - das ist der einzige Vorgang in dieser App, der Daten des Nutzers
+ * unwiederbringlich loescht.
+ *
+ * Alles in einer Transaktion (CLAUDE.md). Hier ist sie nicht Kuer, sondern
+ * Pflicht: Ein Abbruch zwischen Loeschen und Schreiben liesse eine leere App
+ * zurueck, und die Sicherung ist dann womoeglich die einzige Kopie.
+ *
+ * Nur bekannte Spalten werden uebernommen. Eine Sicherung aus einem aelteren
+ * Stand hat weniger, eine handbearbeitete koennte mehr haben - beides darf den
+ * Vorgang nicht sprengen.
+ */
+export async function restoreBackup(file: BackupFile): Promise<number> {
+  let written = 0;
+
+  await db.transaction(async (tx) => {
+    for (const table of DELETE_ORDER) {
+      await tx.delete(BACKUP_SOURCES[table]);
+    }
+
+    for (const table of BACKUP_TABLES) {
+      const rows = pickKnownColumns(BACKUP_SOURCES[table], file.data[table]);
+
+      if (rows.length > 0) {
+        // Der Typ der Zeilen steht erst zur Laufzeit fest: Sie stammen aus
+        // einer Datei, und welche Spalten es gibt, entscheidet die Tabelle.
+        // Deshalb hier ein Cast statt einer Typangabe, die nur so tut.
+        await tx.insert(BACKUP_SOURCES[table]).values(rows as never);
+        written += rows.length;
+      }
+    }
+  });
+
+  return written;
+}
+
+function pickKnownColumns(
+  table: (typeof BACKUP_SOURCES)[BackupTable],
+  rows: Record<string, unknown>[],
+): Record<string, unknown>[] {
+  const keys = Object.keys(getTableColumns(table));
+
+  return rows.map((row) =>
+    Object.fromEntries(keys.filter((key) => key in row).map((key) => [key, row[key]])),
+  );
+}
+
+export const LAST_BACKUP_KEY = 'last_backup_at';
+export const BACKUP_REMINDER_DISMISSED_KEY = 'backup_reminder_dismissed_at';
+
+export async function getTimestamp(key: string): Promise<number | null> {
+  const stored = await getAppState(key);
+  const parsed = stored === null ? Number.NaN : Number(stored);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+export async function setTimestamp(key: string, at: number = Date.now()): Promise<void> {
+  await setAppState(key, String(at));
 }

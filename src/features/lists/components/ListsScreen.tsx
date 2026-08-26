@@ -1,10 +1,11 @@
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 import { router } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { FlatList, StyleSheet, View } from 'react-native';
 import {
   Appbar,
+  Banner,
   Button,
   Dialog,
   FAB,
@@ -18,6 +19,14 @@ import {
   useTheme,
 } from 'react-native-paper';
 
+import { ensureFirstStart } from '@/db/appState';
+import { needsBackupReminder } from '@/features/transfer/backup';
+import {
+  BACKUP_REMINDER_DISMISSED_KEY,
+  LAST_BACKUP_KEY,
+  getTimestamp,
+  setTimestamp,
+} from '@/features/transfer/repository';
 import { useKeyboardHeight } from '@/lib/useKeyboardHeight';
 
 import { buildListOverview, cleanListName, listRoute, MAX_LIST_NAME_LENGTH } from '../logic';
@@ -56,11 +65,38 @@ export function ListsScreen() {
   const [renameFor, setRenameFor] = useState<{ id: string; name: string } | null>(null);
   const [deleteFor, setDeleteFor] = useState<{ id: string; name: string } | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+  const [appMenuOpen, setAppMenuOpen] = useState(false);
+  const [reminder, setReminder] = useState(false);
 
   const rows = useMemo(
     () => buildListOverview(listRows.data ?? [], countRows.data ?? []),
     [listRows.data, countRows.data],
   );
+
+  // Erinnerung an die Sicherung (FR-6.6). Die Entscheidung selbst trifft eine
+  // reine Funktion; hier werden nur die drei Zeitpunkte geholt.
+  useEffect(() => {
+    let cancelled = false;
+
+    void Promise.all([
+      getTimestamp(LAST_BACKUP_KEY),
+      getTimestamp(BACKUP_REMINDER_DISMISSED_KEY),
+      ensureFirstStart(),
+    ]).then(([lastBackupAt, dismissedAt, firstStartAt]) => {
+      if (!cancelled) {
+        setReminder(needsBackupReminder(lastBackupAt, dismissedAt, firstStartAt, Date.now()));
+      }
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const dismissReminder = useCallback(() => {
+    setReminder(false);
+    void setTimestamp(BACKUP_REMINDER_DISMISSED_KEY);
+  }, []);
 
   // Die Route wird zweimal ausgedrueckt: als getippte Angabe fuer den Router
   // und als Zeichenkette fuer das Gedaechtnis. Nur so bleibt die Pruefung der
@@ -138,13 +174,73 @@ export function ListsScreen() {
           accessibilityLabel={t('lists.import')}
           testID="open-import"
         />
-        <Appbar.Action
-          icon="tag-multiple-outline"
-          onPress={() => router.push('/produkte')}
-          accessibilityLabel={t('lists.products')}
-          testID="open-products"
-        />
+        {/* Ein sichtbarer Knopf, der Rest im Menue: Empfangen passiert
+            gelegentlich, Katalogpflege und Sicherung selten. Vier Symbole
+            nebeneinander waeren fuer die Zielgruppe vier Raetsel. */}
+        <Menu
+          visible={appMenuOpen}
+          onDismiss={() => setAppMenuOpen(false)}
+          anchor={
+            <Appbar.Action
+              icon="dots-vertical"
+              onPress={() => setAppMenuOpen(true)}
+              accessibilityLabel={t('lists.menu')}
+              testID="lists-menu"
+            />
+          }
+        >
+          <Menu.Item
+            leadingIcon="tag-multiple-outline"
+            title={t('lists.products')}
+            testID="open-products"
+            onPress={() => {
+              setAppMenuOpen(false);
+              router.push('/produkte');
+            }}
+          />
+          <Menu.Item
+            leadingIcon="content-save-outline"
+            title={t('lists.backup')}
+            testID="open-backup"
+            onPress={() => {
+              setAppMenuOpen(false);
+              router.push('/sicherung');
+            }}
+          />
+          <Menu.Item
+            leadingIcon="stethoscope"
+            title={t('lists.diagnostics')}
+            testID="open-diagnostics"
+            onPress={() => {
+              setAppMenuOpen(false);
+              router.push('/diagnose');
+            }}
+          />
+        </Menu>
       </Appbar.Header>
+
+      {/* Der Streifen ist die Gegenmassnahme zu Risiko R3: Ohne Cloud-Sicherung
+          bedeutet ein verlorenes Telefon den Verlust aller Daten. */}
+      <Banner
+        visible={reminder}
+        icon="cloud-off-outline"
+        testID="backup-reminder"
+        actions={[
+          {
+            label: t('backup.reminderDismiss'),
+            onPress: dismissReminder,
+          },
+          {
+            label: t('backup.reminderAction'),
+            onPress: () => {
+              dismissReminder();
+              router.push('/sicherung');
+            },
+          },
+        ]}
+      >
+        {t('backup.reminder')}
+      </Banner>
 
       <FlatList
         data={rows}

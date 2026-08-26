@@ -1,0 +1,80 @@
+# E2E fuer M9: Sicherung und Diagnose.
+#
+# Sicherung erstellen -> der Zeitpunkt wird festgehalten -> Diagnose ist
+# erreichbar und leer (FR-6.4, FR-6.6, FR-8.2).
+#
+# Nicht automatisiert: das Zurueckspielen. Es braucht den Dateiauswaehler des
+# Systems und eine echte Sicherungsdatei - beides gehoert Android und der
+# manuellen Abnahme. Der gefaehrlichste Vorgang der App wird also von Hand
+# geprueft, und das ist hier die richtige Reihenfolge.
+#
+# Laeuft gegen einen Release-Build (ADR-025): npm run android:release
+appId: de.toshopping.app
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: 'add-input'
+    timeout: 30000
+- tapOn:
+    id: 'back-to-lists'
+- extendedWaitUntil:
+    visible:
+      id: 'lists-menu'
+    timeout: 15000
+
+# --- Sicherung (FR-6.4) ---
+- tapOn:
+    id: 'lists-menu'
+- tapOn:
+    id: 'open-backup'
+- extendedWaitUntil:
+    visible:
+      id: 'backup-screen'
+    timeout: 15000
+
+# Frisch installiert wurde noch nie gesichert - genau der Zustand, den der
+# Hinweisstreifen nach vierzehn Tagen meldet.
+- assertVisible: 'Noch nie gesichert'
+
+- tapOn:
+    id: 'backup-export'
+# Das Teilen-Menue gehoert dem System; hier wird es nur wieder geschlossen.
+# Erst danach steht fest, dass die Datei fertig ist.
+- back
+- extendedWaitUntil:
+    visible: 'Zuletzt gesichert.*'
+    timeout: 30000
+
+# --- Diagnose (FR-8.2) ---
+- back
+- extendedWaitUntil:
+    visible:
+      id: 'lists-menu'
+    timeout: 15000
+- tapOn:
+    id: 'lists-menu'
+- tapOn:
+    id: 'open-diagnostics'
+- extendedWaitUntil:
+    visible:
+      id: 'diagnostics-screen'
+    timeout: 15000
+
+# Ohne Absturz ist der Speicher leer - das ist der Normalfall und wird auch so
+# benannt, statt einen leeren Bildschirm zu zeigen.
+- assertVisible:
+    id: 'diagnostics-empty'
+# Der Datenschutzhinweis steht oben, nicht im Kleingedruckten.
+- assertVisible: '.*keine Einkaufslisten.*'
+# Nichts zu leeren, also ist der Knopf gesperrt.
+- assertVisible:
+    id: 'diagnostics-clear'
+    enabled: false
+
+- back
+- extendedWaitUntil:
+    visible:
+      id: 'lists'
+    timeout: 15000

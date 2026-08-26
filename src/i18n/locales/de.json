@@ -159,7 +159,10 @@
     "deleteConfirm": "Löschen",
     "deleted": "„{{name}}“ gelöscht",
     "products": "Produkte verwalten",
-    "import": "Liste empfangen"
+    "import": "Liste empfangen",
+    "menu": "Weitere Aktionen",
+    "backup": "Sicherung",
+    "diagnostics": "Diagnose"
   },
   "products": {
     "title": "Produkte",
@@ -217,5 +220,53 @@
     "errorForeignFormat": "Diese Datei stammt nicht von To-Shopping.",
     "errorTooNew": "Diese Datei stammt aus einer neueren Version der App. Aktualisiere To-Shopping und versuche es erneut.",
     "errorNoAccess": "Auf die Datei ist kein Zugriff mehr möglich. Öffne sie noch einmal aus der Nachricht."
+  },
+  "backup": {
+    "title": "Sicherung",
+    "back": "Zurück",
+    "exportTitle": "Sicherung erstellen",
+    "exportHint": "Alle Listen, Produkte, Kategorien und die Kaufhistorie werden in eine Datei geschrieben. Wohin sie geht, entscheidest du im Teilen-Menü – zum Beispiel in deine eigene Cloud oder per E-Mail an dich selbst.",
+    "export": "Sicherung erstellen",
+    "exportDone": "Sicherung erstellt ({{count}} Einträge)",
+    "fileName": "To-Shopping Sicherung",
+    "dialogTitle": "Sicherung ablegen",
+    "never": "Noch nie gesichert",
+    "lastAt": "Zuletzt gesichert am {{date}}",
+    "restoreTitle": "Sicherung zurückspielen",
+    "restoreHint": "Achtung: Dabei wird alles ersetzt, was jetzt in der App steht – alle Listen, alle Produkte, die ganze Historie. Das lässt sich nicht rückgängig machen.",
+    "restore": "Datei auswählen",
+    "restoreConfirmTitle": "Alles ersetzen?",
+    "restoreConfirmHint": "Die Sicherung enthält {{count}} Einträge vom {{date}}. Dein jetziger Datenbestand wird vollständig gelöscht und durch diesen ersetzt.",
+    "restoreConfirm": "Ersetzen",
+    "restoreDone": "{{count}} Einträge zurückgespielt",
+    "errorTitle": "Die Sicherung lässt sich nicht lesen",
+    "errorUnreadable": "Der Inhalt ist beschädigt oder unvollständig.",
+    "errorForeignFormat": "Diese Datei ist keine To-Shopping-Sicherung.",
+    "errorTooNew": "Diese Sicherung stammt aus einer neueren Version der App.",
+    "errorNewerSchema": "Diese Sicherung stammt aus einer neueren Datenbankfassung. Aktualisiere To-Shopping und versuche es erneut.",
+    "unavailable": "Auf diesem Gerät gibt es kein Teilen-Menü",
+    "reminder": "Deine Daten liegen nur auf diesem Gerät. Seit über 14 Tagen gibt es keine Sicherung.",
+    "reminderAction": "Jetzt sichern",
+    "reminderDismiss": "Später"
+  },
+  "diagnostics": {
+    "title": "Diagnose",
+    "back": "Zurück",
+    "empty": "Keine Fehler gespeichert",
+    "emptyHint": "Das ist der Normalfall. Stürzt die App ab, landet der technische Bericht hier – und bleibt auf dem Gerät.",
+    "count": "{{count}} gespeicherte Fehler",
+    "privacy": "Die Berichte enthalten keine Einkaufslisten und keine Produktnamen – nur technische Angaben zur App und zum Gerät. Sie werden nirgendwohin gesendet, solange du es nicht selbst tust.",
+    "send": "An den Entwickler senden",
+    "sendTitle": "Fehlerbericht senden",
+    "clear": "Fehlerspeicher leeren",
+    "cleared": "Fehlerspeicher geleert",
+    "reportHeader": "Fehlerbericht To-Shopping",
+    "reportEmpty": "Keine Fehler gespeichert.",
+    "reportPrivacy": "Dieser Bericht enthält keine Einkaufslisten und keine Produktnamen."
+  },
+  "crash": {
+    "title": "Da ist etwas schiefgegangen",
+    "hint": "Die App hat einen Fehler gefunden und ihn auf dem Gerät gespeichert. Deine Listen sind nicht betroffen.",
+    "restart": "Erneut versuchen"
   }
 }

@@ -34,10 +34,14 @@ appId: de.toshopping.app
 # --- Produkt loeschen (T-7.3) ---
 - tapOn:
     id: 'back-to-lists'
+# Katalogpflege liegt seit M9 im Menue der Uebersicht - vier Symbole
+# nebeneinander waeren fuer die Zielgruppe vier Raetsel gewesen.
 - extendedWaitUntil:
     visible:
-      id: 'open-products'
+      id: 'lists-menu'
     timeout: 15000
+- tapOn:
+    id: 'lists-menu'
 - tapOn:
     id: 'open-products'
 - extendedWaitUntil:
@@ -85,10 +89,14 @@ appId: de.toshopping.app
 # --- Katalog zuruecksetzen (T-7.4) ---
 - tapOn:
     id: 'back-to-lists'
+# Katalogpflege liegt seit M9 im Menue der Uebersicht - vier Symbole
+# nebeneinander waeren fuer die Zielgruppe vier Raetsel gewesen.
 - extendedWaitUntil:
     visible:
-      id: 'open-products'
+      id: 'lists-menu'
     timeout: 15000
+- tapOn:
+    id: 'lists-menu'
 - tapOn:
     id: 'open-products'
 - extendedWaitUntil:

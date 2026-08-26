@@ -10,7 +10,9 @@ import type { IconProps } from 'react-native-paper/lib/typescript/components/Mat
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { StartupScreen } from '@/components/StartupScreen';
+import { ErrorBoundary } from '@/features/diagnostics/components/ErrorBoundary';
 import { IncomingFileWatcher } from '@/features/transfer/IncomingFileWatcher';
+import { ensureFirstStart } from '@/db/appState';
 import { db } from '@/db/client';
 import migrations from '@/db/migrations/migrations';
 import { seedIfEmpty } from '@/db/seed';
@@ -57,6 +59,10 @@ export default function RootLayout() {
 
     let cancelled = false;
     seedIfEmpty(db)
+      // Der Zeitpunkt des ersten Starts wird gleich mit festgehalten: Die
+      // Erinnerung an die Sicherung (FR-6.6) braucht einen Anfangspunkt, und
+      // hier ist die erste Stelle, an der die Datenbank bereitsteht.
+      .then(() => ensureFirstStart())
       .then(() => {
         if (!cancelled) {
           setSeeded(true);
@@ -80,21 +86,25 @@ export default function RootLayout() {
     <GestureHandlerRootView style={{ flex: 1 }}>
       <SafeAreaProvider>
         <PaperProvider theme={theme} settings={paperSettings}>
+          {/* Die Error Boundary liegt innerhalb des Themes: Der Fehlerbildschirm
+              soll aussehen wie die App und nicht wie ein Systemdialog. */}
           <ThemeProvider value={navigationTheme}>
             <StatusBar style="auto" />
-            {ready && !error ? (
-              <>
-                <Stack
-                  screenOptions={{
-                    headerShown: false,
-                    contentStyle: { backgroundColor: theme.colors.background },
-                  }}
-                />
-                <IncomingFileWatcher />
-              </>
-            ) : (
-              <StartupScreen error={error ?? null} />
-            )}
+            <ErrorBoundary>
+              {ready && !error ? (
+                <>
+                  <Stack
+                    screenOptions={{
+                      headerShown: false,
+                      contentStyle: { backgroundColor: theme.colors.background },
+                    }}
+                  />
+                  <IncomingFileWatcher />
+                </>
+              ) : (
+                <StartupScreen error={error ?? null} />
+              )}
+            </ErrorBoundary>
           </ThemeProvider>
         </PaperProvider>
       </SafeAreaProvider>

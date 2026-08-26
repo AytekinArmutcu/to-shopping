@@ -642,6 +642,53 @@ Der Hinweis „Teilen erzeugt eine Kopie" (FR-6.7) steht **vor** dem ersten Teil
 
 ---
 
+## ADR-033 – Der Fehlerspeicher liegt in einer Datei, nicht in der Datenbank
+
+**Datum:** 2026-08-26 · **Status:** Angenommen
+
+**Kontext**
+FR-8.1 verlangt einen lokalen Fehlerspeicher mit den letzten 20 Eintraegen. Die App hat bereits eine Datenbank und darin sogar eine Schluessel-Wert-Ablage (`app_state`) fuer genau solche Kleinigkeiten. Es liegt nahe, den Fehlerspeicher dort abzulegen.
+
+**Entscheidung**
+Der Fehlerspeicher ist eine **Datei** im Dokumentenordner (`fehler.json`), wie in `architecture.md` 9 vorgesehen.
+
+**Begruendung**
+Ein Fehlerspeicher darf nicht von dem abhaengen, was gerade kaputt sein koennte. Waere er eine Tabelle, wuerde ausgerechnet ein Datenbankfehler nicht aufgezeichnet – also genau der Fall, den man am dringendsten sehen will. Dasselbe gilt fuer einen Fehler beim Oeffnen der Datenbank: Dann gibt es noch gar keinen Ort zum Schreiben.
+
+**Verworfene Alternativen**
+- *`app_state`-Tabelle.* Naheliegend, aber sie teilt das Schicksal der Datenbank.
+- *Zwischenspeicher statt Dokumentenordner.* Android raeumt den Zwischenspeicher weg, wenn der Platz knapp wird – der Bericht waere verschwunden, bevor jemand ihn ansieht.
+- *Fehlerdienst eines Drittanbieters (Sentry o. Ae.).* Ausgeschlossen durch die Nicht-Ziele des PRD und die Datenschutzzusage: keine Uebertragung an Dritte in V1 (ADR-002, ADR-011).
+
+**Konsequenz**
+Der Fehlerspeicher ueberlebt einen kaputten Datenbestand und liegt ausserhalb der Vollsicherung – er beschreibt dieses Geraet, nicht die Daten des Nutzers.
+
+**Grenze, die man kennen muss:** Die Error Boundary faengt nur Fehler in React ab. Der Absturz, der in M5 die App umgebracht hat, entstand beim Einhaengen der Views durch React Native selbst; davon erfaehrt JavaScript nichts mehr, und kein Eintrag landet im Speicher. Der Fehlerspeicher ist ein Netz fuer den eigenen Code, kein Schutz gegen alles – und deshalb bleibt der E2E-Lauf auf einem echten Geraet die wichtigere Absicherung.
+
+---
+
+## ADR-034 – Die Wiederherstellung ersetzt den Bestand und wird nie automatisch ausgeloest
+
+**Datum:** 2026-08-26 · **Status:** Angenommen
+
+**Kontext**
+Die Vollsicherung enthaelt echte IDs (`architecture.md` 5.2). Beim Zurueckspielen stellt sich die Frage: ergaenzen oder ersetzen?
+
+**Entscheidung**
+Ersetzen – vollstaendig, in einer Transaktion, nach ausdruecklicher Warnung mit Nennung von Zeilenzahl und Datum der Sicherung.
+
+**Verworfene Alternative**
+*Ergaenzen.* Technisch unmoeglich ohne Umschreiben aller IDs: Dieselbe Liste zweimal mit derselben Kennung gibt es nicht. Wuerde man die IDs neu vergeben, waere das Ergebnis eine Mischung aus altem und gesichertem Bestand, in der niemand mehr unterscheiden kann, was woher stammt – und ein Rueckweg existiert dann erst recht nicht.
+
+**Konsequenz**
+Das Zurueckspielen ist der **einzige** Vorgang in dieser App, der Daten des Nutzers unwiederbringlich loescht. Entsprechend steht die Warnung vor dem Knopf und nicht daneben, und die Rueckfrage nennt konkrete Zahlen statt einer allgemeinen Formel.
+
+Nach dem Zurueckspielen geht es zwangsweise zur Listenuebersicht: Die Liste, auf der der Nutzer vorher war, gibt es womoeglich nicht mehr.
+
+Ausserdem: Der Zeitpunkt der letzten Sicherung wird gesetzt, sobald die Datei im Teilen-Menue liegt – nicht erst, wenn sie irgendwo angekommen ist. Android verraet nicht, ob der Nutzer sie tatsaechlich abgelegt hat. Die Erinnerung nach vierzehn Tagen kann also im schlimmsten Fall schweigen, obwohl nichts gesichert wurde. Der Gegenentwurf – jedes Mal nachzufragen, ob es geklappt hat – waere eine Frage, die niemand beantworten kann und die beim dritten Mal weggetippt wird.
+
+---
+
 ## Offene Entscheidungen (bewusst vertagt)
 
 | Thema | Wann zu entscheiden | Was dann abzuwägen ist |

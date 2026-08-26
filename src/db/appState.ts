@@ -33,3 +33,24 @@ export async function getFlag(key: string): Promise<boolean> {
 export async function setFlag(key: string, value: boolean): Promise<void> {
   await setAppState(key, value ? 'true' : 'false');
 }
+
+export const FIRST_START_KEY = 'first_start_at';
+
+/**
+ * Zeitpunkt des allerersten Starts, in Millisekunden.
+ *
+ * Die Erinnerung an die Sicherung (FR-6.6) braucht einen Anfangspunkt: Ohne
+ * ihn muesste sie entweder sofort erscheinen - in einer App, in der es noch
+ * nichts zu sichern gibt - oder nie, solange nie gesichert wurde.
+ */
+export async function ensureFirstStart(now: number = Date.now()): Promise<number> {
+  const stored = await getAppState(FIRST_START_KEY);
+  const parsed = stored === null ? Number.NaN : Number(stored);
+
+  if (Number.isFinite(parsed)) {
+    return parsed;
+  }
+
+  await setAppState(FIRST_START_KEY, String(now));
+  return now;
+}

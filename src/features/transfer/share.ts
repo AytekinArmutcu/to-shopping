@@ -1,6 +1,8 @@
 import { File, Paths } from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
+import { Share } from 'react-native';
 
+import { serializeBackup, type BackupFile } from './backup';
 import { serializeSharedList, shareFileName, type SharedListFile } from './logic';
 
 /**
@@ -105,4 +107,72 @@ export async function pickSharedFile(): Promise<string | null> {
   } catch {
     return null;
   }
+}
+
+/* ------------------------------------------------------------------ *
+ * Vollsicherung (FR-6.4, FR-6.5)
+ * ------------------------------------------------------------------ */
+
+/**
+ * Schreibt die Sicherung und reicht sie ins Teilen-Menue.
+ *
+ * Der Nutzer entscheidet, wohin: eigene Cloud, E-Mail an sich selbst,
+ * Speicherkarte. Genau das war der Wunsch - kein Unternehmen, bei dem man sich
+ * anmelden muss (ADR-004). Der Preis ist, dass die Sicherung eine bewusste
+ * Handlung bleibt; die Erinnerung nach vierzehn Tagen ist die Gegenmassnahme.
+ */
+export async function shareBackup(
+  file: BackupFile,
+  fileName: string,
+  dialogTitle: string,
+): Promise<ShareOutcome> {
+  if (!(await Sharing.isAvailableAsync())) {
+    return 'nichtVerfuegbar';
+  }
+
+  const target = new File(Paths.cache, fileName);
+
+  if (target.exists) {
+    target.delete();
+  }
+
+  target.create();
+  target.write(serializeBackup(file));
+
+  await Sharing.shareAsync(target.uri, {
+    mimeType: 'application/json',
+    dialogTitle,
+    UTI: 'public.json',
+  });
+
+  return 'geteilt';
+}
+
+/** Laesst den Nutzer eine Sicherungsdatei aussuchen und liest sie ein. */
+export async function pickBackupFile(): Promise<string | null> {
+  const result = await File.pickFileAsync({
+    mimeTypes: ['application/json', 'application/octet-stream'],
+  });
+
+  if (result.canceled) {
+    return null;
+  }
+
+  try {
+    return await result.result.text();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Verschickt reinen Text ueber das Teilen-Menue - fuer den Fehlerbericht
+ * (FR-8.2).
+ *
+ * Hier reicht das eingebaute Teilen von React Native: Es gibt keine Datei,
+ * nur Text, und der Nutzer entscheidet im Menue, wohin er ihn schickt. Kein
+ * Drittanbieter, keine automatische Uebertragung (architecture.md 9).
+ */
+export async function shareReport(message: string, dialogTitle: string): Promise<void> {
+  await Share.share({ message }, { dialogTitle });
 }

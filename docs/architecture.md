@@ -304,7 +304,8 @@ To-Shopping/
 │   ├── ladenlayout.tsx           # Kategorie-Reihenfolge          ?listId=
 │   ├── produkte.tsx              # Katalogpflege
 │   ├── vorlagen.tsx
-│   ├── einstellungen.tsx         # Sicherung, Diagnose
+│   ├── sicherung.tsx             # Vollsicherung, Wiederherstellung
+│   ├── diagnose.tsx              # Fehlerspeicher, Bericht senden
 │   └── import.tsx                # Ziel des Teilen-Intents, Vorschau
 │
 │   Routen sind flach und tragen die Listen-ID als Parameter statt im
@@ -325,6 +326,7 @@ To-Shopping/
 │   │   ├── suggestions/          # logic.ts = Abschnitt 4.2, voll getestet
 │   │   ├── templates/
 │   │   ├── history/
+│   │   ├── diagnostics/          # Fehlerspeicher, Error Boundary
 │   │   └── transfer/             # Export, Import, Sicherung, Formate
 │   ├── components/               # domänenfreie UI-Bausteine
 │   ├── theme/                    # Material-3-Farbschema (Grün), Typografie
