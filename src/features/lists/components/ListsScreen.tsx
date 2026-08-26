@@ -133,6 +133,12 @@ export function ListsScreen() {
             Liste: Er gilt fuer alle. Eine eigene Einstellungsseite bekommt er
             in M9, wenn Sicherung und Diagnose dazukommen. */}
         <Appbar.Action
+          icon="tray-arrow-down"
+          onPress={() => router.push('/import')}
+          accessibilityLabel={t('lists.import')}
+          testID="open-import"
+        />
+        <Appbar.Action
           icon="tag-multiple-outline"
           onPress={() => router.push('/produkte')}
           accessibilityLabel={t('lists.products')}

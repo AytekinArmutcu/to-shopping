@@ -3,7 +3,7 @@ import { router } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SectionList, StyleSheet, View } from 'react-native';
-import { Appbar, Button, Dialog, Portal, Snackbar, Text, useTheme } from 'react-native-paper';
+import { Appbar, Button, Dialog, Menu, Portal, Snackbar, Text, useTheme } from 'react-native-paper';
 import Animated, { useAnimatedKeyboard, useAnimatedStyle } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -39,6 +39,10 @@ import {
   setLastRoute,
   touchList,
 } from '@/features/lists/repository';
+import { buildShareText, SHARE_COPY_HINT_KEY } from '@/features/transfer/logic';
+import { buildSharedListForList } from '@/features/transfer/repository';
+import { shareList } from '@/features/transfer/share';
+import { getFlag, setFlag } from '@/db/appState';
 
 /**
  * Der Haupt-Screen: eine Liste mit ihren Artikeln, Eingabefeld und Abschluss.
@@ -68,6 +72,9 @@ export function ListScreen({ listId }: Props) {
   const [finishedCount, setFinishedCount] = useState<number | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [shareHintOpen, setShareHintOpen] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
 
   // Ab Android 15 erzwingt das System Edge-to-Edge: Das Fenster wird beim
   // Oeffnen der Tastatur nicht mehr verkleinert, android:windowSoftInputMode
@@ -184,6 +191,56 @@ export function ListScreen({ listId }: Props) {
     paddingBottom: Math.max(keyboard.height.value, insets.bottom),
   }));
 
+  /**
+   * Teilen (FR-6.1, PRD Flow 3): Datei plus lesbarer Text ins Android-Menue.
+   *
+   * Die Datei wird erst hier aus der Datenbank gebaut und nicht aus dem, was
+   * gerade auf dem Bildschirm steht: Sichtbar ist je nach Schalter nur ein
+   * Teil der Liste, geteilt gehoert aber alles Offene.
+   */
+  const doShare = useCallback(async () => {
+    const file = await buildSharedListForList(listId);
+
+    if (file === null || file.list.items.length === 0) {
+      setMessage(t('share.empty'));
+      return;
+    }
+
+    const text = buildShareText(file.list.items, {
+      header: t('share.header', { name: file.list.name, count: file.list.items.length }),
+      unitShort: (unit) => t(`units.${unit}.short`),
+    });
+
+    const outcome = await shareList(file, text, t('share.fallbackName'), t('share.dialogTitle'));
+
+    if (outcome === 'nichtVerfuegbar') {
+      setMessage(t('share.unavailable'));
+    }
+  }, [listId, t]);
+
+  /**
+   * Beim ersten Mal kommt der Hinweis, dass eine Kopie entsteht (FR-6.7).
+   *
+   * Er steht vor dem Teilen und nicht danach: Wer erst hinterher erfaehrt,
+   * dass Aenderungen nicht zurueckfliessen, hat die falsche Erwartung schon
+   * verschickt.
+   */
+  const startShare = useCallback(() => {
+    setMenuOpen(false);
+    void getFlag(SHARE_COPY_HINT_KEY).then((seen) => {
+      if (seen) {
+        void doShare();
+      } else {
+        setShareHintOpen(true);
+      }
+    });
+  }, [doShare]);
+
+  const confirmShareHint = useCallback(() => {
+    setShareHintOpen(false);
+    void setFlag(SHARE_COPY_HINT_KEY, true).then(() => doShare());
+  }, [doShare]);
+
   // Die Detailzeile liest ihre Werte aus der Live-Abfrage, nicht aus einer
   // Kopie: So zeigt sie immer, was tatsaechlich in der Datenbank steht.
   const editingItem = rows.find((row) => row.id === editingId) ?? null;
@@ -225,6 +282,25 @@ export function ListScreen({ listId }: Props) {
           accessibilityLabel={t('list.catalog')}
           testID="open-catalog"
         />
+        <Menu
+          visible={menuOpen}
+          onDismiss={() => setMenuOpen(false)}
+          anchor={
+            <Appbar.Action
+              icon="dots-vertical"
+              onPress={() => setMenuOpen(true)}
+              accessibilityLabel={t('list.menu')}
+              testID="list-menu"
+            />
+          }
+        >
+          <Menu.Item
+            leadingIcon="share-variant"
+            title={t('list.share')}
+            onPress={startShare}
+            testID="menu-share"
+          />
+        </Menu>
       </Appbar.Header>
 
       <View style={styles.container}>
@@ -333,6 +409,20 @@ export function ListScreen({ listId }: Props) {
       </View>
 
       <Portal>
+        {/* Einmaliger Hinweis vor dem ersten Teilen (FR-6.7). */}
+        <Dialog visible={shareHintOpen} onDismiss={() => setShareHintOpen(false)}>
+          <Dialog.Title>{t('share.copyTitle')}</Dialog.Title>
+          <Dialog.Content>
+            <Text variant="bodyMedium">{t('share.copyHint')}</Text>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setShareHintOpen(false)}>{t('common.cancel')}</Button>
+            <Button onPress={confirmShareHint} testID="share-hint-confirm">
+              {t('share.copyConfirm')}
+            </Button>
+          </Dialog.Actions>
+        </Dialog>
+
         {/* Rueckfrage nur, wenn noch etwas offen ist (PRD Flow 2.8). Ist alles
             abgehakt, waere sie ein ueberfluessiger Klick. */}
         <Dialog visible={confirmOpen} onDismiss={() => setConfirmOpen(false)}>
@@ -348,6 +438,15 @@ export function ListScreen({ listId }: Props) {
           </Dialog.Actions>
         </Dialog>
       </Portal>
+
+      <Snackbar
+        visible={message !== null}
+        onDismiss={() => setMessage(null)}
+        duration={4000}
+        testID="list-message"
+      >
+        {message ?? ''}
+      </Snackbar>
 
       <Snackbar
         visible={undoItemId !== null}

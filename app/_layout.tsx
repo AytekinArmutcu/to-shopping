@@ -10,6 +10,7 @@ import type { IconProps } from 'react-native-paper/lib/typescript/components/Mat
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { StartupScreen } from '@/components/StartupScreen';
+import { IncomingFileWatcher } from '@/features/transfer/IncomingFileWatcher';
 import { db } from '@/db/client';
 import migrations from '@/db/migrations/migrations';
 import { seedIfEmpty } from '@/db/seed';
@@ -82,12 +83,15 @@ export default function RootLayout() {
           <ThemeProvider value={navigationTheme}>
             <StatusBar style="auto" />
             {ready && !error ? (
-              <Stack
-                screenOptions={{
-                  headerShown: false,
-                  contentStyle: { backgroundColor: theme.colors.background },
-                }}
-              />
+              <>
+                <Stack
+                  screenOptions={{
+                    headerShown: false,
+                    contentStyle: { backgroundColor: theme.colors.background },
+                  }}
+                />
+                <IncomingFileWatcher />
+              </>
             ) : (
               <StartupScreen error={error ?? null} />
             )}

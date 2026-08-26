@@ -134,9 +134,24 @@ Die Play Console verlangt eine Erklärung, ob man als **Händler** (Trader) auft
 
 ### 4.6 Berechtigungen
 
-V1 fordert **keine** Laufzeitberechtigung an. Im Manifest wird lediglich `INTERNET` stehen (technische Voraussetzung für OTA) – das ist keine gefährliche Berechtigung und erfordert keine Nutzerzustimmung.
+V1 fordert **keine** Laufzeitberechtigung an.
 
-→ Aufgabe **C-6**: Vor dem ersten Store-Upload das erzeugte Manifest prüfen, ob Bibliotheken unbemerkt Berechtigungen hinzugefügt haben. Nicht benötigte Berechtigungen werden ausdrücklich entfernt.
+**Stand nach M8 (2026-08-26).** Das erzeugte Manifest wurde geprüft. Gefunden und behandelt:
+
+| Berechtigung | Herkunft | Entscheidung |
+|---|---|---|
+| `INTERNET` | Expo-Vorlage | **bleibt** – technische Voraussetzung für OTA, keine gefährliche Berechtigung |
+| `VIBRATE` | `expo-haptics` | **bleibt** – das kurze Klopfen beim Abhaken (FR-3.2), keine Nutzerzustimmung nötig |
+| `READ_EXTERNAL_STORAGE` | `expo-file-system` | **entfernt** über `android.blockedPermissions` |
+| `WRITE_EXTERNAL_STORAGE` | `expo-file-system` | **entfernt** über `android.blockedPermissions` |
+| `SYSTEM_ALERT_WINDOW` | Expo-Vorlage | **entfernt** – wird nur vom Entwickler-Menü gebraucht, und `expo-dev-client` ist nicht Teil des Projekts |
+| `de.toshopping.app.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` | React Native | **bleibt** – app-eigene Signaturberechtigung, für andere Apps nicht sichtbar |
+
+Die beiden Speicherberechtigungen kamen mit `expo-file-system` herein. Die App braucht sie nicht: Geteilte Dateien werden in das **eigene** Zwischenspeicherverzeichnis geschrieben, empfangene Dateien über `content://`-Adressen gelesen, die der Absender freigibt. Beides kommt ohne Speicherberechtigung aus.
+
+Geprüft wird das **zusammengeführte** Manifest des Release-Builds (`android/app/build/intermediates/merged_manifest/release/`), nicht die Vorlage – nur dort ist zu sehen, was am Ende im APK steht.
+
+→ Aufgabe **C-6** bleibt offen für den Zeitpunkt vor dem Store-Upload: Die Prüfung ist bei **jeder** neuen Bibliothek zu wiederholen. Sie ist nicht einmalig erledigt, sondern gehört zur Abnahme jeder Abhängigkeit.
 
 ---
 
@@ -182,7 +197,7 @@ Fälligkeit: **IT** = vor dem internen Test · **ÖV** = vor öffentlicher Verö
 | **C-3** | Datenschutzerklärung auf GitHub Pages veröffentlichen, URL in die Play Console eintragen | IT | 30 min |
 | **C-4** | Expo-Dokumentation zum Datenumfang von EAS Update prüfen und das Data-Safety-Formular danach ausfüllen | IT | 45 min |
 | **C-5** | IARC-Fragebogen zur Altersfreigabe ausfüllen | IT | 20 min |
-| **C-6** | Erzeugtes Android-Manifest auf ungewollte Berechtigungen prüfen und bereinigen | IT | 20 min |
+| **C-6** | Erzeugtes Android-Manifest auf ungewollte Berechtigungen prüfen und bereinigen – **nach M8 durchgeführt** (siehe 4.6), vor dem Upload zu wiederholen | IT | 20 min |
 | **C-7** | Händlerstatus in der Play Console als Nicht-Händler erklären | IT | 10 min |
 | **C-8** | Prüfen, welche Testanforderungen für dieses Entwicklerkonto vor der Produktionsspur gelten | ÖV | 15 min |
 | **C-9** | Store-Eintrag: Beschreibung, Screenshots, Feature-Grafik | ÖV | 2 h |

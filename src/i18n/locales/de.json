@@ -74,7 +74,9 @@
     "layout": "Ladenlayout",
     "checked": "Erledigt",
     "fallbackCategory": "Sonstiges",
-    "back": "Zurück zur Übersicht"
+    "back": "Zurück zur Übersicht",
+    "share": "Liste teilen",
+    "menu": "Weitere Aktionen"
   },
   "item": {
     "remove": "{{name}} von der Liste entfernen",
@@ -156,7 +158,8 @@
     "deleteHint": "Die Liste und alle ihre Artikel werden entfernt. Das lässt sich nicht rückgängig machen.",
     "deleteConfirm": "Löschen",
     "deleted": "„{{name}}“ gelöscht",
-    "products": "Produkte verwalten"
+    "products": "Produkte verwalten",
+    "import": "Liste empfangen"
   },
   "products": {
     "title": "Produkte",
@@ -186,5 +189,33 @@
     "resetConfirm": "Zurücksetzen",
     "resetDone": "{{count}} mitgelieferte Produkte wiederhergestellt",
     "resetBlocked": "{{count}} übersprungen – ein anderes Produkt trägt den Namen"
+  },
+  "share": {
+    "dialogTitle": "Einkaufsliste teilen",
+    "fallbackName": "Einkaufsliste",
+    "header": "Einkaufsliste „{{name}}“ ({{count}} Artikel)",
+    "copyTitle": "Teilen erzeugt eine Kopie",
+    "copyHint": "Der Empfänger bekommt einen Abzug deiner Liste. Änderungen von ihm kommen nicht zu dir zurück, und deine Änderungen sieht er nicht. Dieser Hinweis erscheint nur dieses eine Mal.",
+    "copyConfirm": "Verstanden, teilen",
+    "empty": "Auf dieser Liste steht nichts Offenes zum Teilen",
+    "unavailable": "Auf diesem Gerät gibt es kein Teilen-Menü"
+  },
+  "import": {
+    "title": "Liste empfangen",
+    "back": "Zurück",
+    "loading": "Datei wird gelesen …",
+    "pick": "Datei auswählen",
+    "pickHint": "Wähle eine Datei mit der Endung .tsl, die dir jemand geschickt hat.",
+    "preview": "Vorschau",
+    "itemCount": "{{count}} Artikel",
+    "skipped": "{{count}} Einträge waren unlesbar und werden übersprungen",
+    "listName": "{{name}} ({{date}})",
+    "confirm": "Als neue Liste übernehmen",
+    "done": "„{{name}}“ übernommen",
+    "errorTitle": "Die Datei lässt sich nicht lesen",
+    "errorUnreadable": "Der Inhalt ist beschädigt oder unvollständig. Bitte lass sie dir noch einmal schicken.",
+    "errorForeignFormat": "Diese Datei stammt nicht von To-Shopping.",
+    "errorTooNew": "Diese Datei stammt aus einer neueren Version der App. Aktualisiere To-Shopping und versuche es erneut.",
+    "errorNoAccess": "Auf die Datei ist kein Zugriff mehr möglich. Öffne sie noch einmal aus der Nachricht."
   }
 }

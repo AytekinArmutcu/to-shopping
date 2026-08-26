@@ -1,0 +1,97 @@
+# E2E fuer M8: Teilen und Empfangen.
+#
+# Geprueft wird, was in der App liegt: der einmalige Hinweis auf die Kopie
+# (FR-6.7) und der Weg zum Empfangen-Screen. Was danach passiert - die Auswahl
+# in WhatsApp, das Ankommen auf einem zweiten Geraet - gehoert Android und
+# einer fremden App und bleibt der manuellen Abnahme vorbehalten.
+#
+# Laeuft gegen einen Release-Build (ADR-025): npm run android:release
+appId: de.toshopping.app
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: 'add-input'
+    timeout: 30000
+
+# Etwas zum Teilen auf die Liste bringen
+- tapOn:
+    id: 'add-input'
+- inputText: 'Milch'
+- extendedWaitUntil:
+    visible:
+      id: 'suggestion-Milch'
+    timeout: 30000
+- tapOn:
+    id: 'suggestion-Milch'
+- extendedWaitUntil:
+    visible:
+      id: 'item-Milch'
+    timeout: 30000
+- hideKeyboard
+
+# --- Der Hinweis kommt vor dem Teilen (FR-6.7) ---
+- tapOn:
+    id: 'list-menu'
+- tapOn:
+    id: 'menu-share'
+- extendedWaitUntil:
+    visible:
+      id: 'share-hint-confirm'
+    timeout: 15000
+
+# Abbrechen merkt sich nichts: Wer den Hinweis wegtippt, ohne ihn zu
+# bestaetigen, soll ihn beim naechsten Versuch wiedersehen.
+- tapOn: 'Abbrechen'
+- extendedWaitUntil:
+    notVisible:
+      id: 'share-hint-confirm'
+    timeout: 15000
+- tapOn:
+    id: 'list-menu'
+- tapOn:
+    id: 'menu-share'
+- extendedWaitUntil:
+    visible:
+      id: 'share-hint-confirm'
+    timeout: 15000
+
+# Bestaetigen oeffnet das Android-Teilen-Menue. Das gehoert dem System -
+# hier wird es nur wieder geschlossen.
+- tapOn:
+    id: 'share-hint-confirm'
+- back
+- extendedWaitUntil:
+    visible:
+      id: 'item-Milch'
+    timeout: 15000
+
+# --- Beim zweiten Mal kein Hinweis mehr (FR-6.7) ---
+- tapOn:
+    id: 'list-menu'
+- tapOn:
+    id: 'menu-share'
+- extendedWaitUntil:
+    notVisible:
+      id: 'share-hint-confirm'
+    timeout: 15000
+- back
+- extendedWaitUntil:
+    visible:
+      id: 'item-Milch'
+    timeout: 15000
+
+# --- Der Weg zum Empfangen ist erreichbar (FR-6.2) ---
+- tapOn:
+    id: 'back-to-lists'
+- extendedWaitUntil:
+    visible:
+      id: 'open-import'
+    timeout: 15000
+- tapOn:
+    id: 'open-import'
+- extendedWaitUntil:
+    visible:
+      id: 'import-picker'
+    timeout: 15000

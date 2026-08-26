@@ -613,6 +613,35 @@ Das Kennzeichen `is_builtin` bleibt auch nach einer Umbenennung erhalten – nur
 
 ---
 
+## ADR-032 – Teilen verschickt Datei und Text; der Import legt immer eine neue Liste an
+
+**Datum:** 2026-08-26 · **Status:** Angenommen
+
+**Kontext**
+Teilen war das urspruengliche Kernanliegen des Auftraggebers: „Die Idee, dass mehrere Leute einkaufen gehen, also es teilen kann, finde ich auch cool." Ohne Backend (ADR-001) geht das nur ueber Dateien im Android-Teilen-Menue. Dabei stellen sich drei Fragen: Was wird verschickt? Was passiert beim Empfaenger? Und wie kommt die Datei ueberhaupt in die App?
+
+**Entscheidungen**
+
+1. **Datei *und* lesbarer Text zusammen.** Die `.tsl`-Datei kann nur die App lesen; der Text ist fuer alle anderen. Wer eine Einkaufsliste per WhatsApp schickt, weiss meist nicht, ob der Empfaenger die App hat – und muss es auch nicht wissen.
+2. **Nur offene Artikel wandern mit.** Was abgehakt ist, liegt bereits im Wagen. Eine Kopie inklusive erledigter Posten waere fuer den Empfaenger irrefuehrend.
+3. **Der Import legt immer eine neue Liste an**, nie ergaenzt er eine bestehende.
+4. **Zwei Wege herein:** Antippen der Datei in der Nachricht (Intent-Filter) **und** ein Dateiauswaehler in der App.
+
+**Verworfene Alternativen**
+- *Nur die Datei verschicken.* Fuer Empfaenger ohne App wertlos – und das duerfte der haeufigere Fall sein.
+- *In eine bestehende Liste importieren, wahlweise.* Die gefaehrlichere Voreinstellung: Der Empfaenger koennte seine eigenen Artikel nicht mehr von den fremden trennen, und ein versehentlicher Import liesse sich nicht rueckgaengig machen, ohne die eigene Arbeit mitzureissen. Eine ueberfluessige Liste ist dagegen mit zwei Tipps geloescht.
+- *Nur den Intent-Filter, ohne Dateiauswaehler.* Ob eine fremde App unsere Datei an uns weiterreicht, haengt daran, welchen Dateityp sie ihr zuschreibt. Eine unbekannte Endung wie `.tsl` reichen viele Messenger als `application/octet-stream` durch – und darauf zu horchen hiesse, sich fuer **jede** unbekannte Datei auf dem Geraet anzubieten. Das waere aufdringlich und fuer die Zielgruppe verwirrend.
+- *Die Endung auf `.json` aendern*, damit der Typ stimmt. Haette das Weiterreichen erleichtert, aber die Datei sieht dann wie irgendeine JSON-Datei aus, und die App wuerde sich fuer alle davon zustaendig fuehlen.
+
+**Konsequenz**
+Der Intent-Filter horcht auf `application/json` – das trifft den Fall, in dem der Messenger den Typ richtig erkennt, ohne sich fuer beliebige Dateien anzubieten. Wo das nicht klappt, fuehrt der Dateiauswaehler zuverlaessig zum Ziel; er haengt an nichts ausser der App selbst.
+
+Der Import ist misstrauisch gegenueber allem, was von aussen kommt: Kaputte Eintraege werden uebersprungen und **gezaehlt**, statt die Datei ganz abzulehnen. Eine Liste mit neun von zehn Artikeln ist mehr wert als gar keine – solange der Empfaenger die Zahl sieht.
+
+Der Hinweis „Teilen erzeugt eine Kopie" (FR-6.7) steht **vor** dem ersten Teilen und nicht danach: Wer erst hinterher erfaehrt, dass Aenderungen nicht zurueckfliessen, hat die falsche Erwartung bereits verschickt.
+
+---
+
 ## Offene Entscheidungen (bewusst vertagt)
 
 | Thema | Wann zu entscheiden | Was dann abzuwägen ist |
