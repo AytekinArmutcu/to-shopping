@@ -1,0 +1,165 @@
+# E2E fuer M11: Vorlagen (FR-5.3 bis FR-5.5).
+#
+# Der Kern ist die Abgleichsregel aus architecture.md 4.4: Beim Anwenden wird
+# uebersprungen, was offen schon draufsteht. Der Flow stellt genau diesen Fall
+# her - eine Vorlage mit zwei Artikeln, von denen einer noch auf der Liste
+# liegt und einer entfernt wurde.
+#
+# Laeuft gegen einen Release-Build (ADR-025): npm run android:release
+appId: de.toshopping.app
+---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: 'add-input'
+    timeout: 30000
+
+# Zwei Artikel auf die Liste
+- tapOn:
+    id: 'add-input'
+- inputText: 'Milch'
+- extendedWaitUntil:
+    visible:
+      id: 'suggestion-Milch'
+    timeout: 30000
+- tapOn:
+    id: 'suggestion-Milch'
+- inputText: 'Brot'
+- extendedWaitUntil:
+    visible:
+      id: 'suggestion-Brot'
+    timeout: 15000
+- tapOn:
+    id: 'suggestion-Brot'
+- hideKeyboard
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: 'item-Brot'
+    timeout: 15000
+
+# --- Als Vorlage speichern (T-11.1) ---
+- tapOn:
+    id: 'list-menu'
+- extendedWaitUntil:
+    visible:
+      id: 'menu-save-template'
+    timeout: 15000
+- tapOn:
+    id: 'menu-save-template'
+- extendedWaitUntil:
+    visible:
+      id: 'template-name'
+    timeout: 15000
+- tapOn:
+    id: 'template-name'
+- eraseText: 20
+- inputText: 'Wocheneinkauf'
+- hideKeyboard
+- waitForAnimationToEnd
+- tapOn:
+    id: 'template-save-confirm'
+- extendedWaitUntil:
+    visible: '.*Wocheneinkauf.*2 Artikeln.*'
+    timeout: 15000
+
+# --- Einen Artikel entfernen, damit beim Anwenden etwas zu tun ist ---
+- tapOn: 'Brot von der Liste entfernen'
+- extendedWaitUntil:
+    notVisible:
+      id: 'item-Brot'
+    timeout: 15000
+- assertVisible: '1 von 1 offen'
+
+# --- Vorlage anwenden (T-11.4, architecture.md 4.4) ---
+- tapOn:
+    id: 'list-menu'
+- extendedWaitUntil:
+    visible:
+      id: 'menu-apply-template'
+    timeout: 15000
+- tapOn:
+    id: 'menu-apply-template'
+- extendedWaitUntil:
+    visible:
+      id: 'apply-Wocheneinkauf'
+    timeout: 15000
+- tapOn:
+    id: 'apply-Wocheneinkauf'
+
+# Brot kommt zurueck, Milch nicht doppelt. "2 von 2 offen" ist der Beweis:
+# Waere Milch ein zweites Mal eingefuegt worden, stuende hier "3 von 3".
+- extendedWaitUntil:
+    visible:
+      id: 'item-Brot'
+    timeout: 15000
+- assertVisible:
+    id: 'item-Milch'
+- assertVisible: '2 von 2 offen'
+- assertVisible: '1 hinzugefügt, 1 standen schon drauf'
+
+# --- Verwalten: umbenennen und loeschen (T-11.2) ---
+- tapOn:
+    id: 'back-to-lists'
+- extendedWaitUntil:
+    visible:
+      id: 'lists-menu'
+    timeout: 15000
+- tapOn:
+    id: 'lists-menu'
+- extendedWaitUntil:
+    visible:
+      id: 'open-templates'
+    timeout: 15000
+- tapOn:
+    id: 'open-templates'
+- extendedWaitUntil:
+    visible:
+      id: 'template-Wocheneinkauf'
+    timeout: 15000
+- assertVisible: '2 Artikel'
+
+- tapOn:
+    id: 'template-more-Wocheneinkauf'
+- extendedWaitUntil:
+    visible:
+      id: 'template-rename'
+    timeout: 15000
+- tapOn:
+    id: 'template-rename'
+- extendedWaitUntil:
+    visible:
+      id: 'template-rename-input'
+    timeout: 15000
+- tapOn:
+    id: 'template-rename-input'
+- eraseText: 20
+- inputText: 'Grosseinkauf'
+- hideKeyboard
+- waitForAnimationToEnd
+- tapOn:
+    id: 'template-rename-confirm'
+- extendedWaitUntil:
+    visible:
+      id: 'template-Grosseinkauf'
+    timeout: 15000
+
+- tapOn:
+    id: 'template-more-Grosseinkauf'
+- extendedWaitUntil:
+    visible:
+      id: 'template-delete'
+    timeout: 15000
+- tapOn:
+    id: 'template-delete'
+- extendedWaitUntil:
+    visible:
+      id: 'template-delete-confirm'
+    timeout: 15000
+- tapOn:
+    id: 'template-delete-confirm'
+- extendedWaitUntil:
+    visible:
+      id: 'templates-empty'
+    timeout: 15000

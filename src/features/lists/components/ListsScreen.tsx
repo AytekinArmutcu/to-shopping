@@ -199,6 +199,15 @@ export function ListsScreen() {
             }}
           />
           <Menu.Item
+            leadingIcon="clipboard-list-outline"
+            title={t('lists.templates')}
+            testID="open-templates"
+            onPress={() => {
+              setAppMenuOpen(false);
+              router.push('/vorlagen');
+            }}
+          />
+          <Menu.Item
             leadingIcon="content-save-outline"
             title={t('lists.backup')}
             testID="open-backup"

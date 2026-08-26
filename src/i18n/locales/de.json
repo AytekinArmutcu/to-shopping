@@ -76,7 +76,9 @@
     "fallbackCategory": "Sonstiges",
     "back": "Zurück zur Übersicht",
     "share": "Liste teilen",
-    "menu": "Weitere Aktionen"
+    "menu": "Weitere Aktionen",
+    "saveTemplate": "Als Vorlage speichern",
+    "applyTemplate": "Vorlage anwenden"
   },
   "item": {
     "remove": "{{name}} von der Liste entfernen",
@@ -162,7 +164,8 @@
     "import": "Liste empfangen",
     "menu": "Weitere Aktionen",
     "backup": "Sicherung",
-    "diagnostics": "Diagnose"
+    "diagnostics": "Diagnose",
+    "templates": "Vorlagen"
   },
   "products": {
     "title": "Produkte",
@@ -268,5 +271,33 @@
     "title": "Da ist etwas schiefgegangen",
     "hint": "Die App hat einen Fehler gefunden und ihn auf dem Gerät gespeichert. Deine Listen sind nicht betroffen.",
     "restart": "Erneut versuchen"
+  },
+  "templates": {
+    "title": "Vorlagen",
+    "back": "Zurück",
+    "emptyTitle": "Noch keine Vorlage",
+    "emptyHint": "Speichere eine Liste als Vorlage – zum Beispiel deinen Wocheneinkauf. Danach liegt sie mit einem Tippen wieder auf der Liste.",
+    "count": "{{count}} Artikel",
+    "more": "Weitere Aktionen für {{name}}",
+    "nameLabel": "Name der Vorlage",
+    "namePlaceholder": "z. B. Wocheneinkauf",
+    "rename": "Umbenennen",
+    "renameTitle": "Vorlage umbenennen",
+    "renameConfirm": "Speichern",
+    "delete": "Löschen",
+    "deleteTitle": "„{{name}}“ löschen?",
+    "deleteHint": "Die Vorlage wird entfernt. Listen, auf die du sie angewendet hast, bleiben unverändert.",
+    "deleteConfirm": "Löschen",
+    "deleted": "„{{name}}“ gelöscht",
+    "saveTitle": "Liste als Vorlage speichern",
+    "saveHint": "Artikel, Mengen und Notizen werden übernommen – die Haken nicht.",
+    "saveConfirm": "Speichern",
+    "saved": "„{{name}}“ mit {{count}} Artikeln gespeichert",
+    "saveEmpty": "Auf dieser Liste steht nichts, was sich speichern ließe",
+    "applyTitle": "Vorlage anwenden",
+    "applyEmpty": "Du hast noch keine Vorlage",
+    "applied": "{{count}} Artikel hinzugefügt",
+    "appliedNone": "Alles davon steht schon auf der Liste",
+    "appliedSkipped": "{{count}} hinzugefügt, {{skipped}} standen schon drauf"
   }
 }

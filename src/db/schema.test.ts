@@ -47,6 +47,10 @@ describe('Fremdschluessel-Regeln', () => {
     expect(onDeleteOf(templateItems, 'product_id')).toBe('set null');
   });
 
+  it('nimmt beim Loeschen einer Vorlage ihre Artikel mit (FR-5.5)', () => {
+    expect(onDeleteOf(templateItems, 'template_id')).toBe('cascade');
+  });
+
   it('nimmt beim Loeschen einer Kategorie das Produkt nicht mit', () => {
     expect(onDeleteOf(products, 'category_id')).toBe('set null');
   });

@@ -749,6 +749,30 @@ Die Funktion waechst mit der Nutzung: In der ersten Woche unsichtbar, nach einem
 
 ---
 
+## ADR-038 – Eine Vorlage ueberspringt, was schon draufsteht, statt Mengen zu addieren
+
+**Datum:** 2026-08-26 · **Status:** Angenommen
+
+**Kontext**
+`architecture.md` 4.4 legt fest, **wann** ein Vorlagen-Artikel uebersprungen wird: wenn auf der Zielliste bereits ein nicht abgehakter Artikel mit derselben Produkt-ID oder demselben Namen steht. Offen blieb, **was** stattdessen passiert – und was mit der Menge geschieht.
+
+**Entscheidung**
+Der Artikel wird uebersprungen. Die Menge auf der Liste bleibt, wie sie ist; nichts wird addiert und nichts ueberschrieben. Die Rueckmeldung nennt beide Zahlen: „1 hinzugefuegt, 1 standen schon drauf".
+
+**Verworfene Alternativen**
+- *Mengen addieren.* „2 l Milch auf der Liste, 1 l in der Vorlage, macht 3 l" ist eine Rechnung, die niemand im Kopf mitfuehrt – und sie ist bei mehrfachem Anwenden derselben Vorlage still fatal.
+- *Die Menge der Vorlage uebernehmen.* Wuerde eine Aenderung ueberschreiben, die der Nutzer gerade von Hand gemacht hat.
+- *Nachfragen, was gelten soll.* Bei sieben Artikeln sieben Rueckfragen. Fuer eine Zielgruppe, die maximale Einfachheit braucht, das Gegenteil von hilfreich.
+
+**Konsequenz**
+„Steht schon da, bleibt wie es ist" ist die Regel, die man im Laden im Kopf hat. Preis: Wer die Menge aus der Vorlage haben will, muss sie von Hand anpassen – ein seltener Fall gegenueber dem haeufigen, in dem eine Vorlage die Liste ergaenzen soll.
+
+Zwei Feinheiten, die aus dem Kopf nicht folgen und deshalb im Test stehen: **Abgehaktes zaehlt nicht** – wer den Einkauf beendet hat, bekommt den Artikel wieder. Und die Vorlage prueft sich **auch gegen sich selbst**: Enthaelt sie denselben Artikel zweimal, landet er einmal auf der Liste.
+
+Der Namensvergleich als zweiter Weg neben der Produkt-ID ist kein Luxus: Wird ein Produkt aus dem Katalog geloescht, bleibt der Listeneintrag als Text stehen (ADR-007) und haette keine Produkt-ID mehr. Ohne den Namensvergleich stuende er nach dem Anwenden doppelt da.
+
+---
+
 ## Offene Entscheidungen (bewusst vertagt)
 
 | Thema | Wann zu entscheiden | Was dann abzuwägen ist |

@@ -2,8 +2,19 @@ import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 import { router } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { SectionList, StyleSheet, View } from 'react-native';
-import { Appbar, Button, Dialog, Menu, Portal, Snackbar, Text, useTheme } from 'react-native-paper';
+import { ScrollView, SectionList, StyleSheet, View } from 'react-native';
+import {
+  Appbar,
+  Button,
+  Dialog,
+  List,
+  Menu,
+  Portal,
+  Snackbar,
+  Text,
+  TextInput,
+  useTheme,
+} from 'react-native-paper';
 import Animated, { useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -41,6 +52,16 @@ import {
 } from '@/features/lists/repository';
 import { toProductStats } from '@/features/suggestions/logic';
 import { currentStatsQuery } from '@/features/suggestions/repository';
+import {
+  cleanTemplateName,
+  MAX_TEMPLATE_NAME_LENGTH,
+  type TemplateOverviewRow,
+} from '@/features/templates/logic';
+import {
+  applyTemplate,
+  getTemplateOverview,
+  saveListAsTemplate,
+} from '@/features/templates/repository';
 import { buildShareText, SHARE_COPY_HINT_KEY } from '@/features/transfer/logic';
 import { buildSharedListForList } from '@/features/transfer/repository';
 import { shareList } from '@/features/transfer/share';
@@ -78,6 +99,9 @@ export function ListScreen({ listId }: Props) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [shareHintOpen, setShareHintOpen] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [templateName, setTemplateName] = useState('');
+  const [saveTemplateOpen, setSaveTemplateOpen] = useState(false);
+  const [templateChoices, setTemplateChoices] = useState<TemplateOverviewRow[] | null>(null);
 
   // Ab Android 15 erzwingt das System Edge-to-Edge: Das Fenster wird beim
   // Oeffnen der Tastatur nicht mehr verkleinert, android:windowSoftInputMode
@@ -250,6 +274,62 @@ export function ListScreen({ listId }: Props) {
     void setFlag(SHARE_COPY_HINT_KEY, true).then(() => doShare());
   }, [doShare]);
 
+  /**
+   * Die aktuelle Liste als Vorlage sichern (FR-5.3).
+   *
+   * Der Name wird vorgeschlagen, nicht erzwungen: Meistens heisst die Vorlage
+   * wie die Liste, aus der sie stammt.
+   */
+  const openSaveTemplate = useCallback(() => {
+    setMenuOpen(false);
+
+    if (rows.length === 0) {
+      setMessage(t('templates.saveEmpty'));
+      return;
+    }
+
+    setTemplateName(listRows.data?.[0]?.name ?? '');
+    setSaveTemplateOpen(true);
+  }, [rows.length, listRows.data, t]);
+
+  const saveTemplate = useCallback(() => {
+    const name = cleanTemplateName(templateName);
+    setSaveTemplateOpen(false);
+
+    if (name === null) {
+      return;
+    }
+
+    void saveListAsTemplate(listId, name).then((count) => {
+      setMessage(t('templates.saved', { name, count }));
+    });
+  }, [templateName, listId, t]);
+
+  /**
+   * Vorlagen werden erst beim Oeffnen geladen, nicht dauerhaft beobachtet -
+   * siehe getTemplateOverview.
+   */
+  const openApplyTemplate = useCallback(() => {
+    setMenuOpen(false);
+    void getTemplateOverview().then(setTemplateChoices);
+  }, []);
+
+  const applyTemplateTo = useCallback(
+    (templateId: string) => {
+      setTemplateChoices(null);
+      void applyTemplate(templateId, listId).then(({ added, skipped }) => {
+        if (added === 0) {
+          setMessage(t('templates.appliedNone'));
+        } else if (skipped === 0) {
+          setMessage(t('templates.applied', { count: added }));
+        } else {
+          setMessage(t('templates.appliedSkipped', { count: added, skipped }));
+        }
+      });
+    },
+    [listId, t],
+  );
+
   // Die Detailzeile liest ihre Werte aus der Live-Abfrage, nicht aus einer
   // Kopie: So zeigt sie immer, was tatsaechlich in der Datenbank steht.
   const editingItem = rows.find((row) => row.id === editingId) ?? null;
@@ -309,6 +389,18 @@ export function ListScreen({ listId }: Props) {
             title={t('list.share')}
             onPress={startShare}
             testID="menu-share"
+          />
+          <Menu.Item
+            leadingIcon="content-save-outline"
+            title={t('list.saveTemplate')}
+            onPress={openSaveTemplate}
+            testID="menu-save-template"
+          />
+          <Menu.Item
+            leadingIcon="clipboard-list-outline"
+            title={t('list.applyTemplate')}
+            onPress={openApplyTemplate}
+            testID="menu-apply-template"
           />
         </Menu>
       </Appbar.Header>
@@ -420,6 +512,64 @@ export function ListScreen({ listId }: Props) {
       </View>
 
       <Portal>
+        {/* Liste als Vorlage sichern (FR-5.3). */}
+        <Dialog
+          visible={saveTemplateOpen}
+          onDismiss={() => setSaveTemplateOpen(false)}
+          style={{ marginBottom: keyboardHeight }}
+        >
+          <Dialog.Title>{t('templates.saveTitle')}</Dialog.Title>
+          <Dialog.Content>
+            <TextInput
+              mode="outlined"
+              value={templateName}
+              onChangeText={setTemplateName}
+              label={t('templates.nameLabel')}
+              placeholder={t('templates.namePlaceholder')}
+              maxLength={MAX_TEMPLATE_NAME_LENGTH}
+              testID="template-name"
+              onSubmitEditing={saveTemplate}
+            />
+            <Text variant="bodySmall" style={styles.dialogHint}>
+              {t('templates.saveHint')}
+            </Text>
+          </Dialog.Content>
+          <Dialog.Actions>
+            <Button onPress={() => setSaveTemplateOpen(false)}>{t('common.cancel')}</Button>
+            <Button onPress={saveTemplate} testID="template-save-confirm">
+              {t('templates.saveConfirm')}
+            </Button>
+          </Dialog.Actions>
+        </Dialog>
+
+        {/* Vorlage auswaehlen und anwenden (FR-5.4). */}
+        <Dialog visible={templateChoices !== null} onDismiss={() => setTemplateChoices(null)}>
+          <Dialog.Title>{t('templates.applyTitle')}</Dialog.Title>
+          <Dialog.ScrollArea style={styles.dialogScroll}>
+            {templateChoices?.length === 0 ? (
+              <Text variant="bodyMedium" style={styles.dialogHint} testID="apply-empty">
+                {t('templates.applyEmpty')}
+              </Text>
+            ) : (
+              <ScrollView>
+                {templateChoices?.map((template) => (
+                  <List.Item
+                    key={template.id}
+                    title={template.name}
+                    description={t('templates.count', { count: template.itemCount })}
+                    onPress={() => applyTemplateTo(template.id)}
+                    testID={`apply-${template.name}`}
+                    style={styles.dialogRow}
+                  />
+                ))}
+              </ScrollView>
+            )}
+          </Dialog.ScrollArea>
+          <Dialog.Actions>
+            <Button onPress={() => setTemplateChoices(null)}>{t('common.cancel')}</Button>
+          </Dialog.Actions>
+        </Dialog>
+
         {/* Einmaliger Hinweis vor dem ersten Teilen (FR-6.7). */}
         <Dialog visible={shareHintOpen} onDismiss={() => setShareHintOpen(false)}>
           <Dialog.Title>{t('share.copyTitle')}</Dialog.Title>
@@ -507,6 +657,20 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingBottom: 12,
     gap: 8,
+  },
+  dialogScroll: {
+    paddingHorizontal: 0,
+    maxHeight: 320,
+  },
+  dialogRow: {
+    minHeight: 56,
+    justifyContent: 'center',
+    paddingHorizontal: 24,
+  },
+  dialogHint: {
+    paddingTop: 8,
+    paddingHorizontal: 24,
+    opacity: 0.8,
   },
   footerRow: {
     flexDirection: 'row',
