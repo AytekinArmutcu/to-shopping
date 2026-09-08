@@ -245,7 +245,7 @@ Die App fragt beim ersten Start **keine einzige Berechtigung** ab. Preis: Erinne
 
 ## ADR-013 – OTA-Updates über EAS Update
 
-**Datum:** 2026-08-18 · **Status:** Angenommen
+**Datum:** 2026-08-18 · **Status:** **Abgelöst durch ADR-040** – V1 liefert ohne OTA aus, `expo-updates` ist nicht installiert. Der Eintrag bleibt stehen, weil die Abwägung bei der Wiedervorlage nach vier Wochen wieder gebraucht wird.
 
 **Kontext**
 Zehn Tester, App in aktiver Entwicklung, 5 h/Woche. Jede Korrektur über den Store-Weg kostet Upload, Wartezeit und Aufmerksamkeit der Tester.
@@ -823,6 +823,70 @@ Aktualisierungen laufen ueber den internen Play-Store-Test. Ein Fehler, der eine
 Wiedervorlage nach den vier Wochen echter Nutzung: Zeigt sich, dass haeufig nachgebessert werden muss und der Store-Weg dabei stoert, ist die Abwaegung neu zu treffen – dann mit dem Wissen aus dem Alltag statt mit einer Vermutung.
 
 Der Internetzugang bleibt im Manifest, weil eine Programmbibliothek ihn eintraegt. Ihn zu sperren wuerde die Entwicklungs-Builds unbrauchbar machen, die ihren Code vom Metro-Server laden. Die Datenschutzerklaerung nennt das ausdruecklich: Der Zugang steht im Manifest und wird nicht benutzt.
+
+---
+
+## ADR-041 – Das Store-Bundle enthält drei Architekturen, lokale Builds zwei
+
+**Datum:** 2026-09-08 · **Status:** Angenommen · **Löst die offene Frage aus ADR-023**
+
+**Kontext**
+ADR-023 beschränkte den Build auf `arm64-v8a` und `x86_64` und senkte die Bauzeit damit von 2 h 48 min auf Minuten. Der Preis: `armeabi-v7a` fehlt, also alle 32-Bit-ARM-Geräte. ADR-023 hielt fest, dass vor der Store-Veröffentlichung neu zu entscheiden ist – jetzt ist der Zeitpunkt.
+
+Die Frage stellt sich beim App Bundle anders als beim APK. Ein APK mit drei Architekturen ist für **jeden** Nutzer dreimal so groß. Ein Bundle nicht: Google zerlegt es und liefert jedem Gerät nur den Teil, der zu seinem Prozessor passt.
+
+**Entscheidung**
+Das Store-Bundle wird mit **allen drei** Architekturen gebaut, über ein eigenes Skript:
+
+```
+npm run bundle:android
+```
+
+`android/gradle.properties` bleibt unverändert bei zwei Architekturen. Der volle Satz wird nur an dieses eine Kommando übergeben (`-PreactNativeArchitectures=...`).
+
+**Begründung**
+Die einzigen Kosten sind Bauzeit, und die fällt selten an – ein Store-Upload alle paar Wochen, kein Vorgang im Minutentakt. Die tägliche Arbeit, `npm run android:release` und die zwölf E2E-Flows bleiben unangetastet schnell, weil sie weiter aus `gradle.properties` lesen.
+
+Was gewonnen wird, ist kein technischer Vorteil, sondern das Vermeiden eines stillen Fehlers: Ohne `armeabi-v7a` sähe ein Tester mit einem älteren Telefon die App im Play Store **gar nicht erst** – und bekäme keine Fehlermeldung, sondern eine leere Suche. Das ist genau die Sorte Problem, die man im internen Test nicht findet, weil niemand meldet, was er nicht sieht.
+
+**Verworfene Alternativen**
+*`gradle.properties` dauerhaft auf drei Architekturen.* Ehrlicher, weil dann jeder Build dem Store-Build gleicht. Verworfen, weil es jeden E2E-Lauf verlangsamt – und die Läufe sind das, was die Qualität hält.
+
+*Bei zwei bleiben.* Vertretbar: 64-Bit-ARM ist bei Telefonen ab etwa 2019 durchgängig. Verworfen, weil die Ersparnis nur die Bauzeit betrifft und der Verlust einen echten Nutzer treffen kann.
+
+**Konsequenz**
+Der erste Bundle-Build dauert deutlich länger als vier Minuten, weil `armeabi-v7a` einmal komplett durch den C++-Übersetzer muss. Danach greift der Zwischenspeicher.
+
+Die beiden Wege können auseinanderlaufen: Was nur im Store-Bundle gebaut wird, wird von keinem E2E-Lauf berührt. Ein Fehler, der ausschließlich `armeabi-v7a` beträfe, fiele erst einem Tester auf. Das ist hinzunehmen – die Alternative wäre, alle Tests dreifach zu bauen.
+
+---
+
+## ADR-042 – Auslieferung als App Bundle, und damit hält Google den Signaturschlüssel
+
+**Datum:** 2026-09-08 · **Status:** Angenommen
+
+**Kontext**
+Der Play Store nimmt für neue Apps kein APK mehr an, sondern ein **Android App Bundle**. Daran hängt eine Bedingung, die auf den ersten Blick nach einer Formalie aussieht und keine ist: Wer per Bundle ausliefert, muss **Play App Signing** benutzen. Google erzeugt und verwahrt dann den Schlüssel, mit dem die App am Ende signiert wird.
+
+Das berührt den Satz, mit dem dieses Projekt angefangen hat: „Ich möchte nicht meine Daten an einem Unternehmen geben."
+
+**Entscheidung**
+V1 wird als App Bundle über Play App Signing ausgeliefert. Was lokal erzeugt wird, ist ein **Upload-Schlüssel**; er signiert nur den Weg vom Rechner zur Play Console. Den Schlüssel, mit dem die App auf den Geräten der Nutzer landet, hält Google.
+
+**Begründung**
+Es gibt hier nichts abzuwägen: Ohne Play App Signing kein Bundle, ohne Bundle keine neue App im Play Store, ohne Play Store kein interner Test (ADR-014). Der Zwang ist die Entscheidung.
+
+Aufgeschrieben wird sie trotzdem, weil sie eine **Datenschutz-Zusage nicht berührt, aber danach aussieht**. Google bekommt keine Nutzerdaten – Listen, Artikel und Kaufhistorie bleiben unverändert auf dem Gerät. Google bekommt einen kryptografischen Schlüssel für das Programm. Diese Unterscheidung ist wichtig genug, um sie einmal ausgeschrieben zu haben, statt sie später verteidigen zu müssen.
+
+**Verworfene Alternative**
+*Verteilung als APK per Link.* Damit bliebe jeder Schlüssel im eigenen Haus. Bereits in ADR-014 verworfen, und aus dem stärkeren Grund: Die Installation aus unbekannten Quellen wäre für diese Zielgruppe die größte Hürde des ganzen Projekts. Ein Schlüssel bei Google ist der kleinere Preis als zehn Tester, die an einer Sicherheitswarnung scheitern.
+
+**Konsequenz**
+Der Upload-Schlüssel ist **ersetzbar**. Geht er verloren, setzt der Play-Support ihn zurück – die App bleibt aktualisierbar. Das ist der Unterschied zur alten APK-Welt, in der ein verlorener Schlüssel das Ende bedeutete. Die README hat das bis heute falsch beschrieben und ist mit diesem ADR berichtigt.
+
+Trotzdem sichern: Ein Support-Fall kostet Tage, in denen kein Update ausgeliefert werden kann.
+
+Der Schlüssel und sein Passwort gehören **nicht** ins Repository (CLAUDE.md). Der Build liest sie über `project.hasProperty(...)` aus `%USERPROFILE%\.gradle\gradle.properties`. Fehlen sie, signiert er mit dem Debug-Schlüssel weiter – E2E-Läufe und die manuelle Abnahme laufen also auch auf einem Rechner ohne eingerichteten Schlüssel.
 
 ---
 

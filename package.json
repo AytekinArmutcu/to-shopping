@@ -13,7 +13,8 @@
     "test:watch": "jest --watch",
     "e2e": "maestro test e2e",
     "db:generate": "drizzle-kit generate",
-    "android:release": "expo run:android --variant release --no-bundler"
+    "android:release": "expo run:android --variant release --no-bundler",
+    "bundle:android": "android\\gradlew.bat -p android bundleRelease -PreactNativeArchitectures=armeabi-v7a,arm64-v8a,x86_64"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",

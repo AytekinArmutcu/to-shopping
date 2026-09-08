@@ -34,25 +34,21 @@ Die Architekturentscheidungen aus dem Discovery haben den überwiegenden Teil de
 | Produktkatalog, Kategorien, Vorlagen | ausschließlich lokal | nein |
 | Kaufhistorie (Produkt, Menge, Datum) | ausschließlich lokal | nein |
 | Sicherungs- und Teilen-Dateien | dort, wohin der Nutzer sie selbst schickt | nur durch aktives Handeln des Nutzers |
-| **OTA-Update-Abfrage** | Expo-Server (USA) | **ja** – siehe 2.2 |
 | **Fehlerbericht** | lokal gespeichert | **nur wenn der Nutzer ihn selbst verschickt** – siehe 2.3 |
 
 Personenbezogene Daten im engeren Sinn entstehen durch die App nicht. Der Nutzer *kann* welche eintragen (eine Notiz „Geschenk für Oma Schmidt"), aber diese Daten verlassen das Gerät nicht.
 
-### 2.2 Der OTA-Update-Abruf – die relevante Stelle
+### 2.2 Ausgehender Datenverkehr – es gibt keinen
 
-Beim Start prüft die App über EAS Update, ob ein Update vorliegt (ADR-013). Dabei werden an Expo-Server übermittelt:
+Hier stand bis ADR-040 der OTA-Update-Abruf über EAS Update. **V1 liefert ohne OTA aus**, `expo-updates` ist nicht installiert.
 
-- IP-Adresse (technisch unvermeidbar bei jedem Verbindungsaufbau)
-- Angaben zu App-Version, Laufzeitversion, Plattform und Kanal
+Damit gibt es in V1 **keine einzige Stelle, an der die App von sich aus eine Verbindung aufbaut.** Kein regelmäßiger ausgehender Datenverkehr, kein Drittlandtransfer, keine Rechtsgrundlage zu prüfen.
 
-**Das ist der einzige regelmäßige ausgehende Datenverkehr der App.** Er ist:
+Das vereinfacht drei Dinge auf einen Schlag: Die Datenschutzerklärung stimmt ohne jede Einschränkung (Abschnitt 3), das Data-Safety-Formular ist durchgehend mit „nein" zu beantworten (4.1), und Abschnitt 2.4 hat nur noch einen Fall statt zwei.
 
-- **erforderlich**, um Sicherheits- und Fehlerkorrekturen auszuliefern (Rechtsgrundlage: berechtigtes Interesse, Art. 6 Abs. 1 lit. f DSGVO),
-- ein **Drittlandtransfer** in die USA, der in der Datenschutzerklärung zu nennen ist,
-- **nicht abschaltbar**, ohne OTA aufzugeben.
+> `INTERNET` steht weiterhin im Manifest, weil eine Programmbibliothek es dort einträgt (4.6). Eine Berechtigung im Manifest ist kein Datenverkehr – die App nutzt sie nicht.
 
-→ Aufgabe **C-2** und **C-3**.
+**Kommt OTA später dazu** (Wiedervorlage nach vier Wochen Nutzung, ADR-040), ist dieser Abschnitt wiederherzustellen und C-4 neu zu stellen.
 
 ### 2.3 Fehlerberichte
 
@@ -62,7 +58,7 @@ Ab dem Moment, in dem der Bericht beim Entwickler ankommt, ist der Entwickler da
 
 ### 2.4 Rolle nach DSGVO
 
-Solange die App rein lokal arbeitet, findet **keine Verarbeitung durch den Entwickler** statt – der Nutzer verarbeitet seine eigenen Daten auf seinem eigenen Gerät. Verantwortlicher wird der Entwickler nur für: den OTA-Abruf (2.2) und eingehende Fehlerberichte (2.3).
+Solange die App rein lokal arbeitet, findet **keine Verarbeitung durch den Entwickler** statt – der Nutzer verarbeitet seine eigenen Daten auf seinem eigenen Gerät. Verantwortlicher wird der Entwickler in V1 nur in einem einzigen Fall: für einen Fehlerbericht, den ein Nutzer ihm von sich aus schickt (2.3).
 
 **Sobald Live-Sync kommt (ADR-003), ändert sich das grundlegend:** Dann ist der Entwickler Verantwortlicher für alle Listeninhalte aller Nutzer, braucht einen AVV mit dem Hosting-Anbieter, eine erweiterte Datenschutzerklärung, ein Löschkonzept und eine Kontolöschungsfunktion. Das ist bei der Entscheidung über Sync einzupreisen.
 
@@ -84,16 +80,17 @@ Verworfene Alternativen: eigene Domain (Kosten, keine 0 €), Notion/Google Docs
 
 1. Verantwortlicher (Name, Anschrift, E-Mail)
 2. Grundsatz: Alle Inhalte der App werden ausschließlich lokal auf dem Gerät gespeichert. Es gibt keine Benutzerkonten und keine Übertragung von Listeninhalten an den Entwickler.
-3. Automatische Updates (OTA): welche Daten, an wen, warum, Drittlandbezug, Rechtsgrundlage
-4. Fehlerberichte: nur auf ausdrückliche Handlung des Nutzers, Inhalt, Aufbewahrung
-5. Teilen und Sichern: Daten verlassen das Gerät nur, wenn der Nutzer sie selbst über eine andere App verschickt; für diese App gilt deren Datenschutzerklärung
-6. Berechtigungen: Die App fordert keine Laufzeitberechtigungen an
-7. Keine Werbung, kein Tracking, keine Analyse, keine Profilbildung
-8. Betroffenenrechte (Auskunft, Löschung, Beschwerde bei der Aufsichtsbehörde) und wie sie hier praktisch aussehen: Löschung = App deinstallieren
-9. Google Play als Vertriebsweg: Google verarbeitet eigenständig Daten, Verweis auf Googles Datenschutzerklärung
-10. Stand und Änderungsdatum
+3. Fehlerberichte: nur auf ausdrückliche Handlung des Nutzers, Inhalt, Aufbewahrung
+4. Teilen und Sichern: Daten verlassen das Gerät nur, wenn der Nutzer sie selbst über eine andere App verschickt; für diese App gilt deren Datenschutzerklärung
+5. Berechtigungen: Die App fordert keine Laufzeitberechtigungen an; `INTERNET` steht im Manifest, wird aber nicht genutzt
+6. Keine Werbung, kein Tracking, keine Analyse, keine Profilbildung
+7. Betroffenenrechte (Auskunft, Löschung, Beschwerde bei der Aufsichtsbehörde) und wie sie hier praktisch aussehen: Löschung = App deinstallieren
+8. Google Play als Vertriebsweg: Google verarbeitet eigenständig Daten, Verweis auf Googles Datenschutzerklärung
+9. Stand und Änderungsdatum
 
-→ Aufgabe **C-2**.
+Der frühere Punkt 3 („Automatische Updates") ist mit ADR-040 entfallen.
+
+→ Aufgabe **C-2**, umgesetzt als Entwurf in [`datenschutz.md`](datenschutz.md).
 
 ---
 
@@ -103,14 +100,20 @@ Verworfene Alternativen: eigene Domain (Kosten, keine 0 €), Notion/Google Docs
 
 Verpflichtend für jede App, unabhängig von der Testspur.
 
+Seit ADR-040 ist das Formular in einer Minute ausgefüllt, weil die App keine Daten überträgt (2.2):
+
 | Frage | Antwort für To-Shopping |
 |---|---|
-| Werden Daten erhoben oder geteilt? | Listeninhalte: **nein** |
-| Werden Daten übertragen? | Nur die technische Update-Abfrage (App-Version, Gerätetyp, IP) |
-| Verschlüsselte Übertragung? | ja (HTTPS) |
+| Werden Daten erhoben oder geteilt? | **nein** |
+| Werden Daten übertragen? | **nein** – die App baut von sich aus keine Verbindung auf |
+| Verschlüsselte Übertragung? | entfällt, es wird nichts übertragen |
 | Können Nutzer Löschung verlangen? | Ja – Deinstallation löscht alle Daten |
 
-> **Offener Punkt, ehrlich zu prüfen (Aufgabe C-4):** Ob die EAS-Update-Abfrage im Data-Safety-Formular als „Datenerhebung" zu deklarieren ist, hängt davon ab, ob die übertragenen Angaben dort gespeichert oder nur flüchtig verarbeitet werden. Vor dem Ausfüllen ist die aktuelle Expo-Dokumentation zu diesem Punkt zu lesen und die Antwort danach zu richten. **Im Zweifel deklarieren** – eine zu vorsichtige Angabe kostet nichts, eine falsche Angabe ist ein Verstoß gegen die Play-Richtlinien.
+> **Sicherungs- und Teilen-Dateien sind hier nicht zu deklarieren.** Das Formular fragt danach, was die *App* erhebt und überträgt. Eine Datei, die der Nutzer selbst über das Teilen-Menü verschickt, ist keine Übertragung durch die App – die App übergibt sie an das Betriebssystem, und der Nutzer entscheidet über alles Weitere.
+
+> **Der Fehlerbericht (2.3) ebenfalls nicht.** Er wird lokal gespeichert und verlässt das Gerät nur, wenn der Nutzer ihn ausdrücklich verschickt. Auch das ist keine Erhebung durch die App.
+
+**Falls OTA später hinzukommt, ist diese Tabelle hinfällig** und C-4 neu zu stellen. Dann gilt wieder: im Zweifel deklarieren – eine zu vorsichtige Angabe kostet nichts, eine falsche ist ein Verstoß gegen die Play-Richtlinien.
 
 ### 4.2 Altersfreigabe (IARC-Fragebogen)
 
@@ -136,11 +139,11 @@ Die Play Console verlangt eine Erklärung, ob man als **Händler** (Trader) auft
 
 V1 fordert **keine** Laufzeitberechtigung an.
 
-**Stand nach M8 (2026-08-26).** Das erzeugte Manifest wurde geprüft. Gefunden und behandelt:
+**Stand nach M8, zuletzt nachgeprüft am 8. September 2026** vor dem ersten Bundle-Upload. Das erzeugte Manifest wurde geprüft. Gefunden und behandelt:
 
 | Berechtigung | Herkunft | Entscheidung |
 |---|---|---|
-| `INTERNET` | Expo-Vorlage | **bleibt** – technische Voraussetzung für OTA, keine gefährliche Berechtigung |
+| `INTERNET` | Expo-Vorlage | **bleibt** – lässt sich nicht sinnvoll entfernen, keine gefährliche Berechtigung. Seit ADR-040 wird sie von nichts mehr genutzt; die Datenschutzerklärung sagt das ausdrücklich |
 | `VIBRATE` | `expo-haptics` | **bleibt** – das kurze Klopfen beim Abhaken (FR-3.2), keine Nutzerzustimmung nötig |
 | `READ_EXTERNAL_STORAGE` | `expo-file-system` | **entfernt** über `android.blockedPermissions` |
 | `WRITE_EXTERNAL_STORAGE` | `expo-file-system` | **entfernt** über `android.blockedPermissions` |

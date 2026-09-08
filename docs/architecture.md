@@ -37,10 +37,10 @@ Zweiter Leitgedanke, der eine Reihe von Entscheidungen erklärt:
 | Gesten & Animation | `react-native-gesture-handler`, `react-native-reanimated` | Wischgeste, Durchstreich-Animation |
 | Unit-Tests | **Jest** + React Native Testing Library | Logik und Komponenten |
 | E2E-Tests | **Maestro** | Smoke-Flow auf echtem Gerät/Emulator |
-| Build | **EAS Build** + lokaler Build (`expo run:android`) | Android-Builds unter Windows |
-| Auslieferung | **Play Console, interner Test** + **EAS Update** (OTA) | Verteilung und schnelle Korrekturen |
+| Build | **lokal über Gradle** (`expo run:android`, `gradlew bundleRelease`) | Android-Builds unter Windows, kostenlos |
+| Auslieferung | **Play Console, interner Test** | Verteilung an die Tester |
 
-**Nicht im Stack und bewusst nicht:** kein Backend, kein GraphQL/REST-Client, kein Redux, kein Analytics-SDK, kein Crash-Reporting-SDK, keine Werbe-SDKs.
+**Nicht im Stack und bewusst nicht:** kein Backend, kein GraphQL/REST-Client, kein Redux, kein Analytics-SDK, kein Crash-Reporting-SDK, keine Werbe-SDKs, **kein EAS Build und kein EAS Update** (ADR-040) – und damit kein Expo-Konto.
 
 Begründung der Stack-Wahl und die verworfenen Alternativen (Flutter, natives Kotlin, PWA, Bare React Native): siehe [`decisions.md`](decisions.md), ADR-001.
 
@@ -283,11 +283,11 @@ Es gibt keine Offline-Strategie im üblichen Sinn, weil es keinen Online-Modus g
 |---|---|
 | Datenhaltung | vollständig lokal in SQLite |
 | Schreibvorgänge | sofort, ohne Warteschlange, ohne Bestätigungs-UI |
-| Netzwerkzugriff der App | **keiner**, mit einer Ausnahme: EAS Update fragt beim Start nach einem OTA-Update |
-| Berechtigungen | keine Netzwerk-, Standort-, Kamera- oder Benachrichtigungsberechtigung in V1 |
+| Netzwerkzugriff der App | **keiner**, ohne Ausnahme (ADR-040) |
+| Berechtigungen | keine Standort-, Kamera- oder Benachrichtigungsberechtigung in V1 |
 | Konflikte | können nicht entstehen (ein Gerät, eine Datenbank) |
 
-Die EAS-Update-Abfrage ist der einzige ausgehende Netzwerkverkehr und muss in der Datenschutzerklärung erwähnt werden – siehe [`compliance.md`](compliance.md).
+Die App baut von sich aus **keine einzige** Verbindung auf. `INTERNET` steht im Manifest, weil eine Programmbibliothek es dort einträgt – benutzt wird es nicht. Damit ist das Data-Safety-Formular durchgehend mit „nein" zu beantworten; siehe [`compliance.md`](compliance.md).
 
 ---
 
@@ -414,12 +414,15 @@ Die Repository-Schicht wird **nicht** durchgängig getestet – sie ist dünn un
 | Zweck | Weg |
 |---|---|
 | Tägliche Entwicklung | `npx expo start` mit Development Build auf dem S24 |
-| Android-Build lokal | `npx expo run:android` (Android Studio + SDK auf Windows), kostenlos |
-| Build für den Store | EAS Build, kostenloses Kontingent |
-| Verteilung an Tester | Play Console, **interner Test**, Einladung per E-Mail |
-| Schnellkorrekturen | **EAS Update** (OTA) – nur Änderungen am JavaScript, nicht bei nativen Änderungen |
+| Android-Build lokal | `npm run android` (Android Studio + SDK auf Windows), kostenlos |
+| Build für E2E und Abnahme | `npm run android:release` – APK mit eingebettetem JavaScript (ADR-025) |
+| **Build für den Store** | `npm run bundle:android` – App Bundle, lokal über Gradle, alle drei Architekturen (ADR-041) |
+| Verteilung an Tester | Play Console, **interner Test**, Einladung per E-Mail (ADR-014) |
+| Schnellkorrekturen | **gibt es nicht** – jede Korrektur braucht einen neuen Build und Upload (ADR-040) |
 
-**Wichtig:** Änderungen an nativen Abhängigkeiten, Berechtigungen oder der App-Konfiguration erfordern immer ein neues Bundle im Store. OTA ersetzt das nicht.
+**Alles läuft lokal.** Kein EAS Build, kein EAS Update, kein `eas.json`, kein Expo-Konto. Der Rechner baut, die Play Console verteilt.
+
+**Signierung:** Der Build liest den Upload-Schlüssel aus `%USERPROFILE%\.gradle\gradle.properties`, nie aus dem Repository. Fehlen die Eigenschaften, signiert er mit dem Debug-Schlüssel weiter (ADR-042). Den Schlüssel für die Geräte hält Google – Play App Signing ist beim App Bundle Pflicht.
 
 Versionierung: `app.json` führt `version` (sichtbar) und `versionCode` (Play Console). Der `versionCode` wird bei jedem Store-Upload erhöht.
 

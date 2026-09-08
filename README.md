@@ -64,6 +64,7 @@ Der Ordner `android/` wird dabei erzeugt und ist bewusst **nicht** versioniert �
 | `npm start` | Expo-Entwicklungsserver |
 | `npm run android` | Nativer Build und Installation auf Gerät/Emulator (Entwicklung) |
 | `npm run android:release` | Release-Build mit eingebettetem JavaScript – **Voraussetzung für `npm run e2e`** |
+| `npm run bundle:android` | App Bundle für den Play Store – siehe „Auslieferung in den Play Store" |
 | `npm run typecheck` | TypeScript ohne Ausgabe prüfen |
 | `npm run lint` | ESLint und Prettier prüfen |
 | `npm run format` | Formatierung automatisch korrigieren |
@@ -258,8 +259,14 @@ keytool -genkeypair -v -storetype PKCS12 -keystore to-shopping-upload.keystore -
 `%LOCALAPPDATA%\Programs\Android Studio\jbr\bin\keytool.exe`
 
 Der Befehl fragt nach einem Passwort und ein paar Angaben zur Person. Lege die
-entstandene Datei **außerhalb des Projektordners** ab und sichere sie – geht sie
-verloren, lässt sich die App im Play Store nicht mehr aktualisieren.
+entstandene Datei **außerhalb des Projektordners** ab und sichere sie.
+
+> **Was passiert, wenn er verloren geht?** Nicht das, was in älteren Anleitungen
+> steht. Beim App Bundle gilt **Play App Signing**: Google erzeugt und verwahrt
+> den Schlüssel, mit dem die App auf den Geräten landet. Was du hier erzeugst,
+> ist nur der **Upload**-Schlüssel für den Weg zur Console – und den setzt der
+> Play-Support auf Antrag zurück. Die App bleibt also aktualisierbar.
+> Sichern trotzdem: Ein Support-Fall kostet Tage ohne Update. Siehe ADR-042.
 
 ### 2. Dem Build sagen, wo der Schlüssel liegt
 
@@ -284,10 +291,32 @@ unverändert, auch ohne eingerichteten Schlüssel.
 Der Play Store nimmt kein APK, sondern ein **Android App Bundle**:
 
 ```bash
-cd android && ./gradlew bundleRelease
+npm run bundle:android
 ```
 
 Das Ergebnis liegt in `android/app/build/outputs/bundle/release/app-release.aab`.
+
+Das Skript übergibt alle drei Architekturen (ADR-041) und weicht damit bewusst
+von `android/gradle.properties` ab, das für schnelle Entwicklungs- und E2E-Builds
+bei zweien bleibt. Rechne beim ersten Mal mit einer deutlich längeren Bauzeit –
+`armeabi-v7a` muss einmal komplett durch den C++-Übersetzer.
+
+> Das Skript ruft `android\gradlew.bat` mit vollem Pfad auf, nicht `cd android
+> && gradlew`. Grund: Ist die Umgebungsvariable `NoDefaultCurrentDirectoryInExePath`
+> gesetzt – was manche Terminals tun –, sucht `cmd` nicht im aktuellen
+> Verzeichnis, und der Aufruf schlägt fehl. Ein Pfad mit Trennzeichen umgeht die
+> Suche ganz. Damit ist das Skript Windows-spezifisch, was zum Rest des Projekts
+> passt (Entwicklung nur unter Windows).
+
+**Prüfen, ob wirklich dein Schlüssel benutzt wurde** – sonst scheitert erst der
+Upload:
+
+```bash
+keytool -printcert -jarfile android/app/build/outputs/bundle/release/app-release.aab
+```
+
+Steht dort `androiddebugkey`, hat Gradle deine Eigenschaften aus Schritt 2 nicht
+gefunden. Erwartet wird der Aussteller, den du beim Erzeugen angegeben hast.
 
 ### 4. Vor dem ersten Upload
 
@@ -299,7 +328,7 @@ abgedeckt:
 | C-1 | Name, Anschrift, Kontakt-E-Mail für die Datenschutzerklärung festlegen |
 | C-2 | `docs/datenschutz.md` ausfüllen – die Lücken sind mit `[…]` markiert |
 | C-3 | Datenschutzerklärung veröffentlichen, URL in der Play Console eintragen |
-| C-4 | Data-Safety-Formular ausfüllen (hängt davon ab, ob OTA eingerichtet wird) |
+| C-4 | Data-Safety-Formular ausfüllen – seit ADR-040 durchgehend „nein" |
 | C-5 | IARC-Fragebogen zur Altersfreigabe |
 | C-6 | Manifest auf Berechtigungen prüfen – siehe unten |
 | C-7 | Händlerstatus als Nicht-Händler erklären |
@@ -316,7 +345,19 @@ Erwartet werden genau drei Einträge: `INTERNET`, `VIBRATE` und die app-interne
 
 ### 5. Architekturen prüfen
 
-Der Build erzeugt derzeit nur `arm64-v8a` und `x86_64` (siehe
-`plugins/withAndroidBuildConfig.js`). Das deckt alle Telefone der letzten Jahre
-ab. Sollen sehr alte Geräte unterstützt werden, ist `armeabi-v7a` wieder
-aufzunehmen – zum Preis einer deutlich längeren Bauzeit.
+```bash
+unzip -l android/app/build/outputs/bundle/release/app-release.aab | grep 'lib/'
+```
+
+Erwartet werden `armeabi-v7a`, `arm64-v8a` und `x86_64`. Fehlt eine, wurde das
+Bundle mit den Werten aus `android/gradle.properties` gebaut statt mit denen aus
+`npm run bundle:android`.
+
+Ein Bundle mit drei Architekturen macht die App für niemanden größer: Google
+zerlegt es und liefert jedem Gerät nur seinen Teil. Nur die Bauzeit steigt.
+
+### 6. Store-Material
+
+`store/` enthält Icon, Feature-Grafik und Screenshots,
+[`docs/store-eintrag.md`](docs/store-eintrag.md) die Texte und die fertigen
+Antworten für alle Formulare der Play Console.

@@ -247,6 +247,27 @@ Die beiden zuletzt geplanten Meilensteine **M10 (Vorschläge) und M11 (Vorlagen)
 > Testern verteilt der interne Play-Store-Test ohnehin schnell genug. Wiedervorlage
 > nach den vier Wochen echter Nutzung.
 
+**Stand T-12.6 am 8. September 2026** – der Bauweg steht und ist geprüft:
+
+| | |
+|---|---|
+| `npm run bundle:android` | 22 min, erfolgreich |
+| Architekturen im Bundle | `armeabi-v7a`, `arm64-v8a`, `x86_64` (ADR-041) |
+| C-6, Berechtigungen | genau drei, wie erwartet |
+| targetSdk / minSdk | 36 / 24 |
+| Signatur | **noch Debug** – wartet auf den Upload-Schlüssel |
+
+Was noch fehlt, hängt nicht am Code: der Upload-Schlüssel (README, „Auslieferung
+in den Play Store"), die Screenshots vom Gerät, und C-1 bis C-7. Der Rollout an
+die Tester wartet auf die Anschrift für die Datenschutzerklärung – Aufgabe C-11,
+die durch die Veröffentlichung auf GitHub Pages früher schlagend wird als in
+`compliance.md` angenommen.
+
+Nebenbefund beim Zusammenstellen des Store-Materials: **T-12.3 war nur
+scheinbar erledigt.** Das Icon war die Expo-Vorlage, in `assets/icon.png` sogar
+mit sichtbaren Konstruktionslinien. Ersetzt und als Skript hinterlegt
+(`store/grafiken.py`), damit es reproduzierbar bleibt.
+
 **Abnahme V1:** Zehn Tester haben die App installiert. Der Entwickler benutzt sie bei jedem Einkauf – die vier Wochen des Erfolgskriteriums beginnen zu laufen.
 
 ---
