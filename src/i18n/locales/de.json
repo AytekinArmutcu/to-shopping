@@ -104,6 +104,8 @@
   "catalog": {
     "title": "Produkte",
     "search": "Produkt suchen",
+    "searchAction": "Suchen",
+    "searchClear": "Suche leeren",
     "uncategorized": "Ohne Kategorie",
     "empty": "Kein Produkt gefunden",
     "emptyHint": "Tippe weniger Buchstaben, oder lege das Produkt über das Eingabefeld der Liste an.",
@@ -171,6 +173,8 @@
     "title": "Produkte",
     "back": "Zurück",
     "search": "Produkt suchen",
+    "searchAction": "Suchen",
+    "searchClear": "Suche leeren",
     "empty": "Kein Produkt gefunden",
     "emptyHint": "Tippe weniger Buchstaben, oder lege das Produkt neu an.",
     "more": "Weitere Aktionen für {{name}}",

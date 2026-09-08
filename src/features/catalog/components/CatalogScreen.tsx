@@ -105,6 +105,9 @@ export function CatalogScreen({ listId }: Props) {
         onChangeText={setQuery}
         placeholder={t('catalog.search')}
         accessibilityLabel={t('catalog.search')}
+        // Siehe ProductsScreen: Paper beschriftet Lupe und X sonst englisch.
+        searchAccessibilityLabel={t('catalog.searchAction')}
+        clearAccessibilityLabel={t('catalog.searchClear')}
         testID="catalog-search"
         style={styles.search}
       />

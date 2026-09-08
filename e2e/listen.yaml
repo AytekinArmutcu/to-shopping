@@ -78,6 +78,18 @@ appId: de.toshopping.app
 # --- Umbenennen ---
 - tapOn:
     id: 'more-Drogerie'
+# Erst abwarten, dass das Menue wirklich offen ist. Ohne diese Pruefung tippt
+# Maestro auf die Stelle, an der der Eintrag gleich sein wird - und trifft
+# waehrend der Aufblendbewegung daneben, was das Menue wieder schliesst.
+#
+# Aufgetreten ist das genau einmal, im vierten Lauf ueber WLAN: Der Flow stand
+# auf der Uebersicht, ohne Menue und ohne Dialog. Zweimal davor lief er durch.
+# Genau deshalb steht die Pruefung jetzt hier - ein Test, der meistens gruen
+# ist, ist kein Test.
+- extendedWaitUntil:
+    visible:
+      id: 'menu-rename'
+    timeout: 15000
 - tapOn:
     id: 'menu-rename'
 - extendedWaitUntil:
@@ -101,6 +113,11 @@ appId: de.toshopping.app
 # --- Loeschen, mit Rueckfrage ---
 - tapOn:
     id: 'more-Drogeriemarkt'
+# Menue erst offen, dann tippen - siehe oben.
+- extendedWaitUntil:
+    visible:
+      id: 'menu-delete'
+    timeout: 15000
 - tapOn:
     id: 'menu-delete'
 - extendedWaitUntil:
@@ -119,6 +136,11 @@ appId: de.toshopping.app
 # --- Duplizieren (T-6.3) ---
 - tapOn:
     id: 'more-Einkauf'
+# Menue erst offen, dann tippen - siehe oben.
+- extendedWaitUntil:
+    visible:
+      id: 'menu-duplicate'
+    timeout: 15000
 - tapOn:
     id: 'menu-duplicate'
 # Der Eintrag heisst "Einkauf (Kopie)". Maestro vergleicht den Text

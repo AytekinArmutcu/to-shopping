@@ -139,11 +139,48 @@ appId: de.toshopping.app
 
 # --- Eigenes Produkt anlegen (T-7.2) ---
 # Das Suchfeld leeren, sonst uebernimmt der Entwurf den Suchtext als Namen.
+#
+# Bewusst ueber das X der Suchleiste und nicht ueber "eraseText: 20": Letzteres
+# schickt eine gezaehlte Zahl Ruecktasten, und ueber eine langsamere Verbindung
+# kommen nicht alle an. Genau daran ist dieser Flow gescheitert - aus
+# "Hafermilch" wurde "Hafe", der Entwurf uebernahm es, und das Produkt hiess am
+# Ende "HafeKokoswasser". Ein Tipp auf das X hat dagegen genau eine Wirkung.
+#
+# Zur Tastatur danach - dreimal falsch gemacht, deshalb ausfuehrlich:
+#
+# Papers X leert das Feld und behaelt manchmal den Fokus, dann springt die
+# Tastatur auf und verdeckt den Knopf "Neues Produkt". Manchmal auch nicht.
+# "hideKeyboard" ist fuer diesen Wechsel die falsche Wahl: Findet es keine
+# Tastatur, faellt es auf die Zuruecktaste zurueck - und die verlaesst den
+# Screen. Zweimal ist der Flow so auf "Meine Listen" gelandet, einmal blieb er
+# hinter der Tastatur haengen. Ein Wartepunkt davor half nicht.
+#
+# Ein Tipp auf die Abteilungsueberschrift ist dagegen in **beiden** Zustaenden
+# harmlos: Sie ist nur Text, kein Bedienelement, also passiert bei geschlossener
+# Tastatur nichts. Ist sie offen, geht der Tipp an die Liste, und die schliesst
+# sie (keyboardShouldPersistTaps="handled" in ProductsScreen.tsx).
 - tapOn:
-    id: 'products-search'
-- eraseText: 20
-- hideKeyboard
+    id: 'products-search-clear-icon'
 - waitForAnimationToEnd
+- tapOn: 'Obst & Gemüse'
+- waitForAnimationToEnd
+# Beweisen, dass das Feld wirklich leer ist - sonst faellt der Flow erst
+# zwanzig Schritte spaeter durch, mit einem Produktnamen, den niemand erklaeren
+# kann.
+#
+# Nicht ueber das X selbst: Paper laesst das immer im Baum stehen und macht es
+# nur durchsichtig (Searchbar.tsx, "Clear icon should be always rendered").
+# Geprueft wird deshalb die Wirkung - ohne Filter steht der ganze Katalog
+# wieder da, und "Ananas" ist der erste Eintrag der ersten Abteilung.
+- extendedWaitUntil:
+    visible:
+      id: 'product-Ananas'
+    timeout: 15000
+# Und der Knopf muss auch wirklich frei liegen, nicht hinter der Tastatur.
+- extendedWaitUntil:
+    visible:
+      id: 'product-create'
+    timeout: 15000
 - tapOn:
     id: 'product-create'
 - extendedWaitUntil:

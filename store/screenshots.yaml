@@ -1,0 +1,257 @@
+# Stellt die Zustaende her, die im Play Store zu sehen sein sollen, und nimmt
+# sie auf. Kein Test - dieser Flow prueft nichts, er inszeniert.
+#
+#     maestro test store/screenshots.yaml
+#
+# Bewusst **nicht** in e2e/: `npm run e2e` laesst den ganzen Ordner laufen, und
+# Gate 4 soll aus Tests bestehen, nicht aus Bildermachen. Der Flow braucht
+# ausserdem einen Menschen, der die Bilder danach ansieht.
+#
+# Die Aufnahmen landen als store/screenshot-*.png. Fuer den dunklen Modus
+# einmal umschalten und erneut laufen lassen:
+#
+#     adb shell cmd uimode night yes
+#
+# Laeuft gegen einen Release-Build (ADR-025): npm run android:release
+appId: de.toshopping.app
+---
+# --- Frischer Anfang, damit die Bilder reproduzierbar sind ---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: 'add-input'
+    timeout: 60000
+
+# --- Eine zweite Liste, damit die Uebersicht nicht leer wirkt ---
+- tapOn:
+    id: 'back-to-lists'
+- extendedWaitUntil:
+    visible:
+      id: 'list-Einkauf'
+    timeout: 15000
+- tapOn:
+    id: 'list-create'
+- extendedWaitUntil:
+    visible:
+      id: 'list-name'
+    timeout: 15000
+- tapOn:
+    id: 'list-name'
+- inputText: 'Drogeriemarkt'
+- hideKeyboard
+- tapOn:
+    id: 'list-create-confirm'
+- extendedWaitUntil:
+    visible:
+      id: 'add-input'
+    timeout: 15000
+
+- tapOn:
+    id: 'add-input'
+- inputText: 'Zahnpasta'
+- extendedWaitUntil:
+    visible:
+      id: 'suggestion-Zahnpasta'
+    timeout: 15000
+- tapOn:
+    id: 'suggestion-Zahnpasta'
+- inputText: 'Duschgel'
+- extendedWaitUntil:
+    visible:
+      id: 'suggestion-Duschgel'
+    timeout: 15000
+- tapOn:
+    id: 'suggestion-Duschgel'
+- hideKeyboard
+
+# --- Zurueck auf die Hauptliste und einen echten Wocheneinkauf fuellen ---
+- tapOn:
+    id: 'back-to-lists'
+- extendedWaitUntil:
+    visible:
+      id: 'list-Einkauf'
+    timeout: 15000
+- tapOn:
+    id: 'list-Einkauf'
+- extendedWaitUntil:
+    visible:
+      id: 'add-input'
+    timeout: 15000
+
+- tapOn:
+    id: 'add-input'
+- inputText: 'Bananen'
+- extendedWaitUntil:
+    visible:
+      id: 'suggestion-Bananen'
+    timeout: 15000
+- tapOn:
+    id: 'suggestion-Bananen'
+- inputText: 'Tomaten'
+- extendedWaitUntil:
+    visible:
+      id: 'suggestion-Tomaten'
+    timeout: 15000
+- tapOn:
+    id: 'suggestion-Tomaten'
+- inputText: 'Brot'
+- extendedWaitUntil:
+    visible:
+      id: 'suggestion-Brot'
+    timeout: 15000
+- tapOn:
+    id: 'suggestion-Brot'
+- inputText: 'Milch'
+- extendedWaitUntil:
+    visible:
+      id: 'suggestion-Milch'
+    timeout: 15000
+- tapOn:
+    id: 'suggestion-Milch'
+- inputText: 'Butter'
+- extendedWaitUntil:
+    visible:
+      id: 'suggestion-Butter'
+    timeout: 15000
+- tapOn:
+    id: 'suggestion-Butter'
+- inputText: 'Eier'
+- extendedWaitUntil:
+    visible:
+      id: 'suggestion-Eier'
+    timeout: 15000
+- tapOn:
+    id: 'suggestion-Eier'
+- inputText: 'Nudeln'
+- extendedWaitUntil:
+    visible:
+      id: 'suggestion-Nudeln'
+    timeout: 15000
+- tapOn:
+    id: 'suggestion-Nudeln'
+- hideKeyboard
+- waitForAnimationToEnd
+
+# ============================================================
+# 1. Die Liste - das Bild, das alles erklaert
+# ============================================================
+- takeScreenshot: store/screenshot-1-liste
+
+# ============================================================
+# 2. Menge und Notiz
+# ============================================================
+- tapOn:
+    id: 'edit-Milch'
+- extendedWaitUntil:
+    visible:
+      id: 'item-detail'
+    timeout: 15000
+- tapOn:
+    id: 'detail-plus'
+- tapOn:
+    id: 'detail-note'
+- inputText: 'die kleine Packung'
+- hideKeyboard
+- waitForAnimationToEnd
+- takeScreenshot: store/screenshot-2-menge
+- tapOn:
+    id: 'detail-done'
+- waitForAnimationToEnd
+
+# ============================================================
+# 3. Mitten im Einkauf - abgehakt und offen nebeneinander
+# ============================================================
+- tapOn: 'Bananen abhaken'
+- waitForAnimationToEnd
+- tapOn: 'Brot abhaken'
+- waitForAnimationToEnd
+# Erledigte einblenden, sonst zeigt das Bild nur, was fehlt - nicht, was
+# schon im Wagen liegt.
+- tapOn:
+    id: 'toggle-checked'
+- waitForAnimationToEnd
+- takeScreenshot: store/screenshot-3-einkauf
+
+# ============================================================
+# 4. Das Ladenlayout - die Reihenfolge des eigenen Marktes
+# ============================================================
+- tapOn:
+    id: 'open-layout'
+- extendedWaitUntil:
+    visible:
+      id: 'layout-list'
+    timeout: 15000
+- waitForAnimationToEnd
+- takeScreenshot: store/screenshot-4-ladenlayout
+- back
+- extendedWaitUntil:
+    visible:
+      id: 'add-input'
+    timeout: 15000
+
+# ============================================================
+# 5. Mehrere Listen nebeneinander - noch mit vollem Einkauf
+# ============================================================
+- tapOn:
+    id: 'back-to-lists'
+- extendedWaitUntil:
+    visible:
+      id: 'list-Einkauf'
+    timeout: 15000
+- waitForAnimationToEnd
+- takeScreenshot: store/screenshot-5-uebersicht
+- tapOn:
+    id: 'list-Einkauf'
+- extendedWaitUntil:
+    visible:
+      id: 'add-input'
+    timeout: 15000
+
+# ============================================================
+# 6. Der Katalog
+# ============================================================
+- tapOn:
+    id: 'open-catalog'
+- extendedWaitUntil:
+    visible:
+      id: 'catalog-list'
+    timeout: 15000
+- waitForAnimationToEnd
+- takeScreenshot: store/screenshot-6-katalog
+- back
+- extendedWaitUntil:
+    visible:
+      id: 'add-input'
+    timeout: 15000
+
+# ============================================================
+# 7. Vorschlaege - das eigentliche Versprechen der App
+#
+# Muss ganz zum Schluss kommen: Vorher gibt es keine Kaufhistorie, und dann
+# zeigt das leere Feld nichts an. Ein Bild mit alphabetischen Katalogtreffern
+# wuerde genau das Gegenteil dessen behaupten, was die App kann.
+# Also erst wirklich einkaufen, dann fotografieren.
+# ============================================================
+- tapOn: 'Tomaten abhaken'
+- tapOn: 'Milch abhaken'
+- tapOn: 'Butter abhaken'
+- tapOn: 'Eier abhaken'
+- tapOn: 'Nudeln abhaken'
+- waitForAnimationToEnd
+- tapOn:
+    id: 'finish-shopping'
+- extendedWaitUntil:
+    visible:
+      id: 'list-empty'
+    timeout: 15000
+
+# Leeres Feld antippen: Jetzt stehen die ueblichen Verdaechtigen da.
+- tapOn:
+    id: 'add-input'
+- extendedWaitUntil:
+    visible:
+      id: 'suggestion-Milch'
+    timeout: 15000
+- waitForAnimationToEnd
+- takeScreenshot: store/screenshot-7-vorschlaege

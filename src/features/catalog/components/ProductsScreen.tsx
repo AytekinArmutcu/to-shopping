@@ -145,6 +145,12 @@ export function ProductsScreen() {
         onChangeText={setQuery}
         placeholder={t('products.search')}
         accessibilityLabel={t('products.search')}
+        // Ohne diese beiden liest der Screenreader die englischen Vorgaben
+        // von Paper vor: "search" und "clear", mitten in einer deutschen App.
+        // Aufgefallen ist das erst im Hierarchie-Abzug eines E2E-Laufs - von
+        // aussen sind es zwei Symbole ohne Beschriftung.
+        searchAccessibilityLabel={t('products.searchAction')}
+        clearAccessibilityLabel={t('products.searchClear')}
         testID="products-search"
         style={styles.search}
       />

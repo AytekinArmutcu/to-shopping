@@ -268,6 +268,18 @@ scheinbar erledigt.** Das Icon war die Expo-Vorlage, in `assets/icon.png` sogar
 mit sichtbaren Konstruktionslinien. Ersetzt und als Skript hinterlegt
 (`store/grafiken.py`), damit es reproduzierbar bleibt.
 
+Und **T-12.1 ebenfalls nicht ganz**: Die Lupe und das X in beiden Suchleisten
+trugen Papers englische Vorgabewerte, `search` und `clear`. Ein Screenreader
+sagte sie in einer durchgehend deutschen App auf Englisch an. Sichtbar war das
+nirgends – es sind zwei Symbole ohne Text. Gefunden wurde es im
+Hierarchie-Abzug eines fehlgeschlagenen E2E-Laufs, nicht im Durchgang von
+M12. Behoben über `products.searchAction` / `searchClear` und die
+entsprechenden Schlüssel unter `catalog`.
+
+> Das ist die Lehre aus beiden Funden: Ein Kriterium wie „Beschriftungen
+> vollständig" lässt sich nicht durch Ansehen abhaken. Was keinen sichtbaren
+> Text hat, prüft man im Baum oder gar nicht.
+
 **Abnahme V1:** Zehn Tester haben die App installiert. Der Entwickler benutzt sie bei jedem Einkauf – die vier Wochen des Erfolgskriteriums beginnen zu laufen.
 
 ---

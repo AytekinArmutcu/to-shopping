@@ -107,9 +107,39 @@ Die App ist auf Deutsch, und zwar durchgehend – nicht übersetzt.
 
 | Was | Datei | Größe |
 |---|---|---|
-| App-Symbol | `store/icon-512.png` | 512 × 512 |
+| App-Symbol | `store/icon-512.png` | 512 × 512, ohne Transparenz |
 | Feature-Grafik | `store/feature-graphic.png` | 1024 × 500 |
-| Screenshots Telefon | `store/screenshot-*.png` | mindestens 2, hier mehr |
+
+Beide erzeugt von `store/grafiken.py` aus den Farben in `src/theme/index.ts`.
+
+### Screenshots
+
+Aufgenommen auf dem Galaxy S24 (1080 × 2340), hergestellt von
+`store/screenshots.yaml`. Play verlangt mindestens zwei; die Reihenfolge unten
+erzählt eine Geschichte und ist die empfohlene.
+
+| # | Datei | Was es zeigt |
+|---|---|---|
+| 1 | `screenshot-1-liste.png` | Die gefüllte Liste, nach Abteilungen sortiert |
+| 2 | `screenshot-2-menge.png` | Menge, Einheit und Notiz an einem Artikel |
+| 3 | `screenshot-3-einkauf.png` | Mitten im Einkauf: offen und erledigt nebeneinander |
+| 4 | `screenshot-4-ladenlayout.png` | Die Reihenfolge des eigenen Marktes |
+| 5 | `screenshot-5-uebersicht.png` | Mehrere Listen nebeneinander |
+| 6 | `screenshot-6-katalog.png` | Der mitgelieferte Produktkatalog |
+| 7 | `screenshot-7-vorschlaege.png` | Nach dem Einkauf: die üblichen Verdächtigen |
+
+Dieselben sieben im Dunkelmodus als `dunkel-*.png`. Für den Store reicht ein
+Satz – der helle wirkt im Play Store freundlicher. Der dunkle liegt bei, weil
+er beweist, dass FR-7.2 hält.
+
+> **Falls die Console die Seitenverhältnisse bemängelt:** Das S24 nimmt mit
+> 1:2,17 auf, Google dokumentiert 9:16 bis 16:9. In der Praxis nimmt die
+> Console hohe Telefonbilder an. Sollte sie hier zicken, sind die Bilder mit
+> Rändern auf 1080 × 1920 zu bringen – sagen, dann mache ich das.
+
+> **Bild 7 zeigt die Tastatur**, und das ist Absicht: Es beweist nebenbei, dass
+> das Eingabefeld über der Tastatur stehen bleibt (Punkt 1 aus
+> [`abnahme.md`](abnahme.md), der Punkt mit dem größten Risiko).
 
 ---
 
