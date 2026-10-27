@@ -49,6 +49,10 @@ Die beiden zuletzt geplanten Meilensteine **M10 (Vorschläge) und M11 (Vorlagen)
 | M10 | Vorschläge aus der Historie | 5 | Ranking nach Häufigkeit und Aktualität |
 | M11 | Vorlagen | 5 | Vorlage speichern und anwenden |
 | M12 | Feinschliff und Auslieferung | 8 | Barrierefreiheit, Dark Mode, interner Test |
+| **V2** | | | *entschieden nach sieben Wochen Alltag, siehe unten* |
+| M13 | Vorrat | 8 | Was zu Hause ist, ohne Buchführung |
+| M14 | Rezepte und Wochenplan | 12 | Kochen aus dem, was da ist |
+| M15 | Widget | 8 | Die Liste ohne App-Start |
 
 ---
 
@@ -281,6 +285,57 @@ entsprechenden Schlüssel unter `catalog`.
 > Text hat, prüft man im Baum oder gar nicht.
 
 **Abnahme V1:** Zehn Tester haben die App installiert. Der Entwickler benutzt sie bei jedem Einkauf – die vier Wochen des Erfolgskriteriums beginnen zu laufen.
+
+---
+
+## V2 – nach sieben Wochen Alltag
+
+Entschieden am 27. Oktober 2026, nachdem die App sieben Wochen täglich in Gebrauch war. Drei Meilensteine, jeder für sich benutzbar, rund 28 Stunden. Die Entscheidungen stehen in ADR-043 bis ADR-046; die Anforderungen als FR-9 bis FR-11 in `PRD.md`.
+
+**Nicht gebaut, bewusst:** Haltbarkeitsdaten (Mengenpflege in Verkleidung), Rezepte aus dem Netz (bricht den Grundsatz), Wochentage im Plan (werden ignoriert), Abhaken im Widget (vertagt, ADR-045).
+
+### M13 – Vorrat
+
+**Ziel:** Die App weiß, was zu Hause ist – ohne dass jemand Buch führt (ADR-043).
+
+| ID | Aufgabe | FR | h | Fertig, wenn … |
+|---|---|---|---|---|
+| T-13.1 | Tabelle `pantry` (product_id PK → products CASCADE, added_at), neue Migration, Schema-Test für die Löschregel | FR-9.1 | 1 | Migration 0001 liegt vor, 0000 unverändert, Schema-Test grün |
+| T-13.2 | Reine Logik: Produkt-IDs aus den Historie-Entwürfen, Checkliste aus Historie ∪ Vorrat nach Abteilungen, Fehlende ermitteln | FR-9.2, FR-9.4 | 2 | Unit-Tests: Duplikate, fehlender Produktbezug, Abteilungsreihenfolge, „Sonstiges", alphabetisch, leere Eingaben |
+| T-13.3 | Repository: Live-Abfrage, Haken setzen/entfernen, Fehlende auf Liste; Einbau in die Transaktion von `finishShopping` | FR-9.1, FR-9.3, FR-9.4 | 1,5 | `finishShopping` schreibt Historie und Vorrat in **einer** Transaktion; bestehende Tests unverändert grün |
+| T-13.4 | Screen `/vorrat`: Checkliste nach Abteilungen, Knopf „n fehlen → auf die Liste", Einträge in beiden Menüs, Texte in `de.json` | FR-9.2–9.4 | 2 | Skizze aus der Erkundung umgesetzt, 48 dp, Beschriftungen, hell und dunkel |
+| T-13.5 | Hinweis „Im Vorrat" unter dem Vorschlag beim Tippen – kein Ausblenden | FR-9.5 | 0,5 | Treffer zeigt die Zeile; Vorschlags-Tests unverändert |
+| T-13.6 | Sicherung: `pantry` als optionale Tabelle (ADR-046); `architecture.md` §3, §4, §5 nachziehen | FR-9.6 | 1 | V1-Sicherungsdatei lässt sich weiter einspielen; Backup-Tests decken „Tabelle fehlt" ab |
+| T-13.7 | E2E `vorrat.yaml`: Einkauf abschließen → Vorrat gefüllt → Haken weg → auf die Liste → Hinweis beim Tippen | – | 1 | Flow grün auf dem S24 |
+
+**Abnahme:** Nach einem echten Einkauf steht alles Gekaufte im Vorrat, ohne dass du etwas getan hast. Eine Minute Checkliste vor dem nächsten Einkauf erzeugt die Liste.
+
+### M14 – Rezepte und Wochenplan
+
+**Ziel:** Kochen aus dem, was da ist (ADR-044).
+
+| ID | Aufgabe | FR | h | Fertig, wenn … |
+|---|---|---|---|---|
+| T-14.1 | Tabellen `recipes`, `recipe_items`, `weekly_plan`, Migration, Schema-Tests | FR-10.1 | 1 | Löschregeln wie bei Vorlagen, geprüft |
+| T-14.2 | Grundstock: ~35 Alltagsgerichte als JSON, Zutaten nur aus `products.json`, keine Markennamen; Test prüft jede Zutat | FR-10.2 | 2 | Test „jede Zutat existiert im Katalog" grün; keine Duplikate |
+| T-14.3 | Reine Logik: `planRecipeShopping` (da / fehlt / schon auf Liste), `buildRecipeOverview`, `planWeeklyShopping`, `planRecipeReset` nach ADR-031 | FR-10.3–10.6 | 2,5 | Tests für Vorrat-Treffer, Listen-Treffer, Zutat ohne Produkt, Reihenfolge, Wochen-Vereinigung |
+| T-14.4 | Repository: Abfragen, anlegen/ändern/löschen, Fehlendes auf Liste (über `addProductsToList`), Wochenplan, Zurücksetzen, Grundstock beim ersten Start | FR-10.2, 10.5, 10.6 | 2 | Alles Zusammengesetzte in Transaktionen |
+| T-14.5 | Screens `/rezepte` (Wochenplan oben, alle Gerichte sortiert) und `/rezept?recipeId=` (Zutaten mit da/fehlt, Notiz, Knopf); Zutateneingabe über `AddItemBar` | FR-10.1, 10.3–10.6 | 3 | Skizzen umgesetzt, hell und dunkel, 48 dp |
+| T-14.6 | Sicherung (optional, ADR-046), E2E `rezepte.yaml`, Doku | FR-10.7 | 1,5 | Flow grün; `architecture.md` kennt die Tabellen |
+
+**Abnahme:** Die Übersicht nennt mindestens ein Gericht mit „Alles da". „Fehlendes auf die Liste" setzt genau das, was fehlt, und nichts doppelt.
+
+### M15 – Widget
+
+**Ziel:** Die Liste sehen, ohne die App zu öffnen (ADR-045).
+
+| ID | Aufgabe | FR | h | Fertig, wenn … |
+|---|---|---|---|---|
+| T-15.1 | Lokales Expo-Modul `modules/to-shopping-widget`: `AppWidgetProvider`, Layout, Receiver im Manifest-Fragment, lesender SQLite-Zugriff, Tipp öffnet die Liste | FR-11.1, FR-11.2 | 4 | Widget liegt auf dem S24 und zeigt die offenen Artikel der zuletzt geöffneten Liste |
+| T-15.2 | `refreshWidget()` aus der App nach Schreibvorgängen; Layout hell und dunkel; leere Liste, keine Liste | FR-11.3, FR-11.4 | 3 | Abhaken in der App ist binnen Sekunden im Widget sichtbar |
+| T-15.3 | Abschnitt in `abnahme.md`, Pflichtpunkt in `architecture.md` §3.4 (zweite Stelle, die das Schema kennt), Doku | – | 1 | Gate 5 deckt ab, was Gate 4 nicht kann |
+
+**Abnahme:** Das Widget überlebt einen Neustart des Telefons und einen `expo prebuild --clean`.
 
 ---
 

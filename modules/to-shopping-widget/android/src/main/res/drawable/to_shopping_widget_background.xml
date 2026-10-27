@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Hintergrund mit abgerundeten Ecken; Farbe wechselt mit hell/dunkel. -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+  <solid android:color="@color/to_shopping_widget_background" />
+  <corners android:radius="@dimen/to_shopping_widget_radius" />
+</shape>

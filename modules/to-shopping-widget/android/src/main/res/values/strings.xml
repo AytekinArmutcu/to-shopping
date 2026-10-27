@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Texte des Widgets. Sie liegen hier und nicht in src/i18n/locales/de.json,
+  weil das Widget ohne JavaScript gezeichnet wird: Der Launcher liest diese
+  Datei direkt. Gleiche Regel wie dort - kein sichtbarer Text im Kotlin-Code.
+-->
+<resources>
+  <!-- Beschreibung in der Widget-Auswahl des Launchers (ab Android 12). -->
+  <string name="to_shopping_widget_description">Offene Artikel der zuletzt geöffneten Liste</string>
+
+  <!--
+    Die drei Zustaende des Widgets (FR-11.4), jeder mit eigener Zeile:
+    keine Liste (App nie gestartet oder alle Listen geloescht), Liste ohne
+    offene Artikel, sonst die Artikel selbst. Ein Tipp ohne Liste oeffnet die
+    App, die dann auf die Uebersicht mit "Neue Liste" fuehrt.
+  -->
+  <string name="to_shopping_widget_no_list">Noch keine Liste – tipp zum Anlegen</string>
+  <string name="to_shopping_widget_no_items">Alles erledigt</string>
+
+  <!--
+    %d: Anzahl der offenen Artikel, die nicht mehr ins Widget passen.
+    Als plurals und nicht als string, weil es "1 weiterer" heisst, nicht
+    "1 weitere". Android waehlt die Form ueber getQuantityString nach den
+    Regeln der Sprache; im Deutschen ist "one" genau die 1.
+  -->
+  <plurals name="to_shopping_widget_more">
+    <item quantity="one">+ %d weiterer</item>
+    <item quantity="other">+ %d weitere</item>
+  </plurals>
+
+  <!-- Beispielinhalt fuer die Vorschau in der Widget-Auswahl (ab Android 12). -->
+  <string name="to_shopping_widget_preview_title">Wocheneinkauf</string>
+  <string name="to_shopping_widget_preview_item_1">Milch</string>
+  <string name="to_shopping_widget_preview_item_2">Brot</string>
+  <string name="to_shopping_widget_preview_item_3">Äpfel</string>
+  <string name="to_shopping_widget_preview_more">+ 2 weitere</string>
+</resources>

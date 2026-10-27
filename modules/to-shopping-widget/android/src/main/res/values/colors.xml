@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Farben des Widgets im hellen Systemdesign. Gleiche Werte wie die Rollen
+  background / onBackground / primary aus src/theme/index.ts (ADR-009), damit
+  Widget und App wie aus einem Guss wirken. Aendert sich die Farbwelt dort,
+  muss sie hier mitgezogen werden.
+-->
+<resources>
+  <color name="to_shopping_widget_background">#FCFDF6</color>
+  <color name="to_shopping_widget_text">#1A1C19</color>
+  <color name="to_shopping_widget_accent">#1E6C33</color>
+</resources>

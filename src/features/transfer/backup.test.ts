@@ -2,6 +2,8 @@ import {
   BACKUP_FORMAT,
   BACKUP_TABLES,
   BACKUP_VERSION,
+  OPTIONAL_BACKUP_TABLES,
+  REQUIRED_BACKUP_TABLES,
   buildBackup,
   countRows,
   needsBackupReminder,
@@ -34,7 +36,23 @@ describe('buildBackup und serializeBackup', () => {
 
   it('enthaelt alle Tabellen aus architecture.md 5.2 (T-9.1)', () => {
     const file = buildBackup(leer(), 1);
-    expect(Object.keys(file.data).sort()).toEqual([...BACKUP_TABLES].sort());
+    // Dieselbe Aufzaehlung wie im JSON-Beispiel in architecture.md 5.2.
+    expect(Object.keys(file.data).sort()).toEqual(
+      [
+        'categories',
+        'products',
+        'lists',
+        'listCategoryOrder',
+        'listItems',
+        'templates',
+        'templateItems',
+        'purchaseHistory',
+        'pantry',
+        'recipes',
+        'recipeItems',
+        'weeklyPlan',
+      ].sort(),
+    );
   });
 
   it('nennt app_state nicht - Geraete-Sachen gehoeren nicht in die Sicherung', () => {
@@ -110,6 +128,134 @@ describe('parseBackup lehnt ab', () => {
       ok: false,
       reason: 'unlesbar',
     });
+  });
+});
+
+describe('optionale Tabellen (ADR-046)', () => {
+  /** Eine Sicherung, wie V1 sie geschrieben hat: nur die Pflichttabellen. */
+  const v1Daten = () =>
+    Object.fromEntries(REQUIRED_BACKUP_TABLES.map((table) => [table, []])) as Record<
+      string,
+      unknown
+    >;
+
+  const datei = (data: unknown) =>
+    JSON.stringify({ format: BACKUP_FORMAT, version: 1, schemaVersion: 1, exportedAt: '', data });
+
+  it('haelt die Pflichtliste beim Stand von V1 fest (T-13.6)', () => {
+    expect([...REQUIRED_BACKUP_TABLES]).toEqual([
+      'categories',
+      'products',
+      'lists',
+      'listCategoryOrder',
+      'listItems',
+      'templates',
+      'templateItems',
+      'purchaseHistory',
+    ]);
+    expect([...OPTIONAL_BACKUP_TABLES]).toEqual(['pantry', 'recipes', 'recipeItems', 'weeklyPlan']);
+    expect(BACKUP_VERSION).toBe(1);
+  });
+
+  it('nimmt eine Datei ohne pantry an und setzt den Vorrat leer - der V1-Fall (T-13.6)', () => {
+    const result = parseBackup(datei(v1Daten()), 1);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.file.data.pantry).toEqual([]);
+      expect(Object.keys(result.file.data).sort()).toEqual([...BACKUP_TABLES].sort());
+    }
+  });
+
+  it('lehnt eine Datei ab, deren pantry keine Liste von Zeilen ist (T-13.6)', () => {
+    expect(parseBackup(datei({ ...v1Daten(), pantry: 'keine Liste' }), 1)).toEqual({
+      ok: false,
+      reason: 'unlesbar',
+    });
+    expect(parseBackup(datei({ ...v1Daten(), pantry: null }), 1)).toEqual({
+      ok: false,
+      reason: 'unlesbar',
+    });
+    expect(parseBackup(datei({ ...v1Daten(), pantry: ['p-milch'] }), 1)).toEqual({
+      ok: false,
+      reason: 'unlesbar',
+    });
+  });
+
+  it('buildBackup nimmt pantry mit, und es kommt beim Einlesen zurueck (T-13.6)', () => {
+    const data: BackupData = {
+      ...gefuellt(),
+      pantry: [{ productId: 'p-milch', addedAt: 1_000 }],
+    };
+    const file = buildBackup(data, 1);
+    expect(file.data.pantry).toEqual([{ productId: 'p-milch', addedAt: 1_000 }]);
+
+    const result = parseBackup(serializeBackup(file), 1);
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.file.data.pantry).toEqual([{ productId: 'p-milch', addedAt: 1_000 }]);
+    }
+  });
+
+  it('countRows zaehlt pantry mit (T-13.6)', () => {
+    expect(
+      countRows({
+        ...gefuellt(),
+        pantry: [
+          { productId: 'p-milch', addedAt: 1_000 },
+          { productId: 'p-brot', addedAt: 2_000 },
+        ],
+      }),
+    ).toBe(6);
+  });
+});
+
+describe('missingOptional (T-14.6)', () => {
+  const datei = (data: unknown) =>
+    JSON.stringify({ format: BACKUP_FORMAT, version: 1, schemaVersion: 1, exportedAt: '', data });
+
+  const v1Daten = () =>
+    Object.fromEntries(REQUIRED_BACKUP_TABLES.map((table) => [table, []])) as Record<
+      string,
+      unknown
+    >;
+
+  it('nennt bei einer V1-Datei alle vier optionalen Tabellen (T-14.6)', () => {
+    const result = parseBackup(datei(v1Daten()), 1);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.missingOptional).toEqual(['pantry', 'recipes', 'recipeItems', 'weeklyPlan']);
+      expect(result.file.missingOptional).toEqual(result.missingOptional);
+      expect(result.file.data.recipes).toEqual([]);
+    }
+  });
+
+  it('ist leer bei einer V2-Datei mit allen Tabellen, auch leeren (T-14.6)', () => {
+    const result = parseBackup(datei(leer()), 1);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.missingOptional).toEqual([]);
+    }
+  });
+
+  it('nennt genau weeklyPlan, wenn nur der Wochenplan fehlt (T-14.6)', () => {
+    const data = { ...leer() } as Record<string, unknown>;
+    data.recipes = [{ id: 'r-1', name: 'Pfannkuchen' }];
+    delete data.weeklyPlan;
+
+    const result = parseBackup(datei(data), 1);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.missingOptional).toEqual(['weeklyPlan']);
+      expect(result.file.data.recipes).toEqual([{ id: 'r-1', name: 'Pfannkuchen' }]);
+    }
+  });
+
+  it('buildBackup schreibt die Angabe nicht in die Datei (T-14.6)', () => {
+    expect('missingOptional' in buildBackup(leer(), 1)).toBe(false);
   });
 });
 

@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Textstile des Widgets. Als Stil statt direkt im Layout, weil das echte
+  Layout und das Vorschau-Layout gleich aussehen muessen.
+-->
+<resources>
+  <style name="ToShoppingWidgetTitle">
+    <item name="android:layout_width">match_parent</item>
+    <item name="android:layout_height">wrap_content</item>
+    <item name="android:layout_marginBottom">4dp</item>
+    <item name="android:textColor">@color/to_shopping_widget_accent</item>
+    <item name="android:textSize">16sp</item>
+    <item name="android:textStyle">bold</item>
+    <item name="android:maxLines">1</item>
+    <item name="android:ellipsize">end</item>
+  </style>
+
+  <style name="ToShoppingWidgetItem">
+    <item name="android:layout_width">match_parent</item>
+    <item name="android:layout_height">wrap_content</item>
+    <item name="android:paddingTop">2dp</item>
+    <item name="android:paddingBottom">2dp</item>
+    <item name="android:textColor">@color/to_shopping_widget_text</item>
+    <item name="android:textSize">14sp</item>
+    <item name="android:maxLines">1</item>
+    <item name="android:ellipsize">end</item>
+  </style>
+
+  <style name="ToShoppingWidgetMore" parent="ToShoppingWidgetItem">
+    <item name="android:textColor">@color/to_shopping_widget_accent</item>
+  </style>
+</resources>

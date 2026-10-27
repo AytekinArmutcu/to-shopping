@@ -190,6 +190,24 @@ export function ListsScreen() {
           }
         >
           <Menu.Item
+            leadingIcon="fridge-outline"
+            title={t('lists.pantry')}
+            testID="open-pantry"
+            onPress={() => {
+              setAppMenuOpen(false);
+              router.push('/vorrat');
+            }}
+          />
+          <Menu.Item
+            leadingIcon="chef-hat"
+            title={t('lists.recipes')}
+            testID="open-recipes"
+            onPress={() => {
+              setAppMenuOpen(false);
+              router.push('/rezepte');
+            }}
+          />
+          <Menu.Item
             leadingIcon="tag-multiple-outline"
             title={t('lists.products')}
             testID="open-products"

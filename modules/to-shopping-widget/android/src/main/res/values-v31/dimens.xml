@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!--
+    Ab Android 12 gibt das System den Eckenradius fuer Widgets vor. Wer ihn
+    uebernimmt, sieht neben den anderen Widgets auf dem Startbildschirm nicht
+    aus wie ein Fremdkoerper.
+  -->
+  <dimen name="to_shopping_widget_radius">@android:dimen/system_app_widget_background_radius</dimen>
+</resources>

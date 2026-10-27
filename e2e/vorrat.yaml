@@ -1,0 +1,224 @@
+# E2E fuer M13: der Vorrat (T-13.7, PRD Flow 8, ADR-043).
+#
+# Der Vorrat waechst aus dem, was gekauft wurde: Nach einem abgeschlossenen
+# Einkauf steht das Gekaufte als "ist da" im Vorrat. Wer zu Hause nachsieht,
+# nimmt heraus, was aufgebraucht ist, und setzt das Fehlende mit einem Tipp
+# auf die Liste. Beim Tippen in der Eingabe verraet der Hinweis "Im Vorrat",
+# dass ein Artikel eigentlich noch da ist.
+#
+# Nebenbei prueft der Flow die i18next-Pluralform auf dem Geraet
+# ("1 fehlt" / "2 fehlen") - die Unit-Tests laufen unter Node, nicht unter Hermes.
+#
+# Laeuft gegen einen Release-Build (ADR-025): npm run android:release
+appId: de.toshopping.app
+---
+# --- Erster Start: die Standardliste entsteht und oeffnet sich ---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: 'add-input'
+    timeout: 60000
+
+# --- Vorrat vor dem ersten Einkauf: leer (PRD Flow 8, Ausgangslage) ---
+- tapOn:
+    id: 'back-to-lists'
+- extendedWaitUntil:
+    visible:
+      id: 'list-Einkauf'
+    timeout: 15000
+- tapOn:
+    id: 'lists-menu'
+- extendedWaitUntil:
+    visible:
+      id: 'open-pantry'
+    timeout: 15000
+- tapOn:
+    id: 'open-pantry'
+- extendedWaitUntil:
+    visible:
+      id: 'pantry-empty'
+    timeout: 15000
+# Ohne listId fuehrt Zurueck in die Uebersicht (/listen), nicht auf eine Liste.
+- tapOn:
+    id: 'pantry-back'
+- extendedWaitUntil:
+    visible:
+      id: 'list-Einkauf'
+    timeout: 15000
+
+# --- Einkaufen: Milch und Brot gekauft, Butter bleibt liegen ---
+- tapOn:
+    id: 'list-Einkauf'
+- extendedWaitUntil:
+    visible:
+      id: 'add-input'
+    timeout: 15000
+- tapOn:
+    id: 'add-input'
+- inputText: 'Milch'
+- extendedWaitUntil:
+    visible:
+      id: 'suggestion-Milch'
+    timeout: 30000
+- tapOn:
+    id: 'suggestion-Milch'
+- inputText: 'Brot'
+- extendedWaitUntil:
+    visible:
+      id: 'suggestion-Brot'
+    timeout: 15000
+- tapOn:
+    id: 'suggestion-Brot'
+- inputText: 'Butter'
+- extendedWaitUntil:
+    visible:
+      id: 'suggestion-Butter'
+    timeout: 15000
+- tapOn:
+    id: 'suggestion-Butter'
+- hideKeyboard
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: 'item-Butter'
+    timeout: 15000
+- assertVisible: '3 von 3 offen'
+
+- tapOn: 'Milch abhaken'
+- extendedWaitUntil:
+    notVisible:
+      id: 'item-Milch'
+    timeout: 15000
+- tapOn: 'Brot abhaken'
+- extendedWaitUntil:
+    notVisible:
+      id: 'item-Brot'
+    timeout: 15000
+
+# Butter ist noch offen, also kommt die Rueckfrage
+- tapOn:
+    id: 'finish-shopping'
+- extendedWaitUntil:
+    visible:
+      id: 'finish-confirm'
+    timeout: 15000
+- tapOn:
+    id: 'finish-confirm'
+- extendedWaitUntil:
+    visible: '1 von 1 offen'
+    timeout: 15000
+
+# --- Vorrat von der Liste aus: das Gekaufte ist da ---
+- tapOn:
+    id: 'list-menu'
+- extendedWaitUntil:
+    visible:
+      id: 'menu-pantry'
+    timeout: 15000
+- tapOn:
+    id: 'menu-pantry'
+- extendedWaitUntil:
+    visible:
+      id: 'pantry-list'
+    timeout: 15000
+- extendedWaitUntil:
+    visible:
+      id: 'pantry-Milch'
+    timeout: 15000
+- assertVisible:
+    id: 'pantry-Brot'
+# Butter wurde nie gekauft: keine Historie, also auch kein Vorrat.
+- assertNotVisible:
+    id: 'pantry-Butter'
+- assertVisible:
+    id: 'pantry-missing'
+    text: 'Alles da'
+
+# --- Nachsehen: Milch ist aufgebraucht (Pluralform auf dem Geraet) ---
+- tapOn:
+    id: 'pantry-Milch'
+- extendedWaitUntil:
+    visible:
+      id: 'pantry-missing'
+      text: '1 fehlt'
+    timeout: 15000
+- tapOn:
+    id: 'pantry-Brot'
+- extendedWaitUntil:
+    visible:
+      id: 'pantry-missing'
+      text: '2 fehlen'
+    timeout: 15000
+# Doch noch Brot gefunden
+- tapOn:
+    id: 'pantry-Brot'
+- extendedWaitUntil:
+    visible:
+      id: 'pantry-missing'
+      text: '1 fehlt'
+    timeout: 15000
+
+# --- Das Fehlende auf die Liste ---
+- tapOn:
+    id: 'pantry-add-missing'
+- extendedWaitUntil:
+    visible:
+      id: 'pantry-snackbar'
+    timeout: 15000
+- assertVisible: '1 Artikel auf die Liste gesetzt'
+
+# Mit listId fuehrt Zurueck auf genau diese Liste.
+- tapOn:
+    id: 'pantry-back'
+- extendedWaitUntil:
+    visible:
+      id: 'item-Milch'
+    timeout: 15000
+- assertVisible:
+    id: 'item-Butter'
+# Brot wurde abgehakt und abgeschlossen und ist noch im Vorrat - es kommt
+# nicht zurueck.
+- assertNotVisible:
+    id: 'item-Brot'
+
+# --- Der Hinweis beim Tippen (FR zum Vorrat in der Eingabe) ---
+# Bewusst nur ein Tipp-Vorgang ("Bro" -> Hinweis da) und kein Gegentest mit
+# "Mil": Dafuer muesste das Feld zwischendurch geleert werden. eraseText zaehlt
+# Tastendruecke blind und ist dafuer verboten; ein Vorschlag antippen leert
+# das Feld zwar, setzt aber einen weiteren Artikel auf die Liste und veraendert
+# damit den Zustand, den der Gegentest pruefen soll. Dass der Hinweis nur bei
+# Vorratsartikeln erscheint, decken die Unit-Tests der Vorratslogik ab.
+- tapOn:
+    id: 'add-input'
+- inputText: 'Bro'
+- extendedWaitUntil:
+    visible:
+      id: 'suggestion-Brot'
+    timeout: 15000
+- assertVisible: 'Im Vorrat'
+
+# --- Neustart: der Vorrat haelt ---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: 'back-to-lists'
+    timeout: 30000
+- tapOn:
+    id: 'back-to-lists'
+- extendedWaitUntil:
+    visible:
+      id: 'list-Einkauf'
+    timeout: 15000
+- tapOn:
+    id: 'lists-menu'
+- extendedWaitUntil:
+    visible:
+      id: 'open-pantry'
+    timeout: 15000
+- tapOn:
+    id: 'open-pantry'
+- extendedWaitUntil:
+    visible:
+      id: 'pantry-Brot'
+    timeout: 15000

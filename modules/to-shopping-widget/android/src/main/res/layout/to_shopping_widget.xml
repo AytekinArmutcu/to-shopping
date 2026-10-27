@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Layout des Widgets. RemoteViews erlauben nur wenige View-Klassen; fuenf
+  feste Zeilen, die der Code ein- und ausblendet, kommen ohne ListView und
+  RemoteViewsService aus - fuer hoechstens fuenf Eintraege reicht das.
+
+  Die Vorgaben hier (nur "Noch keine Liste" sichtbar) zeigt der Launcher,
+  bevor das erste Update angekommen ist.
+
+  @android:id/background: Ab Android 12 nimmt das System diese View fuer die
+  Startanimation in die App und schneidet an ihr die Ecken ab.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  android:id="@android:id/background"
+  android:layout_width="match_parent"
+  android:layout_height="match_parent"
+  android:background="@drawable/to_shopping_widget_background"
+  android:clipToOutline="true"
+  android:orientation="vertical"
+  android:padding="12dp">
+
+  <TextView
+    android:id="@+id/to_shopping_widget_title"
+    style="@style/ToShoppingWidgetTitle"
+    android:visibility="gone" />
+
+  <TextView
+    android:id="@+id/to_shopping_widget_message"
+    style="@style/ToShoppingWidgetItem"
+    android:text="@string/to_shopping_widget_no_list" />
+
+  <TextView
+    android:id="@+id/to_shopping_widget_item_1"
+    style="@style/ToShoppingWidgetItem"
+    android:visibility="gone" />
+
+  <TextView
+    android:id="@+id/to_shopping_widget_item_2"
+    style="@style/ToShoppingWidgetItem"
+    android:visibility="gone" />
+
+  <TextView
+    android:id="@+id/to_shopping_widget_item_3"
+    style="@style/ToShoppingWidgetItem"
+    android:visibility="gone" />
+
+  <TextView
+    android:id="@+id/to_shopping_widget_item_4"
+    style="@style/ToShoppingWidgetItem"
+    android:visibility="gone" />
+
+  <TextView
+    android:id="@+id/to_shopping_widget_item_5"
+    style="@style/ToShoppingWidgetItem"
+    android:visibility="gone" />
+
+  <TextView
+    android:id="@+id/to_shopping_widget_more"
+    style="@style/ToShoppingWidgetMore"
+    android:visibility="gone" />
+</LinearLayout>

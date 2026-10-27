@@ -1,0 +1,25 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!--
+    Manifest-Fragment des Widgets. Gradle fuehrt es beim Build mit dem
+    Manifest der App zusammen - deshalb braucht es kein Config-Plugin, und es
+    ueberlebt ein Prebuild mit Option "clean" (ADR-045). Hinweis: In einem
+    XML-Kommentar darf kein doppelter Bindestrich stehen, sonst bricht der
+    Manifest-Merger mit "Error parsing" ab.
+
+    exported="false": Nur das System (Launcher-Dienst) und die App selbst
+    duerfen den Receiver ansprechen. Fremde Apps koennen so kein Update
+    ausloesen. Bewusst keine uses-permission - das Widget braucht keine.
+  -->
+  <application>
+    <receiver
+      android:name="de.toshopping.widget.ToShoppingWidgetProvider"
+      android:exported="false">
+      <intent-filter>
+        <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+      </intent-filter>
+      <meta-data
+        android:name="android.appwidget.provider"
+        android:resource="@xml/to_shopping_widget_info" />
+    </receiver>
+  </application>
+</manifest>

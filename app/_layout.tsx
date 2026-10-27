@@ -15,8 +15,9 @@ import { IncomingFileWatcher } from '@/features/transfer/IncomingFileWatcher';
 import { ensureFirstStart } from '@/db/appState';
 import { db } from '@/db/client';
 import migrations from '@/db/migrations/migrations';
-import { seedIfEmpty } from '@/db/seed';
+import { seedIfEmpty, seedRecipesOnce } from '@/db/seed';
 import '@/i18n';
+import { startWidgetRefresh } from '@/lib/widgetRefresh';
 import { navigationThemeFor, themeFor } from '@/theme';
 
 /**
@@ -52,6 +53,17 @@ export default function RootLayout() {
   const [seeded, setSeeded] = useState(false);
   const [seedError, setSeedError] = useState<Error | null>(null);
 
+  // Widget nachziehen, sobald die App an Listen oder Artikeln schreibt
+  // (FR-11.3). Eine Stelle fuer alle Schreibvorgaenge, Begruendung in
+  // src/lib/widgetRefresh.ts. Nach der Migration und vor dem Seed: So sieht
+  // das Widget auch die Standardliste, die der erste Start anlegt.
+  useEffect(() => {
+    if (!migrated) {
+      return;
+    }
+    return startWidgetRefresh();
+  }, [migrated]);
+
   useEffect(() => {
     if (!migrated) {
       return;
@@ -59,6 +71,9 @@ export default function RootLayout() {
 
     let cancelled = false;
     seedIfEmpty(db)
+      // Der Rezept-Grundstock kommt auf Bestandsgeraeten erst mit diesem Update;
+      // er wird einmalig gesaet, nach dem Katalog, dessen Produkte er braucht.
+      .then(() => seedRecipesOnce(db))
       // Der Zeitpunkt des ersten Starts wird gleich mit festgehalten: Die
       // Erinnerung an die Sicherung (FR-6.6) braucht einen Anfangspunkt, und
       // hier ist die erste Stelle, an der die Datenbank bereitsteht.

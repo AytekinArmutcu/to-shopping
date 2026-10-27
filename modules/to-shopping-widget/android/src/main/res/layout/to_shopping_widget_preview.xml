@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Vorschau in der Widget-Auswahl (previewLayout, ab Android 12). Gleiche
+  Stile wie das echte Layout, aber mit festem Beispielinhalt, damit man vor
+  dem Platzieren sieht, was das Widget zeigt. Unter Android 12 setzt der
+  Launcher ein eigenes Ersatzbild ein (meist das App-Symbol). Ein eigenes
+  Vorschaubild (previewImage) waere eine Bitmap, die gepflegt werden muesste.
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  android:id="@android:id/background"
+  android:layout_width="match_parent"
+  android:layout_height="match_parent"
+  android:background="@drawable/to_shopping_widget_background"
+  android:clipToOutline="true"
+  android:orientation="vertical"
+  android:padding="12dp">
+
+  <TextView
+    style="@style/ToShoppingWidgetTitle"
+    android:text="@string/to_shopping_widget_preview_title" />
+
+  <TextView
+    style="@style/ToShoppingWidgetItem"
+    android:text="@string/to_shopping_widget_preview_item_1" />
+
+  <TextView
+    style="@style/ToShoppingWidgetItem"
+    android:text="@string/to_shopping_widget_preview_item_2" />
+
+  <TextView
+    style="@style/ToShoppingWidgetItem"
+    android:text="@string/to_shopping_widget_preview_item_3" />
+
+  <TextView
+    style="@style/ToShoppingWidgetMore"
+    android:text="@string/to_shopping_widget_preview_more" />
+</LinearLayout>

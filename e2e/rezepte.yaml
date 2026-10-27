@@ -1,0 +1,239 @@
+# E2E fuer M14: Rezepte und Wochenplan (T-14.6, PRD Flow 9, ADR-044).
+#
+# Der Grundstock ist nach dem ersten Start da. Ein Gericht kommt in den
+# Wochenplan, seine Zutaten mit einem Tipp auf die Liste. Nach dem Einkauf
+# steht alles im Vorrat - die Rezeptuebersicht zeigt dann "Alles da", weil
+# sie zaehlt, was nicht im Vorrat ist. Ein eigenes Gericht entsteht im
+# Editor ueber dieselbe Eingabe wie die Liste (AddItemBar) und ueberlebt
+# "Rezepte zuruecksetzen" (ADR-031: Zuruecksetzen fasst nur Mitgeliefertes an).
+#
+# Nebenbei prueft der Flow die i18next-Pluralformen auf dem Geraet
+# ("5 fehlen", "5 Artikel auf die Liste gesetzt", "35 Gerichte
+# wiederhergestellt") - die Unit-Tests laufen unter Node, nicht unter Hermes.
+#
+# Zahlen aus src/db/seed/recipes.json: 35 Gerichte; Pfannkuchen hat fuenf
+# Zutaten (Mehl, Milch, Eier, Butter, Marmelade).
+#
+# Die Rezeptliste ist laenger als ein Bildschirm, deshalb scrollUntilVisible
+# statt eines blossen Wartens auf die Zeile.
+#
+# Kein hideKeyboard ohne offene Tastatur: Dann drueckt Maestro Zurueck und
+# verlaesst den Bildschirm. Kein eraseText zum Leeren.
+#
+# Laeuft gegen einen Release-Build (ADR-025): npm run android:release
+appId: de.toshopping.app
+---
+# --- Erster Start: der Grundstock ist da ---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: 'add-input'
+    timeout: 60000
+- tapOn:
+    id: 'back-to-lists'
+- extendedWaitUntil:
+    visible:
+      id: 'list-Einkauf'
+    timeout: 15000
+- tapOn:
+    id: 'lists-menu'
+- extendedWaitUntil:
+    visible:
+      id: 'open-recipes'
+    timeout: 15000
+- tapOn:
+    id: 'open-recipes'
+- extendedWaitUntil:
+    visible:
+      id: 'recipes-list'
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: 'recipe-Pfannkuchen'
+    direction: DOWN
+    timeout: 30000
+
+# --- Ein Gericht ansehen und in die Woche nehmen ---
+- tapOn:
+    id: 'recipe-Pfannkuchen'
+- extendedWaitUntil:
+    visible:
+      id: 'ingredient-Mehl'
+    timeout: 15000
+- assertVisible:
+    id: 'ingredient-Eier'
+# Nichts im Vorrat: alle fuenf Zutaten fehlen.
+- assertVisible:
+    id: 'recipe-missing'
+    text: '5 fehlen'
+- tapOn:
+    id: 'recipe-week-switch'
+- waitForAnimationToEnd
+- tapOn:
+    id: 'recipe-back'
+# Die Uebersicht kann noch heruntergescrollt sein - der Wochenplan steht oben.
+- scrollUntilVisible:
+    element:
+      id: 'week-Pfannkuchen'
+    direction: UP
+    timeout: 30000
+- assertVisible:
+    id: 'recipes-week'
+
+# --- Alles Fehlende der Woche auf die Liste ---
+- tapOn:
+    id: 'week-add-missing'
+- extendedWaitUntil:
+    visible:
+      id: 'recipes-snackbar'
+    timeout: 15000
+- assertVisible: '5 Artikel auf die Liste gesetzt'
+
+# --- Einkaufen: alles abhaken, abschliessen ---
+- tapOn:
+    id: 'recipes-back'
+- extendedWaitUntil:
+    visible:
+      id: 'list-Einkauf'
+    timeout: 15000
+- tapOn:
+    id: 'list-Einkauf'
+- extendedWaitUntil:
+    visible:
+      id: 'item-Mehl'
+    timeout: 15000
+- waitForAnimationToEnd
+- tapOn: 'Mehl abhaken'
+- extendedWaitUntil:
+    notVisible:
+      id: 'item-Mehl'
+    timeout: 15000
+- tapOn: 'Milch abhaken'
+- extendedWaitUntil:
+    notVisible:
+      id: 'item-Milch'
+    timeout: 15000
+- tapOn: 'Eier abhaken'
+- extendedWaitUntil:
+    notVisible:
+      id: 'item-Eier'
+    timeout: 15000
+- tapOn: 'Butter abhaken'
+- extendedWaitUntil:
+    notVisible:
+      id: 'item-Butter'
+    timeout: 15000
+- tapOn: 'Marmelade abhaken'
+- extendedWaitUntil:
+    notVisible:
+      id: 'item-Marmelade'
+    timeout: 15000
+# Nichts bleibt offen, also keine Rueckfrage (ListScreen: openCount === 0).
+- tapOn:
+    id: 'finish-shopping'
+- extendedWaitUntil:
+    visible:
+      id: 'list-empty'
+    timeout: 15000
+
+# --- Zurueck zu den Rezepten: jetzt ist alles da ---
+- tapOn:
+    id: 'back-to-lists'
+- extendedWaitUntil:
+    visible:
+      id: 'list-Einkauf'
+    timeout: 15000
+- tapOn:
+    id: 'lists-menu'
+- extendedWaitUntil:
+    visible:
+      id: 'open-recipes'
+    timeout: 15000
+- tapOn:
+    id: 'open-recipes'
+- extendedWaitUntil:
+    visible:
+      id: 'recipes-list'
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: 'recipe-Pfannkuchen'
+    direction: DOWN
+    timeout: 30000
+# "Alles da" steht als description in der Zeile. childOf grenzt auf genau
+# diese Zeile ein - die Wochenzeile zeigt denselben Text.
+- assertVisible:
+    text: 'Alles da'
+    childOf:
+      id: 'recipe-Pfannkuchen'
+
+# --- Eigenes Gericht anlegen ---
+- tapOn:
+    id: 'recipe-create'
+- extendedWaitUntil:
+    visible:
+      id: 'recipe-name'
+    timeout: 15000
+- tapOn:
+    id: 'recipe-name'
+# Bewusst ohne Umlaut: Kein bestehender Flow tippt einen, und Maestros
+# Texteingabe unter Android ist bei Nicht-ASCII nicht verlaesslich.
+- inputText: 'Kaesebrot'
+- tapOn:
+    id: 'add-input'
+- inputText: 'Brot'
+- extendedWaitUntil:
+    visible:
+      id: 'suggestion-Brot'
+    timeout: 15000
+- tapOn:
+    id: 'suggestion-Brot'
+- extendedWaitUntil:
+    visible:
+      id: 'ingredient-Brot'
+    timeout: 15000
+- tapOn:
+    id: 'recipe-save'
+# Nach dem Speichern steht das Gericht im Ansichtsmodus.
+- extendedWaitUntil:
+    visible:
+      id: 'recipe-edit'
+    timeout: 15000
+- tapOn:
+    id: 'recipe-back'
+- extendedWaitUntil:
+    visible:
+      id: 'recipes-list'
+    timeout: 15000
+- scrollUntilVisible:
+    element:
+      id: 'recipe-Kaesebrot'
+    direction: DOWN
+    timeout: 30000
+
+# --- Zuruecksetzen: der Grundstock kommt zurueck, Eigenes bleibt ---
+- tapOn:
+    id: 'recipes-menu'
+- extendedWaitUntil:
+    visible:
+      id: 'recipes-reset'
+    timeout: 15000
+- tapOn:
+    id: 'recipes-reset'
+- extendedWaitUntil:
+    visible:
+      id: 'recipes-reset-confirm'
+    timeout: 15000
+- tapOn:
+    id: 'recipes-reset-confirm'
+- extendedWaitUntil:
+    visible:
+      id: 'recipes-snackbar'
+    timeout: 15000
+- assertVisible: '35 Gerichte wiederhergestellt'
+- scrollUntilVisible:
+    element:
+      id: 'recipe-Kaesebrot'
+    direction: DOWN
+    timeout: 30000

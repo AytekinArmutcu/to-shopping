@@ -1,6 +1,6 @@
 import { and, asc, eq, getTableColumns } from 'drizzle-orm';
 
-import { getAppState, setAppState } from '@/db/appState';
+import { getAppState, setAppState, setFlag } from '@/db/appState';
 import { db } from '@/db/client';
 import migrations from '@/db/migrations/migrations';
 import {
@@ -8,11 +8,16 @@ import {
   listCategoryOrder,
   listItems,
   lists,
+  pantry,
   products,
   purchaseHistory,
+  recipeItems,
+  recipes,
   templateItems,
   templates,
+  weeklyPlan,
 } from '@/db/schema';
+import { RECIPES_SEEDED_KEY } from '@/db/seed';
 
 import {
   BACKUP_TABLES,
@@ -193,10 +198,26 @@ const BACKUP_SOURCES = {
   templates,
   templateItems,
   purchaseHistory,
+  pantry,
+  recipes,
+  recipeItems,
+  weeklyPlan,
 } as const;
 
-/** Reihenfolge zum Loeschen: erst das, was auf anderes zeigt. */
+/**
+ * Reihenfolge zum Loeschen: erst das, was auf anderes zeigt.
+ *
+ * `pantry` steht vorn, weil es auf `products` zeigt. Ebenso die Rezepte:
+ * `weeklyPlan` und `recipeItems` zeigen auf `recipes`, die Zutaten ausserdem
+ * auf `products` - also alle drei vor `products`, und `recipes` zuletzt.
+ * Eingefuegt wird in der Reihenfolge von BACKUP_TABLES, dort stehen sie
+ * hinter `products`.
+ */
 const DELETE_ORDER = [
+  'weeklyPlan',
+  'recipeItems',
+  'recipes',
+  'pantry',
   'purchaseHistory',
   'templateItems',
   'templates',
@@ -255,6 +276,19 @@ export async function restoreBackup(file: BackupFile): Promise<number> {
       }
     }
   });
+
+  // Eine Sicherung ohne `recipes`-Tabelle (V1) hinterlaesst nach dem Ersetzen
+  // eine leere Rezepttabelle - der Merker RECIPES_SEEDED_KEY in app_state
+  // steht aber noch, also kaeme der Grundstock nie zurueck (ADR-046,
+  // Konsequenz). Darum den Merker loeschen: Beim naechsten Start saet
+  // seedRecipesOnce. app_state selbst bleibt aus der Sicherung ausgeschlossen.
+  // Eine Datei mit leerer, aber vorhandener `recipes`-Tabelle laesst den
+  // Merker stehen - dort hat der Nutzer seine Gerichte bewusst geloescht.
+  // Nach der Transaktion, weil setFlag ueber die gemeinsame Verbindung
+  // schreibt und keine Transaktion annimmt (wie in seedRecipesOnce).
+  if (file.missingOptional?.includes('recipes')) {
+    await setFlag(RECIPES_SEEDED_KEY, false);
+  }
 
   return written;
 }

@@ -1,0 +1,395 @@
+[
+  {
+    "name": "Spaghetti Bolognese",
+    "note": "Soße mindestens 30 Minuten köcheln lassen.",
+    "items": [
+      { "product": "Spaghetti", "quantity": 1 },
+      { "product": "Hackfleisch", "quantity": 500, "unit": "g" },
+      { "product": "Gehackte Tomaten", "quantity": 2 },
+      { "product": "Zwiebeln", "quantity": 2, "unit": "stueck" },
+      { "product": "Karotten", "quantity": 2, "unit": "stueck" },
+      { "product": "Knoblauch" },
+      { "product": "Tomatenmark" }
+    ]
+  },
+  {
+    "name": "Kartoffelsuppe",
+    "items": [
+      { "product": "Kartoffeln", "quantity": 1 },
+      { "product": "Karotten", "quantity": 2, "unit": "stueck" },
+      { "product": "Lauch" },
+      { "product": "Zwiebeln", "quantity": 1, "unit": "stueck" },
+      { "product": "Gemüsebrühe" },
+      { "product": "Wiener Würstchen" },
+      { "product": "Petersilie" }
+    ]
+  },
+  {
+    "name": "Pfannkuchen",
+    "items": [
+      { "product": "Mehl", "quantity": 250, "unit": "g" },
+      { "product": "Milch", "quantity": 500, "unit": "ml" },
+      { "product": "Eier" },
+      { "product": "Butter" },
+      { "product": "Marmelade" }
+    ]
+  },
+  {
+    "name": "Käsespätzle",
+    "note": "Die Zwiebeln langsam goldbraun rösten.",
+    "items": [
+      { "product": "Mehl", "quantity": 500, "unit": "g" },
+      { "product": "Eier" },
+      { "product": "Emmentaler", "quantity": 2 },
+      { "product": "Zwiebeln", "quantity": 3, "unit": "stueck" },
+      { "product": "Butter" }
+    ]
+  },
+  {
+    "name": "Linsensuppe",
+    "items": [
+      { "product": "Linsen" },
+      { "product": "Kartoffeln", "quantity": 500, "unit": "g" },
+      { "product": "Karotten", "quantity": 2, "unit": "stueck" },
+      { "product": "Lauch" },
+      { "product": "Speck" },
+      { "product": "Gemüsebrühe" },
+      { "product": "Essig" }
+    ]
+  },
+  {
+    "name": "Gemüsepfanne",
+    "items": [
+      { "product": "Paprika", "quantity": 2 },
+      { "product": "Zucchini" },
+      { "product": "Champignons" },
+      { "product": "Zwiebeln", "quantity": 1, "unit": "stueck" },
+      { "product": "Reis" },
+      { "product": "Speiseöl" }
+    ]
+  },
+  {
+    "name": "Nudelauflauf",
+    "items": [
+      { "product": "Nudeln" },
+      { "product": "Kochschinken" },
+      { "product": "Sahne", "quantity": 2 },
+      { "product": "Eier" },
+      { "product": "Gouda" },
+      { "product": "Tiefkühlerbsen" }
+    ]
+  },
+  {
+    "name": "Bratkartoffeln mit Spiegelei",
+    "items": [
+      { "product": "Kartoffeln", "quantity": 1 },
+      { "product": "Zwiebeln", "quantity": 2, "unit": "stueck" },
+      { "product": "Speck" },
+      { "product": "Eier" },
+      { "product": "Speiseöl" },
+      { "product": "Saure Gurken" }
+    ]
+  },
+  {
+    "name": "Chili con Carne",
+    "items": [
+      { "product": "Hackfleisch", "quantity": 500, "unit": "g" },
+      { "product": "Kidneybohnen", "quantity": 2 },
+      { "product": "Dosenmais" },
+      { "product": "Gehackte Tomaten", "quantity": 2 },
+      { "product": "Paprika", "quantity": 2 },
+      { "product": "Zwiebeln", "quantity": 2, "unit": "stueck" },
+      { "product": "Paprikapulver" },
+      { "product": "Reis" }
+    ]
+  },
+  {
+    "name": "Reispfanne mit Hähnchen",
+    "items": [
+      { "product": "Reis" },
+      { "product": "Hähnchenbrust", "quantity": 400, "unit": "g" },
+      { "product": "Paprika", "quantity": 2 },
+      { "product": "Tiefkühlerbsen" },
+      { "product": "Zwiebeln", "quantity": 1, "unit": "stueck" },
+      { "product": "Speiseöl" }
+    ]
+  },
+  {
+    "name": "Ofengemüse",
+    "note": "Bei 200 Grad etwa 30 Minuten backen.",
+    "items": [
+      { "product": "Kartoffeln", "quantity": 1 },
+      { "product": "Süßkartoffeln", "quantity": 500, "unit": "g" },
+      { "product": "Paprika", "quantity": 2 },
+      { "product": "Zucchini" },
+      { "product": "Zwiebeln", "quantity": 2, "unit": "stueck" },
+      { "product": "Olivenöl" },
+      { "product": "Feta" }
+    ]
+  },
+  {
+    "name": "Tomatensuppe",
+    "items": [
+      { "product": "Passierte Tomaten", "quantity": 2 },
+      { "product": "Zwiebeln", "quantity": 1, "unit": "stueck" },
+      { "product": "Knoblauch" },
+      { "product": "Gemüsebrühe" },
+      { "product": "Sahne" },
+      { "product": "Baguette" }
+    ]
+  },
+  {
+    "name": "Kaiserschmarrn",
+    "items": [
+      { "product": "Mehl", "quantity": 200, "unit": "g" },
+      { "product": "Milch", "quantity": 400, "unit": "ml" },
+      { "product": "Eier" },
+      { "product": "Butter" },
+      { "product": "Zucker", "quantity": 100, "unit": "g" },
+      { "product": "Äpfel", "quantity": 500, "unit": "g" }
+    ]
+  },
+  {
+    "name": "Milchreis",
+    "items": [
+      { "product": "Reis" },
+      { "product": "Milch", "quantity": 1 },
+      { "product": "Zucker", "quantity": 80, "unit": "g" },
+      { "product": "Butter" },
+      { "product": "Tiefkühlbeeren" }
+    ]
+  },
+  {
+    "name": "Rührei mit Brot",
+    "items": [
+      { "product": "Eier" },
+      { "product": "Milch", "quantity": 100, "unit": "ml" },
+      { "product": "Butter" },
+      { "product": "Brot" },
+      { "product": "Cocktailtomaten" },
+      { "product": "Kochschinken" }
+    ]
+  },
+  {
+    "name": "Quark mit Obst",
+    "items": [
+      { "product": "Quark", "quantity": 2 },
+      { "product": "Milch", "quantity": 100, "unit": "ml" },
+      { "product": "Bananen", "quantity": 2 },
+      { "product": "Erdbeeren" },
+      { "product": "Honig" }
+    ]
+  },
+  {
+    "name": "Gulasch mit Nudeln",
+    "note": "Das Fleisch mindestens 90 Minuten schmoren lassen.",
+    "items": [
+      { "product": "Gulasch", "quantity": 600, "unit": "g" },
+      { "product": "Zwiebeln", "quantity": 3, "unit": "stueck" },
+      { "product": "Paprika", "quantity": 2 },
+      { "product": "Tomatenmark" },
+      { "product": "Paprikapulver" },
+      { "product": "Nudeln" }
+    ]
+  },
+  {
+    "name": "Kartoffelpüree mit Würstchen",
+    "items": [
+      { "product": "Kartoffeln", "quantity": 1 },
+      { "product": "Milch", "quantity": 200, "unit": "ml" },
+      { "product": "Butter" },
+      { "product": "Wiener Würstchen" },
+      { "product": "Senf" }
+    ]
+  },
+  {
+    "name": "Erbsensuppe",
+    "items": [
+      { "product": "Tiefkühlerbsen", "quantity": 2 },
+      { "product": "Kartoffeln", "quantity": 500, "unit": "g" },
+      { "product": "Karotten", "quantity": 2, "unit": "stueck" },
+      { "product": "Zwiebeln", "quantity": 1, "unit": "stueck" },
+      { "product": "Gemüsebrühe" },
+      { "product": "Wiener Würstchen" }
+    ]
+  },
+  {
+    "name": "Pizza-Toast",
+    "note": "Bei 200 Grad etwa 10 Minuten überbacken.",
+    "items": [
+      { "product": "Toastbrot" },
+      { "product": "Tomatenmark" },
+      { "product": "Kochschinken" },
+      { "product": "Gouda" },
+      { "product": "Paprika" },
+      { "product": "Champignons" }
+    ]
+  },
+  {
+    "name": "Nudeln mit Kräuterpesto",
+    "note": "Kräuter, Nüsse, Käse und Öl fein pürieren.",
+    "items": [
+      { "product": "Nudeln" },
+      { "product": "Petersilie", "quantity": 2 },
+      { "product": "Walnüsse" },
+      { "product": "Parmesan" },
+      { "product": "Olivenöl" },
+      { "product": "Knoblauch" }
+    ]
+  },
+  {
+    "name": "Gemüsecurry",
+    "items": [
+      { "product": "Kokosmilch" },
+      { "product": "Kichererbsen" },
+      { "product": "Süßkartoffeln", "quantity": 500, "unit": "g" },
+      { "product": "Spinat" },
+      { "product": "Zwiebeln", "quantity": 1, "unit": "stueck" },
+      { "product": "Ingwer" },
+      { "product": "Reis" }
+    ]
+  },
+  {
+    "name": "Kartoffelgratin",
+    "note": "Bei 180 Grad etwa 50 Minuten backen.",
+    "items": [
+      { "product": "Kartoffeln", "quantity": 1 },
+      { "product": "Sahne", "quantity": 2 },
+      { "product": "Milch", "quantity": 200, "unit": "ml" },
+      { "product": "Knoblauch" },
+      { "product": "Emmentaler" }
+    ]
+  },
+  {
+    "name": "Schnitzel mit Kartoffelsalat",
+    "note": "Den Kartoffelsalat am besten einige Stunden vorher anmachen.",
+    "items": [
+      { "product": "Schweineschnitzel", "quantity": 500, "unit": "g" },
+      { "product": "Semmelbrösel" },
+      { "product": "Eier" },
+      { "product": "Mehl", "quantity": 100, "unit": "g" },
+      { "product": "Kartoffeln", "quantity": 1 },
+      { "product": "Saure Gurken" },
+      { "product": "Zwiebeln", "quantity": 1, "unit": "stueck" },
+      { "product": "Zitronen" }
+    ]
+  },
+  {
+    "name": "Fischstäbchen mit Kartoffeln und Spinat",
+    "items": [
+      { "product": "Fischstäbchen" },
+      { "product": "Kartoffeln", "quantity": 1 },
+      { "product": "Tiefkühlspinat" },
+      { "product": "Butter" },
+      { "product": "Zitronen" }
+    ]
+  },
+  {
+    "name": "Lachs mit Reis und Brokkoli",
+    "items": [
+      { "product": "Lachsfilet" },
+      { "product": "Reis" },
+      { "product": "Brokkoli" },
+      { "product": "Zitronen" },
+      { "product": "Butter" }
+    ]
+  },
+  {
+    "name": "Gefüllte Paprika",
+    "note": "Bei 180 Grad etwa 40 Minuten im Ofen garen.",
+    "items": [
+      { "product": "Paprika", "quantity": 4 },
+      { "product": "Hackfleisch", "quantity": 400, "unit": "g" },
+      { "product": "Reis" },
+      { "product": "Zwiebeln", "quantity": 1, "unit": "stueck" },
+      { "product": "Passierte Tomaten" },
+      { "product": "Gouda" }
+    ]
+  },
+  {
+    "name": "Frikadellen mit Kartoffeln",
+    "items": [
+      { "product": "Hackfleisch", "quantity": 500, "unit": "g" },
+      { "product": "Brötchen" },
+      { "product": "Eier" },
+      { "product": "Zwiebeln", "quantity": 1, "unit": "stueck" },
+      { "product": "Senf" },
+      { "product": "Kartoffeln", "quantity": 1 }
+    ]
+  },
+  {
+    "name": "Bratwurst mit Sauerkraut und Püree",
+    "items": [
+      { "product": "Bratwurst", "quantity": 4 },
+      { "product": "Sauerkraut" },
+      { "product": "Kartoffeln", "quantity": 1 },
+      { "product": "Milch", "quantity": 200, "unit": "ml" },
+      { "product": "Butter" }
+    ]
+  },
+  {
+    "name": "Hähnchen-Wraps",
+    "items": [
+      { "product": "Wraps" },
+      { "product": "Hähnchenbrust", "quantity": 400, "unit": "g" },
+      { "product": "Kopfsalat" },
+      { "product": "Tomaten", "quantity": 500, "unit": "g" },
+      { "product": "Gurke" },
+      { "product": "Schmand" }
+    ]
+  },
+  {
+    "name": "Nudeln mit Thunfischsoße",
+    "items": [
+      { "product": "Nudeln" },
+      { "product": "Thunfisch", "quantity": 2 },
+      { "product": "Passierte Tomaten" },
+      { "product": "Zwiebeln", "quantity": 1, "unit": "stueck" },
+      { "product": "Knoblauch" },
+      { "product": "Parmesan" }
+    ]
+  },
+  {
+    "name": "Gemüsesuppe",
+    "items": [
+      { "product": "Karotten", "quantity": 500, "unit": "g" },
+      { "product": "Kartoffeln", "quantity": 500, "unit": "g" },
+      { "product": "Lauch" },
+      { "product": "Blumenkohl" },
+      { "product": "Gemüsebrühe" },
+      { "product": "Petersilie" }
+    ]
+  },
+  {
+    "name": "Kartoffelpuffer mit Apfelmus",
+    "note": "Die geriebenen Kartoffeln gut ausdrücken.",
+    "items": [
+      { "product": "Kartoffeln", "quantity": 1 },
+      { "product": "Zwiebeln", "quantity": 1, "unit": "stueck" },
+      { "product": "Eier" },
+      { "product": "Mehl", "quantity": 50, "unit": "g" },
+      { "product": "Speiseöl" },
+      { "product": "Äpfel", "quantity": 1 }
+    ]
+  },
+  {
+    "name": "Arme Ritter",
+    "items": [
+      { "product": "Toastbrot" },
+      { "product": "Eier" },
+      { "product": "Milch", "quantity": 250, "unit": "ml" },
+      { "product": "Butter" },
+      { "product": "Zucker", "quantity": 50, "unit": "g" }
+    ]
+  },
+  {
+    "name": "Spinat mit Spiegelei und Kartoffeln",
+    "items": [
+      { "product": "Tiefkühlspinat" },
+      { "product": "Eier" },
+      { "product": "Kartoffeln", "quantity": 1 },
+      { "product": "Sahne" },
+      { "product": "Knoblauch" }
+    ]
+  }
+]

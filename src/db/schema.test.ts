@@ -1,6 +1,16 @@
 import { getTableConfig } from 'drizzle-orm/sqlite-core';
 
-import { listCategoryOrder, listItems, products, purchaseHistory, templateItems } from './schema';
+import {
+  listCategoryOrder,
+  listItems,
+  pantry,
+  products,
+  purchaseHistory,
+  recipeItems,
+  recipes,
+  templateItems,
+  weeklyPlan,
+} from './schema';
 
 /**
  * Waechter fuer die Fremdschluessel-Regeln (ADR-007).
@@ -53,5 +63,34 @@ describe('Fremdschluessel-Regeln', () => {
 
   it('nimmt beim Loeschen einer Kategorie das Produkt nicht mit', () => {
     expect(onDeleteOf(products, 'category_id')).toBe('set null');
+  });
+
+  it('Vorrat haengt am Produkt: geloeschtes Produkt verlaesst den Vorrat (T-13.1)', () => {
+    expect(onDeleteOf(pantry, 'product_id')).toBe('cascade');
+  });
+
+  it('Vorrat kennt jedes Produkt hoechstens einmal: product_id ist Primaerschluessel (T-13.1)', () => {
+    const column = getTableConfig(pantry).columns.find((entry) => entry.name === 'product_id');
+    expect(column?.primary).toBe(true);
+  });
+
+  it('nimmt beim Loeschen eines Rezepts seine Zutaten mit (T-14.1)', () => {
+    expect(onDeleteOf(recipeItems, 'recipe_id')).toBe('cascade');
+  });
+
+  it('haelt Zutaten auch ohne Produkt (T-14.1)', () => {
+    expect(onDeleteOf(recipeItems, 'product_id')).toBe('set null');
+  });
+
+  it('nimmt beim Loeschen eines Rezepts seinen Wochenplan-Eintrag mit (T-14.1)', () => {
+    expect(onDeleteOf(weeklyPlan, 'recipe_id')).toBe('cascade');
+  });
+
+  it('erlaubt zwei Rezepte mit gleichem Namen: kein Unique-Index (T-14.1)', () => {
+    const config = getTableConfig(recipes);
+    expect(config.indexes.some((entry) => entry.config.unique)).toBe(false);
+    expect(config.uniqueConstraints).toHaveLength(0);
+    // Gegenprobe: bei products greift dieselbe Abfrage.
+    expect(getTableConfig(products).indexes.some((entry) => entry.config.unique)).toBe(true);
   });
 });

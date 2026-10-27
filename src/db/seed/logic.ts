@@ -85,3 +85,108 @@ export function findDuplicateIds(rows: ProductRow[]): string[] {
 
   return duplicates;
 }
+
+/** Rohform eines Grundstock-Gerichts, wie es in recipes.json steht (ADR-044). */
+export interface SeedRecipe {
+  name: string;
+  note?: string;
+  items: { product: string; quantity?: number; unit?: string }[];
+}
+
+/** Fertige Zeile fuer die Tabelle der Gerichte. */
+export interface RecipeRow {
+  id: string;
+  name: string;
+  note: string | null;
+  isBuiltin: true;
+}
+
+/** Fertige Zeile fuer eine Zutat eines Gerichts. */
+export interface RecipeItemRow {
+  id: string;
+  recipeId: string;
+  productId: string;
+  name: string;
+  quantity: number;
+  unit: Unit;
+  position: number;
+}
+
+/**
+ * Wandelt die Grundstock-Gerichte in Datenbankzeilen um.
+ *
+ * Anders als beim Produktkatalog gibt es hier keinen stillen Rueckfall: Eine
+ * Zutat, die nicht im Katalog steht, oder eine ungueltige Einheit ist ein
+ * Fehler in den ausgelieferten Daten und soll laut auffallen, statt ein
+ * halbes Gericht in die Datenbank zu schreiben. Der Name der Zutat wird als
+ * Kopie gespeichert (ADR-007).
+ */
+export function buildRecipeRows(
+  recipes: SeedRecipe[],
+  products: ProductRow[],
+): { recipes: RecipeRow[]; items: RecipeItemRow[] } {
+  const productsByName = new Map(products.map((product) => [product.name, product]));
+  const recipeRows: RecipeRow[] = [];
+  const itemRows: RecipeItemRow[] = [];
+
+  for (const recipe of recipes) {
+    const recipeId = `r-${slugify(recipe.name)}`;
+    recipeRows.push({
+      id: recipeId,
+      name: recipe.name,
+      note: recipe.note ?? null,
+      isBuiltin: true,
+    });
+
+    recipe.items.forEach((item, index) => {
+      const product = productsByName.get(item.product);
+      if (!product) {
+        throw new Error(`Gericht "${recipe.name}": unbekanntes Produkt "${item.product}"`);
+      }
+      const unit = item.unit ?? product.defaultUnit;
+      if (!isUnit(unit)) {
+        throw new Error(
+          `Gericht "${recipe.name}": ungueltige Einheit "${unit}" bei "${item.product}"`,
+        );
+      }
+      itemRows.push({
+        id: `${recipeId}-i${index}`,
+        recipeId,
+        productId: product.id,
+        name: product.name,
+        quantity: item.quantity ?? 1,
+        unit,
+        position: index,
+      });
+    });
+  }
+
+  return { recipes: recipeRows, items: itemRows };
+}
+
+/** Nennt die Gerichte, die auf ein Produkt ausserhalb des Katalogs verweisen. */
+export function findRecipesWithUnknownProducts(
+  recipes: SeedRecipe[],
+  products: ProductRow[],
+): string[] {
+  const known = new Set(products.map((product) => product.name));
+  return recipes
+    .filter((recipe) => recipe.items.some((item) => !known.has(item.product)))
+    .map((recipe) => recipe.name);
+}
+
+/** Findet Gerichtnamen, die sich nur in der Gross-/Kleinschreibung unterscheiden. */
+export function findDuplicateRecipeNames(recipes: SeedRecipe[]): string[] {
+  const seen = new Set<string>();
+  const duplicates: string[] = [];
+
+  for (const recipe of recipes) {
+    const key = recipe.name.toLowerCase();
+    if (seen.has(key)) {
+      duplicates.push(recipe.name);
+    }
+    seen.add(key);
+  }
+
+  return duplicates;
+}

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Farben des Widgets im dunklen Systemdesign - background / onBackground /
+  primary aus darkColors in src/theme/index.ts. Der Launcher waehlt den
+  Ordner values-night selbst, sobald das Telefon dunkel ist; dafuer muss das
+  Layout die Farben als Ressource referenzieren und darf sie nicht im Code
+  als feste Zahl setzen.
+-->
+<resources>
+  <color name="to_shopping_widget_background">#1A1C19</color>
+  <color name="to_shopping_widget_text">#E2E3DC</color>
+  <color name="to_shopping_widget_accent">#8CD892</color>
+</resources>

@@ -13,6 +13,8 @@ type Props = {
   productIdsOnList: string[];
   /** Kaufhistorie je Produkt - die Grundlage der Reihenfolge (FR-5.2). */
   stats: ProductStats[];
+  /** Produkte, die gerade im Vorrat liegen (FR-9.5) - nur als Hinweis. */
+  pantryProductIds?: string[];
   onPickProduct: (product: CatalogProduct) => void;
   onCreateProduct: (name: string) => void;
 };
@@ -30,6 +32,7 @@ export function AddItemBar({
   products,
   productIdsOnList,
   stats,
+  pantryProductIds = [],
   onPickProduct,
   onCreateProduct,
 }: Props) {
@@ -42,6 +45,11 @@ export function AddItemBar({
     () => rankSuggestions(query, products, stats, productIdsOnList, SESSION_START),
     [query, products, stats, productIdsOnList],
   );
+
+  // Vorrat ist nur ein Hinweis, kein Filter (ADR-043): Nichts wird
+  // ausgeblendet oder umsortiert. Wer mehr kaufen will, soll das koennen,
+  // ohne mit der App zu streiten.
+  const pantrySet = useMemo(() => new Set(pantryProductIds), [pantryProductIds]);
 
   const trimmed = cleanProductName(query);
 
@@ -72,6 +80,7 @@ export function AddItemBar({
               <List.Item
                 key={product.id}
                 title={product.name}
+                description={pantrySet.has(product.id) ? t('add.inPantry') : undefined}
                 onPress={() => pick(product)}
                 accessibilityLabel={t('add.suggestion', { name: product.name })}
                 testID={`suggestion-${product.name}`}

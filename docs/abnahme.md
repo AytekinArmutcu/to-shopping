@@ -10,6 +10,10 @@ Reihenfolge ist Absicht: Die riskantesten Punkte stehen oben.
 
 ## Vorbereitung
 
+> **Vor jedem Test auf einem Telefon mit echten Daten: Sicherung erstellen und
+> die Datei wegschicken.** E2E-Flows löschen die App-Daten (`clearState`), und
+> ein Wechsel der Signatur verlangt eine Deinstallation.
+
 - [ ] Aktueller Release-Build installiert (`npm run android:release`)
 - [ ] Telefon **nicht** im Stromsparmodus (verfälscht Animationen)
 
@@ -106,7 +110,43 @@ Braucht ein zweites Telefon mit installierter App.
 - [ ] Liste → Menü → „Als Vorlage speichern"
 - [ ] Auf eine Liste anwenden, auf der schon etwas davon steht → nichts doppelt
 
-## 8. Vorschläge — nur über Wochen beurteilbar
+## 8. Vorrat
+
+Nach einem echten Einkauf:
+
+- [ ] Übersicht → Menü → Vorrat: Was du gerade gekauft hast, **hat einen Haken**
+- [ ] Zu Hause die Checkliste durchgehen – das dauert **unter einer Minute**
+- [ ] Beim Tippen eines Artikels, der noch da ist, steht „Im Vorrat" am Vorschlag
+
+## 9. Rezepte
+
+- [ ] Übersicht → Menü → Rezepte: Der Grundstock ist **sinnvoll** – Gerichte,
+      die du tatsächlich kochen würdest
+- [ ] Ein Gericht bearbeiten, eine **Menge** ändern, speichern – sie bleibt
+- [ ] Zwei Gerichte in den Wochenplan → „Alles Fehlende auf die Liste" → auf der
+      Liste steht jede Zutat **einmal**, nichts, was im Vorrat ist
+- [ ] Ein eigenes Gericht anlegen, ein mitgeliefertes löschen →
+      „Rezepte zurücksetzen" → das gelöschte ist zurück, **das eigene steht noch**
+
+## 10. Widget
+
+Maestro sieht Widgets nicht – Gate 4 deckt das Widget nicht ab. Deshalb wird es
+hier von Hand geprüft.
+
+- [ ] Widget auf den Startbildschirm legen (lange auf den Startbildschirm
+      drücken → Widgets → To-Shopping), 2×2 Felder
+- [ ] Es zeigt die **zuletzt geöffnete** Liste mit offenen Artikeln, höchstens
+      fünf, dann „+ n weitere“
+- [ ] Einen Artikel in der App abhaken → binnen Sekunden im Widget weg
+- [ ] Tipp aufs Widget öffnet **genau diese** Liste
+- [ ] Ohne Liste und bei „alles erledigt“ erscheinen die beiden Zustandstexte
+- [ ] Hell und dunkel: Systemdesign umschalten – das Widget folgt, ohne neu
+      platziert zu werden
+- [ ] Telefon neu starten: Das Widget zeigt weiter Daten
+- [ ] `expo prebuild --clean` und neuer Build: Das Widget ist noch vorhanden
+      (ADR-045)
+
+## 11. Vorschläge — nur über Wochen beurteilbar
 
 Nicht heute abzuhaken. Nach ein paar echten Einkäufen:
 
@@ -122,7 +162,7 @@ Nicht heute abzuhaken. Nach ein paar echten Einkäufen:
 |---|---|
 | Datum | |
 | Gerät, Android-Version | |
-| Punkte 1–7 abgehakt | |
+| Punkte 1–9 abgehakt | |
 | Gefundene Mängel | |
 
 Gefundene Mängel gehören als Notiz gesammelt, nicht sofort behoben — außer

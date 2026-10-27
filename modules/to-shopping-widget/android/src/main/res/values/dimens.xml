@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- Eckenradius bis Android 11. Ab Android 12 siehe values-v31. -->
+  <dimen name="to_shopping_widget_radius">16dp</dimen>
+</resources>

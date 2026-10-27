@@ -149,6 +149,32 @@ Die Flows sind die verbindliche Beschreibung des Verhaltens. Bei Widersprüchen 
 
 ---
 
+### Flow 8 – Vorrat prüfen (V2, „Vor-dem-Einkauf-Minute")
+
+**Auslöser:** Der nächste Einkauf steht an; der Nutzer will wissen, was fehlt.
+
+1. Liste → Menü → **Vorrat prüfen** (oder Übersicht → Menü → Vorrat).
+2. Der Screen zeigt die üblichen Artikel nach Abteilungen, jeder mit Haken: „ist da". Gefüllt hat ihn der letzte abgeschlossene Einkauf – der Nutzer hat dafür nichts getan.
+3. Der Nutzer geht die Liste durch und entfernt den Haken bei allem, was aufgebraucht ist. Ein Tipp pro Artikel.
+4. Unten steht „n fehlen". Ein Tipp auf **Auf die Liste setzen** legt alle Fehlenden auf die aktive Liste – was schon draufsteht, wird übersprungen.
+5. Zurück zur Liste; sie ist fertig für Flow 2.
+
+**Erfolgskriterium:** Eine Wochenliste entsteht in unter einer Minute, ohne dass ein Artikel getippt wird.
+
+### Flow 9 – Kochen aus dem Vorrat (V2)
+
+**Auslöser:** „Was koche ich diese Woche?"
+
+1. Übersicht → Menü → **Rezepte**. Ganz oben die Gerichte, für die alles da ist; darunter die mit einer fehlenden Zutat, dann zwei, und so fort.
+2. Ein Tipp auf ein Gericht zeigt die Zutaten: Haken bei dem, was im Vorrat liegt, Einkaufswagen bei dem, was fehlt.
+3. **Diese Woche kochen** nimmt das Gericht in den Wochenplan.
+4. Auf der Übersicht steht der Wochenplan oben: **Alles Fehlende auf die Liste (n)** setzt die Zutaten aller gewählten Gerichte gesammelt auf die aktive Liste – jede nur einmal, und nur, was weder da ist noch schon draufsteht.
+5. Nach dem Einkauf: Abschließen füllt den Vorrat; die Gerichte stehen jetzt bei „Alles da".
+
+**Erfolgskriterium:** Der Wocheneinkauf für drei Gerichte ist in drei Tipps auf der Liste.
+
+---
+
 ## 5. Funktionsumfang V1
 
 Die Anforderungen sind durchnummeriert und werden in `roadmap.md` auf Meilensteine abgebildet.
@@ -240,6 +266,44 @@ Die Anforderungen sind durchnummeriert und werden in `roadmap.md` auf Meilenstei
 | FR-8.2 | „Fehlerbericht senden" über das Teilen-Menü, kein Drittanbieter |
 | FR-8.3 | Auslieferung über internen Play-Store-Test |
 | FR-8.4 | OTA-Updates für Änderungen am App-Code – **in V1 vertagt, siehe ADR-040** |
+
+### V2 – entschieden am 27. Oktober 2026 nach sieben Wochen Alltag
+
+Hebt zwei Nicht-Ziele aus Abschnitt 6 auf (Widget, Rezepte) und fügt den Vorrat hinzu. Begründungen: ADR-043 bis ADR-046.
+
+### FR-9 Vorrat
+
+| ID | Anforderung |
+|---|---|
+| FR-9.1 | „Einkauf abschließen" setzt alle abgehakten Artikel mit Produktbezug in den Vorrat – in derselben Transaktion wie die Historie |
+| FR-9.2 | Der Vorrat ist eine Checkliste der üblichen Artikel (Kaufhistorie ∪ Vorrat), nach Abteilungen; Haken = „ist da" |
+| FR-9.3 | Haken entfernen = aufgebraucht; Haken setzen = da |
+| FR-9.4 | Alle Fehlenden der Checkliste gesammelt auf die aktive Liste, ohne Duplikate (Regel aus ADR-038) |
+| FR-9.5 | Vorschläge beim Tippen zeigen „Im Vorrat" unter dem Treffer – ohne ihn auszublenden |
+| FR-9.6 | Der Vorrat ist in der Sicherung enthalten; ältere Sicherungen bleiben einspielbar (ADR-046) |
+
+### FR-10 Rezepte und Wochenplan
+
+| ID | Anforderung |
+|---|---|
+| FR-10.1 | Ein Rezept besteht aus Name, Zutaten (Katalogprodukte, Menge optional) und einer Notiz – keine Schritte, Bilder, Portionen |
+| FR-10.2 | Mitgelieferter Grundstock von Alltagsgerichten, veränderbar, mit „Rezepte zurücksetzen" nach ADR-031 |
+| FR-10.3 | Die Übersicht sortiert nach fehlenden Zutaten, „Alles da" zuerst; jede Zeile nennt die Zahl und bis zu zwei fehlende Zutaten |
+| FR-10.4 | Die Detailansicht kennzeichnet jede Zutat als da oder fehlend |
+| FR-10.5 | „Fehlendes auf die Liste" setzt nur, was weder im Vorrat liegt noch offen auf der Liste steht |
+| FR-10.6 | Wochenplan: Rezepte für diese Woche wählen, gesammelt Fehlendes auf die Liste, Plan leeren – keine Wochentage |
+| FR-10.7 | Zutaten werden über dasselbe Eingabefeld mit denselben Vorschlägen erfasst wie Listenartikel |
+| FR-10.8 | Rezepte und Wochenplan sind in der Sicherung enthalten (optional, ADR-046) |
+
+### FR-11 Widget
+
+| ID | Anforderung |
+|---|---|
+| FR-11.1 | Ein Homescreen-Widget zeigt die offenen Artikel der zuletzt geöffneten Liste, höchstens fünf, dann „+ n weitere" |
+| FR-11.2 | Ein Tipp auf das Widget öffnet diese Liste in der App |
+| FR-11.3 | Das Widget aktualisiert sich nach jeder Änderung in der App, spätestens alle 30 Minuten |
+| FR-11.4 | Das Widget folgt dem hellen und dunklen Systemdesign |
+| FR-11.5 | Das Widget liest nur; es verändert keine Daten (ADR-045) |
 
 ---
 

@@ -890,6 +890,127 @@ Der Schlüssel und sein Passwort gehören **nicht** ins Repository (CLAUDE.md). 
 
 ---
 
+## ADR-043 – Der Vorrat kennt nur „da" oder „nicht da" und füllt sich beim Abschließen des Einkaufs
+
+**Datum:** 2026-10-27 · **Status:** Angenommen · **Eröffnet V2**
+
+**Kontext**
+Nach sieben Wochen Alltagsnutzung wünscht sich der Auftraggeber einen Vorrat: was gerade zu Hause ist, als Grundlage für zwei Dinge – nicht kaufen, was schon da ist, und kochen aus dem, was da ist (ADR-044). Vorrats-Apps scheitern fast immer an derselben Stelle: Sie verlangen, dass jede Entnahme gebucht wird. Das hält im Alltag niemand länger als zwei Wochen durch.
+
+**Entscheidung**
+Der Vorrat ist eine Menge von Produkten, mehr nicht. Eine eigene Tabelle `pantry` mit `product_id` als Schlüssel (Fremdschlüssel auf `products`, `ON DELETE CASCADE`) und `added_at`. Ein Produkt ist da, wenn eine Zeile existiert.
+
+Hinein kommt alles Abgehakte **in derselben Transaktion wie „Einkauf abschließen"** – das kostet den Nutzer nichts. Heraus geht ein Produkt, wenn der Nutzer den Haken entfernt.
+
+Der Vorrats-Screen zeigt nicht „was im Vorrat ist", sondern **„was du üblicherweise kaufst"**: alle Produkte mit Kaufhistorie, dazu alles, was gerade im Vorrat steht, nach Abteilungen gruppiert. Der Haken bedeutet „ist da". Darunter ein Knopf, der alle Fehlenden gesammelt auf die aktive Liste setzt. Ansicht und Pflege sind damit derselbe Screen, und die Pflege ist ein Ritual von einer Minute vor dem Einkauf – keine Buchführung.
+
+**Verworfene Alternativen**
+- *Mengen führen („2 l Milch").* Präzise, aber jede Entnahme müsste gebucht werden. Die Erfahrung mit Vorrats-Apps ist eindeutig.
+- *Drei Stufen (voll, zur Neige, leer).* Ein Tipp mehr pro Artikel und Woche. Der Mehrwert – „bald nachkaufen" – ist genau das, was die Checkliste vor dem Einkauf ohnehin leistet.
+- *Eine Spalte `in_pantry` an `products` statt einer Tabelle.* Weniger Schema, aber jeder Haken schriebe in die Katalogtabelle, und die beobachten mehrere Live-Abfragen (Katalog, Vorschläge). Eine eigene Tabelle löst nur ihre eigenen Abfragen aus.
+- *Alles von Hand pflegen.* Doppelte Arbeit neben der Liste. Der Vorrat würde nach dem ersten vergessenen Eintrag unglaubwürdig und dann ignoriert.
+- *„Aufgebraucht" setzt direkt auf die Liste.* Die Rückkopplung ist richtig gedacht, aber der Auftraggeber will sie nicht automatisch – der Knopf „Fehlende auf die Liste" erledigt es gesammelt und sichtbar.
+
+**Konsequenz**
+Nur Artikel **mit Produktbezug** gelangen in den Vorrat. Listeneinträge ohne `product_id` gibt es praktisch nur, wenn ein Produkt nachträglich gelöscht wurde (ADR-007) – der Fall ist hinzunehmen.
+
+Wird ein Produkt gelöscht, verschwindet es aus dem Vorrat (CASCADE). Das ist gewollt: Der Vorrat ist eine Eigenschaft des Katalogprodukts, keine eigenständige Aufzeichnung.
+
+„Üblich" heißt: innerhalb des Zeitfensters der Vorschläge gekauft (180 Tage, ADR-037). Was länger her ist und nicht mehr im Vorrat liegt, fällt von der Checkliste – es ist dann kein üblicher Artikel mehr. Das ist gewollt; eine Checkliste, die alles je Gekaufte führt, wird mit den Jahren so lang wie der Katalog.
+
+Die Vorschläge beim Tippen zeigen „Im Vorrat" als Hinweis unter dem Treffer – und **blenden nichts aus**. Wer mehr kaufen will, soll das können, ohne mit der App zu streiten.
+
+Die Sicherung nimmt die Tabelle mit; ältere Sicherungen bleiben lesbar (ADR-046).
+
+---
+
+## ADR-044 – Rezepte liegen neben den Vorlagen, nicht in ihnen
+
+**Datum:** 2026-10-27 · **Status:** Angenommen · **Hebt das Nicht-Ziel „Rezepte, Wochenplan" aus PRD §6 für V2 auf**
+
+**Kontext**
+Eine Vorlage ist eine benannte Liste von Zutaten, die auf eine Einkaufsliste gesetzt wird und überspringt, was schon draufsteht (ADR-038). Ein Rezept ist – fast – dasselbe. Der Unterschied ist eine einzige Frage: *Was davon ist schon zu Hause?* Mit dem Vorrat (ADR-043) ist sie beantwortbar. Die Versuchung liegt nahe, Rezepte als Vorlagen mit einem Kennzeichen zu bauen.
+
+**Entscheidung**
+Eigene Tabellen `recipes` und `recipe_items`, im **gleichen Zuschnitt** wie `templates` und `template_items` (Name als Kopie, ADR-007; Produktbezug `SET NULL`; Positionen). Dazu `is_builtin` und eine optionale Notiz am Rezept, und eine dritte Tabelle `weekly_plan` mit nur den gewählten Rezept-IDs – keine Wochentage.
+
+Die App liefert einen **Grundstock von rund 35 Alltagsgerichten** mit, deren Zutaten ausschließlich aus den 200 Katalogprodukten stammen. Ein Test prüft das. Mitgeliefertes ist veränderbar; die Sicherung heißt „Rezepte zurücksetzen" und arbeitet nach dem Muster von ADR-031.
+
+Die Übersicht sortiert nach fehlenden Zutaten, „Alles da" zuerst. „Fehlendes auf die Liste" wendet die Regel aus ADR-038 an, erweitert um den Vorrat: Übersprungen wird, was offen auf der Liste steht **oder** im Vorrat liegt.
+
+**Verworfene Alternativen**
+- *Vorlagen um ein Kennzeichen `kind` erweitern.* Spart zwei Tabellen, aber Vorlagen und Rezepte haben verschiedene Lebensläufe: Vorlagen entstehen aus Listen, Rezepte werden angelegt; Rezepte haben einen Grundstock und ein Zurücksetzen, Vorlagen nicht; „Vorlage anwenden" darf den Vorrat nicht beachten, sonst fehlt im Wocheneinkauf plötzlich die Milch, weil noch ein Rest da war. Zwei Dinge, die sich nur ähneln, in einer Tabelle zu halten, kostet bei jeder Änderung ein „gilt das für beide?".
+- *Rezepte aus dem Netz oder per KI.* Die App würde den Vorrat an einen Server schicken. Das bricht den Grundsatz des Projekts („Ich möchte nicht meine Daten an einem Unternehmen geben") und war dem Auftraggeber ausdrücklich keine Option.
+- *Wochenplan mit Wochentagen.* Montag Bolognese, Dienstag Suppe – wird erfahrungsgemäß nach zwei Wochen ignoriert und ist dann Pflegeaufwand ohne Nutzen. Die Frage „was koche ich diese Woche" braucht keine Tage.
+- *Kein Grundstock, nur eigene Rezepte.* Am ersten Tag wäre der Screen leer und das Versprechen „kochen aus dem Vorrat" unerfüllbar. Der Grundstock ist Starthilfe, bewusst langweilig, und darf gelöscht werden.
+
+**Konsequenz**
+Die Zutateneingabe benutzt **dasselbe Eingabefeld mit denselben Vorschlägen** wie die Liste – kein zweiter Weg, kein zweites Verhalten. Mengen sind optional.
+
+Der Grundstock bindet sich an Katalognamen. Benennt der Nutzer „Hackfleisch" in „Rinderhack" um, bleibt die Verknüpfung über die Produkt-ID bestehen (ADR-031). Löscht er das Produkt, bleibt die Zutat als Text und zählt als „fehlt" – wie ein Listeneintrag ohne Produkt.
+
+Die Warnung aus PRD §6 bleibt gültig: Rezepte können die App verdoppeln. Deshalb gibt es keine Zubereitungsschritte, keine Bilder, keine Portionen, keine Nährwerte. Ein Rezept ist eine Zutatenliste mit Namen und einer Notiz.
+
+---
+
+## ADR-045 – Das Widget ist ein lokales Expo-Modul in Kotlin, ohne neues Paket
+
+**Datum:** 2026-10-27 · **Status:** Angenommen · **Hebt das Nicht-Ziel „Homescreen-Widget" aus PRD §6 für V2 auf**
+
+**Kontext**
+Ein Homescreen-Widget ist in Android eine `AppWidgetProvider`-Klasse mit XML-Layouts – nativer Code, den React Native nicht erzeugt. Zwei Dinge erschweren das in diesem Projekt: `android/` wird bei jedem `expo prebuild` neu erzeugt und ist nicht versioniert (ADR-023); und CLAUDE.md verlangt für jede neue Abhängigkeit eine Rückfrage.
+
+**Entscheidung**
+Ein **lokales Expo-Modul** unter `modules/to-shopping-widget/` mit `expo-module.config.json`. Expo bindet solche Module ohne weiteres Paket ein; sie überleben `prebuild`, weil sie außerhalb von `android/` liegen. Das Modul enthält den `AppWidgetProvider`, die Layouts und ein kleines Manifest-Fragment mit dem Receiver.
+
+Das Widget zeigt die offenen Artikel der **zuletzt geöffneten Liste** (höchstes `last_opened_at`), höchstens fünf, dann „+ n weitere". Es liest dafür die SQLite-Datei der App **nur lesend** über Androids eigene `SQLiteDatabase`. Ein Tipp öffnet die Liste über den App-Link `toshopping://liste?listId=…`.
+
+Aktualisierung: Android erlaubt periodisch frühestens alle 30 Minuten. Zusätzlich stellt das Modul der App eine Funktion `refreshWidget()` bereit, die nach jedem Schreibvorgang an Listen oder Artikeln aufgerufen wird.
+
+**Verworfene Alternativen**
+- *Das Paket `react-native-android-widget`.* Rendert Widgets aus React-Komponenten und spart das XML. Dafür eine neue Abhängigkeit mit eigener Build-Konfiguration, und die Daten kämen über einen Headless-JS-Task – die ganze JavaScript-Laufzeit, um vier Zeilen Text zu zeichnen. Für ein Lernprojekt ist der direkte Weg lehrreicher und für die App der leichtere.
+- *Kotlin direkt in `android/` schreiben.* Weg beim nächsten Prebuild. Man könnte `android/` versionieren, aber ADR-023 hat das aus guten Gründen verworfen.
+- *Ein Config-Plugin, das Kotlin-Dateien in `android/` kopiert.* Funktioniert, ist aber eine zweite, fragile Art, natives Zeug unterzubringen, während Expo mit lokalen Modulen eine erste und vorgesehene hat.
+- *Abhaken im Widget.* Schreibt aus einem Receiver in die Datenbank, während die App dieselbe Datei offen haben kann. Lösbar, aber ein Konfliktfeld, das für einen ersten Wurf nicht sein muss. Vertagt, nicht verworfen.
+
+**Konsequenz**
+Das ist der **erste native Code im Projekt**. Er kennt den Datenbankpfad, den Dateinamen `to-shopping.db` und die Spalten von `lists` und `list_items`. Jede Schemaänderung an diesen beiden Tabellen hat ab jetzt eine zweite Stelle, die mitgeprüft werden muss – das steht in `architecture.md` §3.4 als Pflichtpunkt.
+
+Maestro sieht Widgets nicht. Das Widget bekommt einen Abschnitt in `abnahme.md`; Gate 4 kann es nicht abdecken, Gate 5 muss es.
+
+Ein Nutzer, der das Widget nie auf den Startbildschirm legt, merkt von alledem nichts. Es gibt keinen neuen Berechtigungseintrag im Manifest.
+
+Das Widget öffnet die Datenbank mit einem **stummen Fehler-Handler**. Androids Standard-Handler löscht die Datei, sobald SQLite eine Beschädigung meldet – und eine solche Meldung kann hier auch ohne echten Schaden kommen, weil das Widget mitten in einen Schreibvorgang der App hineinlesen kann. Ohne den eigenen Handler könnte ein harmloser Lesefehler die Daten des Nutzers vernichten; mit ihm kommt der Fehler nur als Exception an, und das Widget behält seine alte Anzeige.
+
+Das Widget liest **im selben Prozess wie die App, ohne Sperre**: Androids SQLite und das von expo-sqlite sind zwei Bibliotheken, die sich gegenseitig nicht sperren. Das Widget kann deshalb kurz einen halbfertigen Stand sehen; dann scheitert das Lesen, und die alte Anzeige bleibt. Ein eigener Prozess hätte das vermieden, weil dann die Dateisperren von SQLite greifen – aber expo-sqlite setzt kein `busy_timeout`, und ein Schreibvorgang der App könnte dann mit „database is locked“ scheitern. Zwischen einem kurz veralteten Widget und einem verlorenen Schreibvorgang in der App ist das Widget der kleinere Preis.
+
+Die App nutzt **kein WAL** (Write-Ahead-Logging). Schaltet sie es je ein, ist der Nur-Lese-Zugriff des Widgets neu zu prüfen: Im WAL-Modus braucht auch ein Leser Schreibzugriff auf die `-shm`-Datei, und `OPEN_READONLY` verhält sich dann anders.
+
+---
+
+## ADR-046 – Die Sicherung bleibt abwärtskompatibel: fehlende Tabellen gelten als leer
+
+**Datum:** 2026-10-27 · **Status:** Angenommen
+
+**Kontext**
+`parseBackup` verlangt bisher, dass **jede** Tabelle aus `BACKUP_TABLES` in der Datei steht, sonst gilt sie als unlesbar. Mit V2 kommen vier Tabellen hinzu (`pantry`, `recipes`, `recipe_items`, `weekly_plan`). Würden sie schlicht an die Liste gehängt, wäre jede Sicherung aus V1 wertlos – und genau diese Dateien liegen bei den Testern.
+
+**Entscheidung**
+`BACKUP_TABLES` wird in **Pflichttabellen** (die acht aus V1) und **optionale Tabellen** (alle neuen) geteilt. Fehlt eine optionale Tabelle in der Datei, gilt sie als leer. `version` des Formats bleibt bei 1, weil die Änderung verträglich ist. Die Prüfung `schemaVersion > aktuell` bleibt unverändert – sie schützt weiter davor, eine Datei aus einer neueren App einzuspielen.
+
+**Verworfene Alternativen**
+- *`version` auf 2 erhöhen und Version 1 ablehnen.* Ehrlich im Sinne der Regel aus `architecture.md` §5.2, aber die Regel meint *inkompatible* Änderungen. Eine Datei, der nur Tabellen fehlen, ist nicht inkompatibel – die Wiederherstellung kann sie vollständig verarbeiten.
+- *Alte Dateien beim Einlesen umschreiben.* Unnötig: „fehlt = leer" ist dieselbe Information ohne Umschreibschritt.
+
+**Konsequenz**
+Eine wiederhergestellte V1-Sicherung hat einen leeren Vorrat und nur den Rezept-Grundstock. Das ist korrekt, nicht verlustbehaftet – es gab diese Daten nicht. Beim nächsten Abschließen eines Einkaufs füllt sich der Vorrat von selbst.
+
+Damit der Grundstock nach einer V1-Wiederherstellung tatsächlich zurückkommt, braucht es einen Zusatz (T-14.6): Die Wiederherstellung **ersetzt** den Bestand, die Rezepttabelle ist danach leer – aber der Merker `recipes_seeded` in `app_state` steht noch, und `seedRecipesOnce` würde nie wieder säen. `parseBackup` meldet deshalb zusätzlich `missingOptional`, welche optionalen Tabellen in der Datei fehlten. Fehlte `recipes`, setzt `restoreBackup` den Merker **nach** seiner Transaktion auf `false`; beim nächsten Start sät `seedRecipesOnce`. Eine Datei mit vorhandener, aber leerer `recipes`-Tabelle lässt den Merker stehen – dort hat der Nutzer seine Gerichte bewusst gelöscht. `app_state` selbst bleibt aus der Sicherung ausgeschlossen; verworfen wurde, den Merker in die Sicherung aufzunehmen, weil er eine Geräte-Angabe ist und eine V1-Datei ihn ohnehin nicht hätte.
+
+Jede weitere neue Tabelle kommt in die optionale Liste. Die Pflichtliste wächst nie mehr.
+
+---
+
 ## Offene Entscheidungen (bewusst vertagt)
 
 | Thema | Wann zu entscheiden | Was dann abzuwägen ist |

@@ -130,6 +130,52 @@ export const templateItems = sqliteTable('template_items', {
   position: integer('position').notNull().default(0),
 });
 
+/**
+ * Vorrat: ein Eintrag pro Produkt, das gerade zu Hause ist - kein Zaehler,
+ * keine Menge. CASCADE, weil der Vorrat eine Eigenschaft des Katalogprodukts
+ * ist: Wird das Produkt geloescht, ist der Vorratseintrag gegenstandslos (ADR-043).
+ */
+export const pantry = sqliteTable('pantry', {
+  productId: text('product_id')
+    .primaryKey()
+    .references(() => products.id, { onDelete: 'cascade' }),
+  addedAt: integer('added_at').notNull().default(now),
+});
+
+/**
+ * Rezepte: Name, optionale Notiz, mitgeliefert-Kennzeichen wie bei products
+ * (ADR-031). Kein Unique-Index auf dem Namen: zwei Gerichte duerfen gleich
+ * heissen (ADR-044).
+ */
+export const recipes = sqliteTable('recipes', {
+  id: text('id').primaryKey(),
+  name: text('name').notNull(),
+  note: text('note'),
+  isBuiltin: integer('is_builtin', { mode: 'boolean' }).notNull().default(false),
+  createdAt: integer('created_at').notNull().default(now),
+});
+
+/** Zutaten: wie template_items. Name als Kopie (ADR-007), Produktbezug SET NULL (ADR-044). */
+export const recipeItems = sqliteTable('recipe_items', {
+  id: text('id').primaryKey(),
+  recipeId: text('recipe_id')
+    .notNull()
+    .references(() => recipes.id, { onDelete: 'cascade' }),
+  productId: text('product_id').references(() => products.id, { onDelete: 'set null' }),
+  name: text('name').notNull(),
+  quantity: real('quantity').notNull().default(1),
+  unit: text('unit').notNull().default(DEFAULT_UNIT),
+  position: integer('position').notNull().default(0),
+});
+
+/** Wochenplan: nur die gewaehlten Rezepte, keine Wochentage (ADR-044). */
+export const weeklyPlan = sqliteTable('weekly_plan', {
+  recipeId: text('recipe_id')
+    .primaryKey()
+    .references(() => recipes.id, { onDelete: 'cascade' }),
+  addedAt: integer('added_at').notNull().default(now),
+});
+
 /** Schluessel-Wert-Ablage fuer alles, was kein eigenes Schema verdient. */
 export const appState = sqliteTable('app_state', {
   key: text('key').primaryKey(),
@@ -143,3 +189,7 @@ export type ListItem = typeof listItems.$inferSelect;
 export type PurchaseHistoryEntry = typeof purchaseHistory.$inferSelect;
 export type Template = typeof templates.$inferSelect;
 export type TemplateItem = typeof templateItems.$inferSelect;
+export type PantryEntry = typeof pantry.$inferSelect;
+export type Recipe = typeof recipes.$inferSelect;
+export type RecipeItem = typeof recipeItems.$inferSelect;
+export type WeeklyPlanEntry = typeof weeklyPlan.$inferSelect;

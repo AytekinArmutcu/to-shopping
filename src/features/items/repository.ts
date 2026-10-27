@@ -1,10 +1,11 @@
 import { and, eq, inArray, sql } from 'drizzle-orm';
 
 import { db } from '@/db/client';
-import { listItems, lists, products, purchaseHistory } from '@/db/schema';
+import { listItems, lists, pantry, products, purchaseHistory } from '@/db/schema';
 import { DEFAULT_UNIT, isUnit, type Unit } from '@/db/units';
 
 import { idsToAdd } from '@/features/catalog/logic';
+import { pantryAdditions } from '@/features/pantry/logic';
 
 import { buildHistoryDrafts, idsToRemoveOnFinish } from './logic';
 
@@ -116,6 +117,7 @@ export async function finishShopping(listId: string, now: number = Date.now()): 
 
   const drafts = buildHistoryDrafts(rows, now);
   const removeIds = idsToRemoveOnFinish(rows);
+  const pantryIds = pantryAdditions(drafts);
 
   if (removeIds.length === 0) {
     return 0;
@@ -130,6 +132,18 @@ export async function finishShopping(listId: string, now: number = Date.now()): 
     );
     await tx.delete(listItems).where(inArray(listItems.id, removeIds));
     await tx.update(lists).set({ lastOpenedAt: now }).where(eq(lists.id, listId));
+
+    // Gekauftes kommt in den Vorrat (ADR-043) - in derselben Transaktion, weil
+    // es den Nutzer keinen Handgriff kostet und Historie und Vorrat nie
+    // auseinanderlaufen duerfen: Ein Einkauf, der in der Statistik steht, aber
+    // nicht im Vorrat, waere ein stiller Widerspruch. Schon Vorhandenes bleibt
+    // mit seinem alten addedAt stehen.
+    if (pantryIds.length > 0) {
+      await tx
+        .insert(pantry)
+        .values(pantryIds.map((productId) => ({ productId, addedAt: now })))
+        .onConflictDoNothing();
+    }
   });
 
   return removeIds.length;

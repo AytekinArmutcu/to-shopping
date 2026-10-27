@@ -242,6 +242,18 @@ Die App liegt im App-Menü und lässt sich zum echten Einkauf mitnehmen.
 Für die tägliche Entwicklung stattdessen `npm run android` – dieser Build lädt Änderungen sofort
 nach, braucht dafür aber einen laufenden `npm start` im selben WLAN.
 
+## Widget
+
+Das Homescreen-Widget liegt als lokales Expo-Modul unter
+`modules/to-shopping-widget/` (Kotlin, ADR-045). Es kommt ohne npm-Paket aus:
+`expo prebuild` bindet es automatisch ein. Ob Expo es findet, zeigt
+`npx expo-modules-autolinking search -p android`.
+
+Geprüft wird es von Hand (`docs/abnahme.md`, Abschnitt 10). **Vor jedem Test
+auf einem Telefon mit echten Daten: Sicherung erstellen und die Datei
+wegschicken.** E2E-Flows löschen die App-Daten (`clearState`), und ein Wechsel
+der Signatur verlangt eine Deinstallation.
+
 ## Auslieferung in den Play Store
 
 Bis hierher wurde jeder Release-Build mit dem **Debug-Schlüssel** signiert, den

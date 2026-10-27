@@ -52,6 +52,7 @@ import {
 } from '@/features/lists/repository';
 import { toProductStats } from '@/features/suggestions/logic';
 import { currentStatsQuery } from '@/features/suggestions/repository';
+import { pantryQuery } from '@/features/pantry/repository';
 import {
   cleanTemplateName,
   MAX_TEMPLATE_NAME_LENGTH,
@@ -132,6 +133,11 @@ export function ListScreen({ listId }: Props) {
   const orderRows = useLiveQuery(categoryOrderQuery(listId), [listId]);
 
   const historyRows = useLiveQuery(currentStatsQuery());
+  const pantryRows = useLiveQuery(pantryQuery());
+  const pantryProductIds = useMemo(
+    () => (pantryRows.data ?? []).map((row) => row.productId),
+    [pantryRows.data],
+  );
 
   const rows = useMemo(() => items.data ?? [], [items.data]);
   const products: CatalogProduct[] = catalog.data ?? [];
@@ -402,6 +408,15 @@ export function ListScreen({ listId }: Props) {
             onPress={openApplyTemplate}
             testID="menu-apply-template"
           />
+          <Menu.Item
+            leadingIcon="fridge-outline"
+            title={t('list.menuPantry')}
+            testID="menu-pantry"
+            onPress={() => {
+              setMenuOpen(false);
+              router.push({ pathname: '/vorrat', params: { listId } });
+            }}
+          />
         </Menu>
       </Appbar.Header>
 
@@ -504,6 +519,7 @@ export function ListScreen({ listId }: Props) {
               products={products}
               productIdsOnList={productIdsOnList}
               stats={stats}
+              pantryProductIds={pantryProductIds}
               onPickProduct={handlePick}
               onCreateProduct={handleCreate}
             />

@@ -53,7 +53,9 @@ Begründung der Stack-Wahl und die verworfenen Alternativen (Flutter, natives Ko
 ```
 categories ──┬── products ──┬── list_items ── lists ── list_category_order
              │              ├── template_items ── templates
-             │              └── purchase_history
+             │              ├── purchase_history
+             │              ├── pantry
+             │              └── recipe_items ── recipes ── weekly_plan
              └── list_category_order
 ```
 
@@ -140,6 +142,46 @@ Index: `(product_id, purchased_at)`.
 `templates`: `id`, `name`, `created_at`.
 `template_items`: `id`, `template_id` (CASCADE), `product_id` (NULL erlaubt), `name`, `category_id`, `quantity`, `unit`, `note`, `position`.
 
+#### `pantry`
+Der Vorrat (FR-9, ADR-043): Ein Produkt ist zu Hause, wenn es hier eine Zeile hat – keine Mengen, keine Stufen.
+
+| Spalte | Typ | Bemerkung |
+|---|---|---|
+| `product_id` | TEXT, PK, FK → `products.id` | `ON DELETE CASCADE` – der Vorrat ist eine Eigenschaft des Katalogprodukts |
+| `added_at` | INTEGER, NOT NULL | Zeitpunkt, seit dem das Produkt im Vorrat steht |
+
+#### `recipes`
+Gerichte (FR-10, ADR-044) – mitgelieferter Grundstock und eigene.
+
+| Spalte | Typ | Bemerkung |
+|---|---|---|
+| `id` | TEXT, PK | beim Grundstock aus dem Namen abgeleitet |
+| `name` | TEXT, NOT NULL | |
+| `note` | TEXT, NULL erlaubt | höchstens 200 Zeichen |
+| `is_builtin` | INTEGER (0/1), Standard 0 | für „Rezepte zurücksetzen" |
+| `created_at` | INTEGER, NOT NULL | |
+
+#### `recipe_items`
+Zutaten, gebaut wie `template_items`: Name als Kopie (ADR-007), Produktbezug optional.
+
+| Spalte | Typ | Bemerkung |
+|---|---|---|
+| `id` | TEXT, PK | |
+| `recipe_id` | TEXT, FK → `recipes.id`, NOT NULL | `ON DELETE CASCADE` |
+| `product_id` | TEXT, FK → `products.id`, NULL erlaubt | `ON DELETE SET NULL` – die Zutat bleibt als Text |
+| `name` | TEXT, NOT NULL | Kopie |
+| `quantity` | REAL, NOT NULL, Standard 1 | |
+| `unit` | TEXT, NOT NULL, Standard `stueck` | |
+| `position` | INTEGER, NOT NULL, Standard 0 | Reihenfolge im Rezept |
+
+#### `weekly_plan`
+Die Gerichte dieser Woche – nur die Auswahl, keine Wochentage (ADR-044).
+
+| Spalte | Typ | Bemerkung |
+|---|---|---|
+| `recipe_id` | TEXT, PK, FK → `recipes.id` | `ON DELETE CASCADE` |
+| `added_at` | INTEGER, NOT NULL | |
+
 #### `app_state`
 Schlüssel-Wert-Ablage für alles, was kein eigenes Schema verdient.
 
@@ -163,6 +205,8 @@ Die Anzeigetexte liegen in den Übersetzungsdateien, nicht im Code.
 ### 3.4 Migrationen
 
 Drizzle erzeugt versionierte SQL-Migrationen in `src/db/migrations/`. Sie laufen beim App-Start automatisch. **Regel: Migrationen werden nie nachträglich verändert**, auch nicht während der Entwicklung – sobald eine Migration einmal auf dem Testgerät gelaufen ist, wird sie nur durch eine neue ergänzt.
+
+**Pflichtpunkt Widget:** Das Widget liest `lists` und `list_items` nativ (`modules/to-shopping-widget/.../ListReader.kt`) mit eigenen SQL-Abfragen. **Jede Schemaänderung an diesen zwei Tabellen ist dort mitzuprüfen** – es ist die einzige zweite Stelle im Projekt, die Spaltennamen kennt.
 
 ---
 
@@ -207,6 +251,7 @@ Als **eine Transaktion**, damit kein Zwischenzustand entstehen kann:
 3. Die abgehakten Artikel löschen.
 4. Nicht abgehakte Artikel bleiben unverändert.
 5. `last_opened_at` der Liste aktualisieren.
+6. Die Produkte der abgehakten Artikel in `pantry` eintragen (Abschnitt 4.6). Schon vorhandene bleiben mit ihrem alten `added_at` stehen.
 
 ### 4.4 Vorlage anwenden (FR-5.4)
 
@@ -220,6 +265,29 @@ Ein Vorlagen-Artikel wird übersprungen, wenn auf der Zielliste bereits ein **ni
 4. Für jeden Artikel: Produkt über den Namen suchen (ohne Groß-/Kleinschreibung). Treffer → verknüpfen. Kein Treffer → Produkt im Katalog anlegen, Kategorie aus der Datei übernehmen, unbekannte Kategorie → „Sonstiges".
 5. Kategorie-Reihenfolge aus der Datei übernehmen, soweit die Kategorien lokal existieren.
 6. Alles in einer Transaktion. Schlägt ein Schritt fehl, ist nichts geschrieben.
+
+### 4.6 Vorrat (FR-9)
+
+1. **Hinein beim Abschließen:** In derselben Transaktion wie 4.3 kommen die abgehakten Artikel in den Vorrat – nur solche **mit Produktbezug**, jedes Produkt einmal. Einträge ohne `product_id` haben kein Katalogprodukt, an dem ein Haken hängen könnte (ADR-043).
+2. **Checkliste:** Sie zeigt „was du üblicherweise kaufst": alle Produkte mit Käufen im 180-Tage-Fenster der Vorschläge (4.2) **vereinigt mit** allem, was gerade im Vorrat steht. Gruppiert nach Abteilungen in der Standardreihenfolge, innerhalb alphabetisch; Produkte ohne oder mit unbekannter Kategorie landen in „Sonstiges". Jeder Abschnitt trägt die Kategorie-ID als `key`.
+3. **„Fehlende auf die Liste":** Alle Produkte ohne Haken gehen gesammelt an `addProductsToList`. Dort gilt dieselbe Regel wie in 4.4 – was schon **nicht abgehakt** mit derselben `product_id` auf der Liste steht, wird übersprungen. Eine eigene Schreiblogik gibt es nicht.
+
+### 4.7 Rezepte und Wochenplan (FR-10)
+
+1. **Zutat einordnen (`planRecipeShopping`):** Jede Zutat ist *da*, *schon auf der Liste* oder *fehlt*. **Der Vorrat schlägt die Liste:** Ist eine Zutat zu Hause und steht zugleich offen auf der Liste, gilt sie als „da" – für das Rezept zählt, ob man kochen kann. „Auf der Liste" entscheidet `planTemplateApply` (4.4), keine eigene Regel. Eine Zutat ohne `product_id` kann nie „da" sein, weil der Vorrat nur Produkte kennt (ADR-043).
+2. **Übersicht (`buildRecipeOverview`):** Gezählt wird, was **nicht im Vorrat** ist – ob es schon auf der Liste steht, spielt keine Rolle, denn „Alles da" heißt „ich kann heute kochen". Sortiert nach Zahl der fehlenden Zutaten, dann alphabetisch, dann nach ID.
+3. **Wochenplan (`planWeeklyShopping`):** Jedes Rezept der Woche wird für sich eingeordnet, die fehlenden Zutaten werden dann **vereinigt** – brauchen zwei Gerichte Hackfleisch, kommt es einmal auf die Liste. Zutaten ohne Produktbezug werden gesondert gemeldet statt still verschluckt. Geschrieben wird über `addProductsToList` wie in 4.6.
+4. **Grundstock genau einmal:** Gesät wird über den Merker `recipes_seeded` in `app_state`, nicht über „Tabelle ist leer" – wer alle Gerichte löscht, soll sie nicht beim nächsten Start wiederfinden (ADR-044). Eine Wiederherstellung aus einer Sicherung ohne `recipes` setzt den Merker zurück (5.2).
+5. **Zurücksetzen (`planRecipeReset`, ADR-031):** Mitgelieferte Gerichte kehren in den Auslieferungszustand zurück, gelöschte kommen wieder, **eigene bleiben unangetastet** – auch eines, das zufällig dieselbe ID wie ein mitgeliefertes trägt.
+
+### 4.8 Widget (FR-11)
+
+Entscheidung und Abwägung in ADR-045; der Code liegt in `modules/to-shopping-widget/`.
+
+1. **Lesen (`ListReader.kt`):** Das Widget öffnet die Datei der App unter `filesDir/SQLite/to-shopping.db` – derselbe Ort, den expo-sqlite verwendet – **nur lesend** über Androids eigene `SQLiteDatabase`. Es nimmt die Liste mit dem jüngsten `last_opened_at` und deren offene Artikel, höchstens fünf, plus die Gesamtzahl für „+ n weitere“. Es setzt einen **eigenen, leeren Fehler-Handler**: Androids Standard **löscht** die Datenbankdatei, sobald SQLite eine Beschädigung meldet – und das kann hier ohne echten Schaden passieren, wenn das Widget eine halb geschriebene Seite erwischt. Jeder Lesefehler endet in „keine neuen Daten“, die alte Anzeige bleibt stehen.
+2. **Aktualisieren:** Android löst das Widget periodisch aus, frühestens alle 30 Minuten. Dazu startet `app/_layout.tsx` nach den Migrationen `startWidgetRefresh` (`src/lib/widgetRefresh.ts`): ein Datenbank-Listener auf `lists` und `list_items`, um 500 ms entprellt. Ein Listener statt eines Aufrufs in jeder Schreibfunktion, weil er **jeden** Schreibvorgang sieht, auch künftige und seltene wie Import oder Wiederherstellung. Die Entprellung macht aus „Einkauf abschließen“ mit zwanzig Artikeln eine Neuzeichnung statt zwanzig. Änderungen an **anderen Tabellen** lösen nichts aus, schieben ein geplantes Update aber auf: SQLite meldet Zeilen sofort, nicht erst beim Commit – liefe das Update mitten in einer Wiederherstellung los, läse das Widget den Stand vor dem Commit und bliebe bis zum nächsten 30-Minuten-Takt dabei.
+3. **Tipp:** Öffnet die Liste über den App-Link `toshopping://liste?listId=…`.
+4. **Bekannte Abweichung:** Das Widget sortiert nur nach `position`, die App zusätzlich nach Abteilung (4.1). Die Reihenfolge im Widget kann daher von der Liste in der App abweichen.
 
 ---
 
@@ -264,10 +332,15 @@ Einkaufsliste „Rewe" (2 Artikel)
   "data": {
     "categories": [], "products": [], "lists": [],
     "listCategoryOrder": [], "listItems": [],
-    "templates": [], "templateItems": [], "purchaseHistory": []
+    "templates": [], "templateItems": [], "purchaseHistory": [],
+    "pantry": [], "recipes": [], "recipeItems": [], "weeklyPlan": []
   }
 }
 ```
+
+Die acht Tabellen aus V1 sind **Pflichttabellen**, alle später hinzugekommenen (`pantry`, `recipes`, `recipeItems`, `weeklyPlan`) sind **optional**: Fehlt eine optionale Tabelle in der Datei, gilt sie als leer, sodass Sicherungen aus V1 lesbar bleiben. Weil das eine verträgliche Änderung ist, bleibt `version` bei 1, und die Pflichtliste wächst nie mehr (ADR-046).
+
+`parseBackup` meldet zusätzlich, welche optionalen Tabellen fehlten (`missingOptional`). Fehlte `recipes`, setzt die Wiederherstellung nach ihrer Transaktion den Merker `recipes_seeded` zurück: Die Rezepttabelle ist nach dem Ersetzen leer, und ohne diesen Schritt käme der Grundstock nie zurück. Beim nächsten Start sät `seedRecipesOnce`. Eine vorhandene, aber leere `recipes`-Tabelle lässt den Merker stehen. `app_state` selbst gehört nie in die Sicherung.
 
 Die Sicherung enthält im Gegensatz zur geteilten Liste **echte IDs**, weil sie den vollständigen Zustand wiederherstellt. Beim Wiederherstellen wird der bestehende Datenbestand **ersetzt**, nicht ergänzt – mit ausdrücklicher Warnung.
 
@@ -336,6 +409,7 @@ To-Shopping/
 │   ├── lib/                      # Hilfsfunktionen: uuid, datum, text-normalisierung
 │   └── store/                    # Zustand: nur UI-Zustand, keine Daten
 │
+├── modules/to-shopping-widget/   # Homescreen-Widget: lokales Expo-Modul in Kotlin (ADR-045)
 ├── e2e/                          # Maestro-Flows (YAML)
 ├── docs/                         # diese Dokumentation
 ├── assets/                       # Icon, Splash

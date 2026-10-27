@@ -20,8 +20,15 @@ export const BACKUP_EXTENSION = 'tsb';
  * `app_state` fehlt bewusst (architecture.md 5.2). Dort stehen Geraete-Sachen -
  * zuletzt genutzte Route, gesehene Hinweise, Zeitpunkt der letzten Sicherung.
  * Sie auf ein anderes Geraet zu tragen waere sinnlos bis stoerend.
+ *
+ * Geteilt in Pflicht- und optionale Tabellen (ADR-046). Die Pflichtliste ist
+ * der Stand von V1 und waechst **nie mehr**: Jede Tabelle, die hier neu
+ * hinzukaeme, wuerde jede aeltere Sicherung unlesbar machen - und die liegen
+ * bei den Nutzern. Neue Tabellen kommen deshalb immer in die optionale Liste;
+ * fehlen sie in einer Datei, gelten sie als leer. Weil das vertraeglich ist,
+ * bleibt BACKUP_VERSION bei 1.
  */
-export const BACKUP_TABLES = [
+export const REQUIRED_BACKUP_TABLES = [
   'categories',
   'products',
   'lists',
@@ -32,8 +39,28 @@ export const BACKUP_TABLES = [
   'purchaseHistory',
 ] as const;
 
+/**
+ * Seit V2. Duerfen in einer Datei fehlen (ADR-046).
+ *
+ * Die Reihenfolge ist zugleich die Einfuegereihenfolge: `recipeItems` und
+ * `weeklyPlan` zeigen auf `recipes`, also muss `recipes` davor stehen.
+ */
+export const OPTIONAL_BACKUP_TABLES = ['pantry', 'recipes', 'recipeItems', 'weeklyPlan'] as const;
+
+/**
+ * Alle Tabellen, Pflicht zuerst. Die optionalen haengen hinten an - das passt
+ * zur Schreibreihenfolge, weil sie auf Pflichttabellen zeigen (`pantry` und
+ * die Zutaten auf `products`), nie umgekehrt.
+ */
+export const BACKUP_TABLES = [...REQUIRED_BACKUP_TABLES, ...OPTIONAL_BACKUP_TABLES] as const;
+
 export type BackupTable = (typeof BACKUP_TABLES)[number];
 
+/**
+ * Zeilen bleiben hier bewusst untypisiert, auch fuer `pantry` (Zeilen der Form
+ * `{ productId, addedAt }` wie PantryEntry): Sie kommen aus einer Datei, und
+ * welche Spalten zaehlen, entscheidet erst die Wiederherstellung.
+ */
 export type BackupData = Record<BackupTable, Record<string, unknown>[]>;
 
 export type BackupFile = {
@@ -42,6 +69,15 @@ export type BackupFile = {
   exportedAt: string;
   schemaVersion: number;
   data: BackupData;
+  /**
+   * Welche optionalen Tabellen in der eingelesenen Datei fehlten. Nur von
+   * parseBackup gesetzt, nie geschrieben (buildBackup laesst es weg).
+   *
+   * Steht hier und nicht nur im Ergebnis von parseBackup, weil die
+   * Wiederherstellung nur die Datei bekommt: restoreBackup braucht die Angabe,
+   * um den Rezept-Merker zurueckzusetzen (ADR-046, Konsequenz).
+   */
+  missingOptional?: BackupTable[];
 };
 
 export type BackupFailure =
@@ -53,7 +89,18 @@ export type BackupFailure =
   | 'neueresSchema';
 
 export type BackupParseResult =
-  { ok: true; file: BackupFile } | { ok: false; reason: BackupFailure };
+  | {
+      ok: true;
+      file: BackupFile;
+      /**
+       * Optionale Tabellen, die in der Datei fehlten - bei einer V1-Sicherung
+       * alle. Leer heisst: Die Datei kannte jede Tabelle, auch wenn sie leer war.
+       * Der Unterschied zaehlt (ADR-046, Konsequenz): Eine leere `recipes`-
+       * Tabelle ist eine Entscheidung des Nutzers, eine fehlende nicht.
+       */
+      missingOptional: BackupTable[];
+    }
+  | { ok: false; reason: BackupFailure };
 
 export function buildBackup(
   data: BackupData,
@@ -127,9 +174,18 @@ export function parseBackup(raw: string, currentSchemaVersion: number): BackupPa
   }
 
   const tables = {} as BackupData;
+  const missingOptional: BackupTable[] = [];
 
   for (const table of BACKUP_TABLES) {
-    const rows = data[table];
+    const optional = (OPTIONAL_BACKUP_TABLES as readonly BackupTable[]).includes(table);
+    // Fehlt eine optionale Tabelle, stammt die Datei aus einer aelteren
+    // Fassung, die sie noch nicht kannte - leer ist dann die richtige Antwort
+    // (ADR-046). Ist sie da, gilt dieselbe Strenge wie fuer alle.
+    const missing = optional && !(table in data);
+    if (missing) {
+      missingOptional.push(table);
+    }
+    const rows = missing ? [] : data[table];
 
     if (!Array.isArray(rows) || !rows.every(isRecord)) {
       return { ok: false, reason: 'unlesbar' };
@@ -146,7 +202,9 @@ export function parseBackup(raw: string, currentSchemaVersion: number): BackupPa
       exportedAt: typeof parsed.exportedAt === 'string' ? parsed.exportedAt : '',
       schemaVersion,
       data: tables,
+      missingOptional,
     },
+    missingOptional,
   };
 }
 

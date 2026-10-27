@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Steckbrief des Widgets fuer den Launcher.
+
+  - minWidth/minHeight 110dp: Androids Formel fuer 2 x 2 Felder (70 * n - 30).
+    targetCellWidth/-Height sagen dasselbe ab Android 12 direkt in Feldern.
+  - updatePeriodMillis 30 min: das Minimum, das Android zulaesst. Kuerzer
+    geht nur ueber refreshWidget() aus der App (ADR-045, FR-11.3).
+  - resizeMode vertical: Wer mehr Zeilen sehen will, zieht es hoeher; in die
+    Breite bringt mehr Platz bei einer Liste nichts.
+  - minResizeHeight 40dp: dieselbe Formel fuer 1 Feld (70 * 1 - 30). Ohne
+    den Wert liesse sich das Widget nicht unter minHeight verkleinern, 2 x 1
+    waere unmoeglich. Das Layout hat keine Groessenlogik: Bei 2 x 1 zeigt es
+    den Titel und so viele Zeilen, wie in die Hoehe passen; der Rest wird
+    unten abgeschnitten.
+-->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+  android:minWidth="110dp"
+  android:minHeight="110dp"
+  android:minResizeHeight="40dp"
+  android:targetCellWidth="2"
+  android:targetCellHeight="2"
+  android:updatePeriodMillis="1800000"
+  android:initialLayout="@layout/to_shopping_widget"
+  android:previewLayout="@layout/to_shopping_widget_preview"
+  android:description="@string/to_shopping_widget_description"
+  android:resizeMode="vertical"
+  android:widgetCategory="home_screen" />

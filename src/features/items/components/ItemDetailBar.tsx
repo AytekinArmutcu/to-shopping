@@ -25,6 +25,12 @@ type Props = {
   item: ItemDetailData;
   onChange: (id: string, details: ItemDetailChange) => void;
   onClose: () => void;
+  /**
+   * Notizfeld zeigen (Standard). Rezeptzutaten haben keine Notiz - dort
+   * blendet RecipeScreen das Feld aus, statt eine Eingabe anzubieten, die
+   * nirgends gespeichert wird.
+   */
+  showNote?: boolean;
 };
 
 /**
@@ -41,7 +47,7 @@ type Props = {
  * "Fertig" schliesst nur. Ein Abbrechen gibt es bewusst nicht - es koennte
  * eine Aenderung stillschweigend verwerfen.
  */
-export function ItemDetailBar({ item, onChange, onClose }: Props) {
+export function ItemDetailBar({ item, onChange, onClose, showNote = true }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
   // Das Mengenfeld hat eine feste Breite, damit die Reihe nicht wandert. Sie
@@ -153,24 +159,26 @@ export function ItemDetailBar({ item, onChange, onClose }: Props) {
         </ScrollView>
       </View>
 
-      <TextInput
-        mode="outlined"
-        dense
-        value={note}
-        // Bewusst bei jedem Buchstaben und nicht erst beim Verlassen des
-        // Feldes: "Fertig" nimmt der Zeile den Fokus nicht ab, sie
-        // verschwindet einfach - eine Notiz, die erst beim Verlassen
-        // gespeichert wird, waere damit still verloren.
-        onChangeText={(text) => {
-          setNote(text);
-          apply({ note: cleanNote(text) });
-        }}
-        placeholder={t('detail.notePlaceholder')}
-        accessibilityLabel={t('detail.note')}
-        maxLength={MAX_NOTE_LENGTH}
-        testID="detail-note"
-        style={styles.note}
-      />
+      {showNote ? (
+        <TextInput
+          mode="outlined"
+          dense
+          value={note}
+          // Bewusst bei jedem Buchstaben und nicht erst beim Verlassen des
+          // Feldes: "Fertig" nimmt der Zeile den Fokus nicht ab, sie
+          // verschwindet einfach - eine Notiz, die erst beim Verlassen
+          // gespeichert wird, waere damit still verloren.
+          onChangeText={(text) => {
+            setNote(text);
+            apply({ note: cleanNote(text) });
+          }}
+          placeholder={t('detail.notePlaceholder')}
+          accessibilityLabel={t('detail.note')}
+          maxLength={MAX_NOTE_LENGTH}
+          testID="detail-note"
+          style={styles.note}
+        />
+      ) : null}
     </View>
   );
 }
