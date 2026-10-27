@@ -297,6 +297,9 @@ Hebt zwei Nicht-Ziele aus Abschnitt 6 auf (Widget, Rezepte) und fügt den Vorrat
 | FR-10.9 | Ein Rezept hat nummerierte Zubereitungsschritte – **nur Text**: keine Timer, Fotos, Portionen (ADR-047, ändert FR-10.1) |
 | FR-10.10 | Zutaten, deren Produkt „Grundvorrat" ist, zählen nicht als fehlend und gehen nicht automatisch auf die Liste |
 | FR-4.5 | Ein Produkt kann als „Grundvorrat" gekennzeichnet werden; mitgelieferte Gewürze und Grundzutaten sind es ab Werk (ADR-047) |
+| FR-9.7 | Der Vorrat führt mit einem Tipp („Was kann ich kochen?") zur Rezeptübersicht (ADR-048) |
+| FR-10.11 | Die Rezeptübersicht lässt sich filtern: alle · alles da · höchstens eine fehlt; die Wahl bleibt gemerkt, der Wochenplan ist ausgenommen |
+| FR-10.12 | Gerichte zu gewählten Vorratsartikeln: Auswahl nur aus dem Vorrat, Treffer bei mindestens einer Zutat, sortiert nach Trefferzahl, dann fehlend (ADR-048) |
 
 ### FR-11 Widget
 

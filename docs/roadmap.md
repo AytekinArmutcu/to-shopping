@@ -54,6 +54,7 @@ Die beiden zuletzt geplanten Meilensteine **M10 (Vorschläge) und M11 (Vorlagen)
 | M14 | Rezepte und Wochenplan | 12 | Kochen aus dem, was da ist |
 | M15 | Widget | 8 | Die Liste ohne App-Start |
 | M16 | Rezepte vertiefen | 14 | Schritte und Gewürze, Grundvorrat zählt nicht als fehlend |
+| M17 | Kochen aus dem Vorrat | 5,5 | Filter „Alles da", Gerichte zu gewählten Zutaten |
 
 ---
 
@@ -354,6 +355,20 @@ Entschieden am 27. Oktober 2026, nachdem die App sieben Wochen täglich in Gebra
 | T-16.6 | Sicherung (`recipeSteps` optional, Versionsmerker zurücksetzen), E2E `rezept-schritte.yaml`, Doku | FR-10.8 | 2 | Flow grün; `architecture.md` kennt Tabelle, Spalte und Regel |
 
 **Abnahme:** Pfannkuchen zeigt Schritte und „Alles da", obwohl Salz draufsteht. Ein eigener Schritt lässt sich anlegen, umsortieren, löschen.
+
+---
+
+### M17 – Kochen aus dem Vorrat
+
+**Ziel:** Die Antwort auf „Was kann ich kochen?" ist einen Tipp entfernt (ADR-048). Entschieden am 27. Oktober 2026, nach dem ersten Tag mit V2.
+
+| ID | Aufgabe | FR | h | Fertig, wenn … |
+|---|---|---|---|---|
+| T-17.1 | Reine Logik: Übersichtsfilter (alle / alles da / höchstens eine fehlt), Treffer nach gewählten Zutaten (mindestens eine, sortiert nach Trefferzahl, dann fehlend, dann Name), Vorrats-Auswahlliste | FR-10.11, FR-10.12 | 1,5 | Tests: Grundvorrat zählt nicht, Sortierung, leere Auswahl = ungefiltert |
+| T-17.2 | Vorrat: Knopf „Was kann ich kochen?"; Rezepte: Filter-Chips (gemerkt), Chip „Zutat wählen…", Auswahlscreen nur aus dem Vorrat, Filter als Routenparameter, leerer Zustand mit Weg zum Vorrat | FR-9.7, FR-10.11, FR-10.12 | 3 | Skizze umgesetzt, 48 dp, Beschriftungen, hell und dunkel |
+| T-17.3 | E2E `kochen.yaml`, Abnahmepunkte, Doku | – | 1 | Flow grün auf dem Emulator |
+
+**Abnahme:** Nach einer Minute Vorrat-Checkliste steht unter „Alles da" mindestens ein Gericht. Zucchini anhaken → nur Gerichte mit Zucchini.
 
 ---
 

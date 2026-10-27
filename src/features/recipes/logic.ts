@@ -1,5 +1,6 @@
 import { cleanProductName } from '@/features/catalog/logic';
 import { planTemplateApply, type TargetItem } from '@/features/templates/logic';
+import type { PantrySection } from '@/features/pantry/logic';
 
 /**
  * Rezepte: was davon da ist, was fehlt, was gesammelt auf die Liste geht
@@ -460,4 +461,145 @@ export function moveStep<T>(steps: T[], from: number, to: number): T[] {
   const moved = result.splice(from, 1);
   result.splice(to, 0, ...moved);
   return result;
+}
+
+/* ------------------------------------------------------------------ *
+ * Filter der Uebersicht (ADR-048, FR-10.11, FR-10.12, T-17.1)
+ * ------------------------------------------------------------------ */
+
+/**
+ * Die drei Filter-Chips ueber der Rezeptliste: Alle, Alles da, Fast alles da.
+ * "Fehlend" ist dabei dasselbe wie in buildRecipeOverview - Grundvorrat ist
+ * in missingCount schon ausgenommen (ADR-047) und wird hier nicht noch einmal
+ * gerechnet.
+ */
+export type RecipeFilter = 'all' | 'allThere' | 'almost';
+
+export const RECIPE_FILTERS: readonly RecipeFilter[] = ['all', 'allThere', 'almost'];
+
+/**
+ * Prueft einen gespeicherten Wert (app_state, ADR-020): Was dort steht, kann
+ * aus einer aelteren Version stammen oder kaputt sein - dann gilt er nicht.
+ */
+export function isRecipeFilter(value: unknown): value is RecipeFilter {
+  return typeof value === 'string' && (RECIPE_FILTERS as readonly string[]).includes(value);
+}
+
+/**
+ * Filtert die Uebersicht, ohne ihre Reihenfolge anzutasten: "allThere" heisst
+ * nichts fehlt, "almost" heisst hoechstens eine Zutat fehlt (schliesst "Alles
+ * da" also ein), "all" laesst alles stehen. Gibt immer ein neues Array zurueck.
+ */
+export function filterRecipeOverview(
+  rows: RecipeOverviewRow[],
+  filter: RecipeFilter,
+): RecipeOverviewRow[] {
+  switch (filter) {
+    case 'allThere':
+      return rows.filter((row) => row.missingCount === 0);
+    case 'almost':
+      return rows.filter((row) => row.missingCount <= 1);
+    case 'all':
+      return [...rows];
+  }
+}
+
+export interface IngredientMatchRow extends RecipeOverviewRow {
+  /** Wie viele verschiedene der gewaehlten Produkte das Gericht verwendet. */
+  matchCount: number;
+  /** Namen der getroffenen Zutaten, je Produkt einmal, in Rezeptreihenfolge. */
+  matchNames: string[];
+}
+
+/**
+ * Gerichte zu gewaehlten Vorratszutaten ("Ich will die Zucchini wegbekommen").
+ *
+ * Ein Gericht passt, wenn es **mindestens eine** der gewaehlten Zutaten
+ * verwendet - nicht alle. Das Ziel ist, etwas aufzubrauchen, nicht ein
+ * bestimmtes Gericht zu finden; "alle gewaehlten" waere bei zwei Zutaten meist
+ * leer (ADR-048). Damit die Gerichte mit mehreren Treffern trotzdem oben
+ * stehen, wird nach Trefferzahl absteigend sortiert, dann nach fehlenden
+ * Zutaten aufsteigend, dann nach deutschem Alphabet, zuletzt nach ID.
+ *
+ * Getroffen wird ueber die productId: Eine Zutat ohne productId matcht nie,
+ * und ein Gericht ohne Zutaten erscheint nie. Dieselbe Zutat zweimal im
+ * Rezept zaehlt einmal - matchCount zaehlt Produkte, nicht Zeilen.
+ *
+ * Ohne Auswahl ist das kein Filter: Alle Zeilen bleiben in ihrer Reihenfolge,
+ * mit matchCount 0 und leeren matchNames.
+ */
+export function rankRecipesByIngredients(
+  rows: RecipeOverviewRow[],
+  itemsByRecipe: Map<string, RecipeIngredient[]> | Record<string, RecipeIngredient[]>,
+  selectedProductIds: string[],
+): IngredientMatchRow[] {
+  if (selectedProductIds.length === 0) {
+    return rows.map((row) => ({ ...row, matchCount: 0, matchNames: [] }));
+  }
+
+  const selected = new Set(selectedProductIds);
+  const matched: IngredientMatchRow[] = [];
+
+  for (const row of rows) {
+    const items = [...ingredientsOf(itemsByRecipe, row.id)].sort((a, b) => a.position - b.position);
+    const seen = new Set<string>();
+    const matchNames: string[] = [];
+    for (const item of items) {
+      if (item.productId !== null && selected.has(item.productId) && !seen.has(item.productId)) {
+        seen.add(item.productId);
+        matchNames.push(item.name);
+      }
+    }
+    if (seen.size > 0) {
+      matched.push({ ...row, matchCount: seen.size, matchNames });
+    }
+  }
+
+  return matched.sort((a, b) => {
+    if (a.matchCount !== b.matchCount) {
+      return b.matchCount - a.matchCount;
+    }
+    if (a.missingCount !== b.missingCount) {
+      return a.missingCount - b.missingCount;
+    }
+    const byName = a.name.localeCompare(b.name, 'de');
+    return byName !== 0 ? byName : a.id.localeCompare(b.id);
+  });
+}
+
+/**
+ * Die Abschnitte fuer die Zutaten-Auswahl: nur, was im Vorrat ist (ADR-048 -
+ * die Frage ist "was kann ich mit dem kochen, was da ist"). Abschnitte, die
+ * dadurch leer werden, fallen weg; key und title bleiben, wie sie sind.
+ */
+export function presentPantrySections(sections: PantrySection[]): PantrySection[] {
+  return sections
+    .map((section) => ({ ...section, items: section.items.filter((item) => item.inPantry) }))
+    .filter((section) => section.items.length > 0);
+}
+
+/**
+ * Liest den Routenparameter "with" (/rezepte?with=…, ADR-048): kommagetrennte
+ * Produkt-IDs. Raender werden abgeschnitten, Leeres verworfen, Doppeltes nur
+ * einmal behalten. Expo Router kann bei mehrfach gesetztem Parameter ein Array
+ * liefern - dann gilt das erste Element.
+ */
+export function parseWithParam(value: string | string[] | undefined): string[] {
+  const raw = Array.isArray(value) ? value[0] : value;
+  if (raw === undefined) {
+    return [];
+  }
+  const ids: string[] = [];
+  for (const part of raw.split(',')) {
+    const id = part.trim();
+    if (id.length > 0 && !ids.includes(id)) {
+      ids.push(id);
+    }
+  }
+  return ids;
+}
+
+/** Gegenstueck zu parseWithParam: parseWithParam(formatWithParam(ids)) ergibt ids, dedupliziert. */
+export function formatWithParam(productIds: string[]): string {
+  return parseWithParam(productIds.join(',')).join(',');
 }

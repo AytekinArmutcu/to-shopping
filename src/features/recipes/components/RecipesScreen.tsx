@@ -1,11 +1,12 @@
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { FlatList, StyleSheet, View } from 'react-native';
+import { FlatList, ScrollView, StyleSheet, View } from 'react-native';
 import {
   Appbar,
   Button,
+  Chip,
   Dialog,
   FAB,
   IconButton,
@@ -17,7 +18,7 @@ import {
   useTheme,
 } from 'react-native-paper';
 
-import { stapleProductIdsQuery } from '@/features/catalog/repository';
+import { catalogProductsQuery, stapleProductIdsQuery } from '@/features/catalog/repository';
 import { listItemsQuery } from '@/features/items/repository';
 import { getOrCreateActiveList } from '@/features/lists/repository';
 import { pantryQuery } from '@/features/pantry/repository';
@@ -26,23 +27,55 @@ import { goTo } from '@/lib/navigation';
 
 import {
   buildRecipeOverview,
+  filterRecipeOverview,
+  formatWithParam,
+  type IngredientMatchRow,
   MISSING_NAMES_LIMIT,
+  parseWithParam,
   planWeeklyShopping,
+  RECIPE_FILTERS,
+  type RecipeFilter,
   type RecipeIngredient,
   type RecipeOverviewRow,
+  rankRecipesByIngredients,
 } from '../logic';
 import {
   addRecipeMissingToList,
   clearWeeklyPlan,
+  getRecipeFilter,
   recipeItemsQuery,
   recipesQuery,
   resetRecipes,
   setInWeeklyPlan,
+  setRecipeFilter,
   weeklyPlanQuery,
 } from '../repository';
 
 /** Routenparameter fuer "neues Gericht anlegen" - RecipeScreen beginnt dann im Bearbeitungsmodus. */
 export const NEW_RECIPE_ID = 'neu';
+
+/**
+ * Ein Paper-Chip ist 32 dp hoch. minHeight macht die Flaeche 48 dp hoch, der
+ * tippbare Teil darin bleibt aber so hoch wie sein Inhalt und sitzt in der
+ * Mitte. hitSlop verlaengert ihn um je 8 dp nach oben und unten - auf
+ * genau die 48 dp der Flaeche (CLAUDE.md).
+ */
+const CHIP_HIT_SLOP = { top: 8, bottom: 8 };
+
+/** Beschriftung je Filter-Chip (de.json, recipes.*). */
+const FILTER_LABEL_KEYS: Record<RecipeFilter, string> = {
+  all: 'recipes.filterAll',
+  allThere: 'recipes.filterAllThere',
+  almost: 'recipes.filterAlmost',
+};
+
+type Props = {
+  /**
+   * Routenparameter "with" (ADR-048): kommagetrennte Produkt-IDs aus der
+   * Zutaten-Auswahl, roh, wie Expo Router ihn liefert.
+   */
+  withParam?: string | string[];
+};
 
 /**
  * Die Artikel der aktiven Liste als Vergleichsgrundlage fuer "steht schon
@@ -98,8 +131,13 @@ export function useActiveListTargets(): TargetItem[] {
  *
  * Gebaut wie der Vorrat (Appbar, Snackbar, busy-Sperre) und die Listen-
  * uebersicht (FAB fuer "Neu").
+ *
+ * Ueber den Gerichten stehen die Filter (ADR-048, FR-10.11, FR-10.12): drei
+ * gemerkte Chips nach Vorrat und der Zutatenfilter, der als Routenparameter
+ * reist. Der Wochenplan bleibt ungefiltert - er ist Auswahl, kein
+ * Suchergebnis.
  */
-export function RecipesScreen() {
+export function RecipesScreen({ withParam }: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
 
@@ -108,7 +146,42 @@ export function RecipesScreen() {
   const pantryRows = useLiveQuery(pantryQuery());
   const planRows = useLiveQuery(weeklyPlanQuery());
   const stapleRows = useLiveQuery(stapleProductIdsQuery());
+  const catalog = useLiveQuery(catalogProductsQuery());
   const targets = useActiveListTargets();
+
+  // Gemerkter Filter (app_state, ADR-020). Bis er geladen ist, gilt "Alle".
+  // Tippt jemand schneller, als die Datenbank antwortet, gewinnt der Tipp.
+  const [filter, setFilter] = useState<RecipeFilter>('all');
+  const filterTouched = useRef(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    void getRecipeFilter().then((stored) => {
+      if (!cancelled && !filterTouched.current) {
+        setFilter(stored);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const chooseFilter = useCallback((next: RecipeFilter) => {
+    filterTouched.current = true;
+    setFilter(next);
+    void setRecipeFilter(next);
+  }, []);
+
+  const withIds = useMemo(() => parseWithParam(withParam), [withParam]);
+
+  // Namen in Auswahlreihenfolge; ein inzwischen geloeschtes Produkt faellt weg.
+  const withNames = useMemo(() => {
+    const nameById = new Map((catalog.data ?? []).map((product) => [product.id, product.name]));
+    return withIds.flatMap((id) => {
+      const name = nameById.get(id);
+      return name === undefined ? [] : [name];
+    });
+  }, [catalog.data, withIds]);
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
@@ -149,6 +222,11 @@ export function RecipesScreen() {
   );
 
   const weekRows = useMemo(() => rows.filter((row) => row.inPlan), [rows]);
+
+  const visibleRows = useMemo(
+    () => rankRecipesByIngredients(filterRecipeOverview(rows, filter), itemsByRecipe, withIds),
+    [rows, filter, itemsByRecipe, withIds],
+  );
 
   const weekPlan = useMemo(
     () =>
@@ -219,6 +297,89 @@ export function RecipesScreen() {
     return t('recipes.missingWith', { count: row.missingCount, names });
   };
 
+  // Mit Zutatenfilter steht vorne, welche der gewaehlten Zutaten das Gericht
+  // verwendet - das ist der Grund, warum es in der Liste steht.
+  const rowDescription = (row: IngredientMatchRow) =>
+    withIds.length === 0
+      ? missingDescription(row)
+      : `${t('recipes.usesNames', { names: row.matchNames.join(', ') })} · ${missingDescription(row)}`;
+
+  const withLabel = t('recipes.filterWith', { names: withNames.join(', ') });
+
+  // Vorwaerts in die Auswahl (ADR-036) - deshalb push. Die aktuelle Auswahl
+  // reist mit, damit sie sich aendern laesst statt neu begonnen zu werden.
+  const openPicker = useCallback(() => {
+    router.push({ pathname: '/rezepte-zutaten', params: { with: formatWithParam(withIds) } });
+  }, [withIds]);
+
+  // Zeile 1 scrollt waagerecht und haelt immer dieselben vier Chips. Der
+  // aktive Zutatenfilter steht darunter in einer eigenen, festen Zeile: In
+  // der scrollenden lag er auf schmalen Bildschirmen ausserhalb des
+  // sichtbaren Teils, und der Zeile sieht man nicht an, dass sie scrollt.
+  const filterChips = (
+    <View>
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.filters}
+        testID="recipes-filters"
+      >
+        {RECIPE_FILTERS.map((option) => (
+          <Chip
+            key={option}
+            selected={filter === option}
+            showSelectedOverlay
+            onPress={() => chooseFilter(option)}
+            accessibilityLabel={t(FILTER_LABEL_KEYS[option])}
+            testID={`recipes-filter-${option}`}
+            style={styles.chip}
+            hitSlop={CHIP_HIT_SLOP}
+          >
+            {t(FILTER_LABEL_KEYS[option])}
+          </Chip>
+        ))}
+        {/* Bleibt auch bei aktivem Zutatenfilter: Tipp oeffnet die Auswahl zum Aendern. */}
+        <Chip
+          icon="basket-outline"
+          onPress={openPicker}
+          accessibilityLabel={t('recipes.filterPick')}
+          testID="recipes-filter-pick"
+          style={styles.chip}
+          hitSlop={CHIP_HIT_SLOP}
+        >
+          {t('recipes.filterPick')}
+        </Chip>
+      </ScrollView>
+      {withIds.length > 0 ? (
+        <View style={styles.withFilter}>
+          {/* Kein Kreuz im Chip - Paper zeichnet es kleiner als 48 dp;
+            Aufheben ist der Knopf daneben. Lange Namen enden mit "…"
+            (Paper setzt am Chip-Text numberOfLines 1). */}
+          <Chip
+            selected
+            showSelectedOverlay
+            onPress={openPicker}
+            ellipsizeMode="tail"
+            accessibilityLabel={withLabel}
+            testID="recipes-filter-with"
+            style={[styles.chip, styles.withChip]}
+            hitSlop={CHIP_HIT_SLOP}
+          >
+            {withLabel}
+          </Chip>
+          <IconButton
+            icon="close"
+            // Entfernt den Parameter an der vorhandenen Route - kein neuer Screen.
+            onPress={() => router.setParams({ with: undefined })}
+            accessibilityLabel={t('recipes.filterClear')}
+            testID="recipes-filter-clear"
+            style={styles.iconButton}
+          />
+        </View>
+      ) : null}
+    </View>
+  );
+
   const header =
     rows.length === 0 ? null : (
       <View>
@@ -281,6 +442,7 @@ export function RecipesScreen() {
         <Text variant="titleSmall" style={[styles.sectionHeader, { color: theme.colors.primary }]}>
           {t('recipes.allTitle')}
         </Text>
+        {filterChips}
       </View>
     );
 
@@ -319,7 +481,7 @@ export function RecipesScreen() {
       </Appbar.Header>
 
       <FlatList
-        data={rows}
+        data={visibleRows}
         keyExtractor={(row) => row.id}
         testID="recipes-list"
         ListHeaderComponent={header}
@@ -327,7 +489,7 @@ export function RecipesScreen() {
         renderItem={({ item }) => (
           <List.Item
             title={item.name}
-            description={missingDescription(item)}
+            description={rowDescription(item)}
             descriptionStyle={item.missingCount === 0 ? { color: theme.colors.primary } : undefined}
             onPress={() => openRecipe(item.id)}
             testID={`recipe-${item.name}`}
@@ -354,17 +516,35 @@ export function RecipesScreen() {
           />
         )}
         ListEmptyComponent={
-          <View style={styles.empty} testID="recipes-empty">
-            <Text variant="titleMedium" style={styles.emptyText}>
-              {t('recipes.empty')}
-            </Text>
-            <Text
-              variant="bodyMedium"
-              style={[styles.emptyText, { color: theme.colors.onSurfaceVariant }]}
-            >
-              {t('recipes.emptyHint')}
-            </Text>
-          </View>
+          rows.length === 0 ? (
+            <View style={styles.empty} testID="recipes-empty">
+              <Text variant="titleMedium" style={styles.emptyText}>
+                {t('recipes.empty')}
+              </Text>
+              <Text
+                variant="bodyMedium"
+                style={[styles.emptyText, { color: theme.colors.onSurfaceVariant }]}
+              >
+                {t('recipes.emptyHint')}
+              </Text>
+            </View>
+          ) : (
+            // Es gibt Gerichte, nur passt keins: meist ein Vorrat ohne Haken
+            // (ADR-048). Erklaerung und Weg dorthin statt leerer Flaeche.
+            <View style={[styles.empty, styles.filterEmpty]} testID="recipes-filter-empty">
+              <Text variant="bodyMedium" style={styles.emptyText}>
+                {t('recipes.filterEmpty')}
+              </Text>
+              <Button
+                mode="outlined"
+                onPress={() => router.push('/vorrat')}
+                testID="recipes-open-pantry"
+                style={styles.emptyAction}
+              >
+                {t('recipes.openPantry')}
+              </Button>
+            </View>
+          )
         }
       />
 
@@ -439,6 +619,34 @@ const styles = StyleSheet.create({
   weekAdd: {
     flexShrink: 1,
   },
+  // Die Zeile ist so hoch wie ihr hoechstes Element (48 dp) plus Rand; der
+  // untere Rand trennt sie von der ersten Gerichtszeile.
+  filters: {
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingTop: 4,
+    paddingBottom: 8,
+  },
+  // 48 dp hoch, Inhalt in der Mitte - dazu CHIP_HIT_SLOP fuer die Tippflaeche.
+  chip: {
+    minHeight: 48,
+    justifyContent: 'center',
+  },
+  // Zweite Zeile, nicht scrollend, volle Breite - Abstaende wie "filters".
+  withFilter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingTop: 4,
+    paddingBottom: 8,
+  },
+  // Gibt nach, wenn die Namen nicht passen; der Aufheben-Knopf bleibt ganz.
+  withChip: {
+    flexShrink: 1,
+  },
   listContent: {
     // Platz, damit der letzte Eintrag nicht unter dem FAB verschwindet.
     paddingBottom: 96,
@@ -453,6 +661,12 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     textAlign: 'center',
+  },
+  filterEmpty: {
+    paddingTop: 24,
+  },
+  emptyAction: {
+    alignSelf: 'center',
   },
   fab: {
     position: 'absolute',

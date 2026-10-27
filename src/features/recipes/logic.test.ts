@@ -1,3 +1,4 @@
+import type { PantrySection } from '@/features/pantry/logic';
 import type { TargetItem } from '@/features/templates/logic';
 
 import {
@@ -7,14 +8,22 @@ import {
   cleanRecipeNote,
   cleanRecipeSteps,
   detachMissingProducts,
+  filterRecipeOverview,
+  formatWithParam,
+  isRecipeFilter,
   MAX_RECIPE_NOTE_LENGTH,
   MAX_STEP_LENGTH,
   moveStep,
+  parseWithParam,
   planRecipeReset,
   planRecipeShopping,
   planWeeklyShopping,
+  presentPantrySections,
+  rankRecipesByIngredients,
+  RECIPE_FILTERS,
   type RecipeIngredient,
   type RecipeLike,
+  type RecipeOverviewRow,
 } from './logic';
 
 const zutat = (
@@ -619,5 +628,243 @@ describe('moveStep', () => {
 
     expect(steps).toEqual(['a', 'b', 'c']);
     expect(moved).not.toBe(steps);
+  });
+});
+
+/* ------------------------------------------------------------------ *
+ * Filter der Uebersicht (T-17.1)
+ * ------------------------------------------------------------------ */
+
+const zeile = (
+  name: string,
+  missingCount = 0,
+  id = `r-${name.toLowerCase()}`,
+): RecipeOverviewRow => ({
+  id,
+  name,
+  isBuiltin: true,
+  totalCount: 5,
+  missingCount,
+  missingNames: [],
+  inPlan: false,
+});
+
+const ids = (rows: { id: string }[]) => rows.map((row) => row.id);
+
+describe('filterRecipeOverview', () => {
+  const rows = [zeile('A', 0), zeile('B', 1), zeile('C', 2), zeile('D', 5)];
+
+  it('"all" laesst alle Zeilen stehen (T-17.1)', () => {
+    expect(ids(filterRecipeOverview(rows, 'all'))).toEqual(['r-a', 'r-b', 'r-c', 'r-d']);
+  });
+
+  it('"allThere" zeigt nur Gerichte, bei denen nichts fehlt (T-17.1)', () => {
+    expect(ids(filterRecipeOverview(rows, 'allThere'))).toEqual(['r-a']);
+  });
+
+  it('"almost" schliesst 0 und 1 fehlende ein, 2 nicht (T-17.1)', () => {
+    expect(ids(filterRecipeOverview(rows, 'almost'))).toEqual(['r-a', 'r-b']);
+  });
+
+  it('behaelt die Reihenfolge der Eingabe (T-17.1)', () => {
+    const unsortiert = [zeile('Z', 1), zeile('A', 0), zeile('M', 1)];
+
+    expect(ids(filterRecipeOverview(unsortiert, 'almost'))).toEqual(['r-z', 'r-a', 'r-m']);
+  });
+
+  it('gibt ein neues Array zurueck, auch bei "all" (T-17.1)', () => {
+    expect(filterRecipeOverview(rows, 'all')).not.toBe(rows);
+  });
+});
+
+describe('isRecipeFilter', () => {
+  it('erkennt die drei gueltigen Filter (T-17.1)', () => {
+    expect(RECIPE_FILTERS).toEqual(['all', 'allThere', 'almost']);
+    expect(RECIPE_FILTERS.every((filter) => isRecipeFilter(filter))).toBe(true);
+  });
+
+  it('lehnt Unbekanntes, andere Schreibweisen und Nicht-Strings ab (T-17.1)', () => {
+    expect(isRecipeFilter('none')).toBe(false);
+    expect(isRecipeFilter('ALL')).toBe(false);
+    expect(isRecipeFilter('')).toBe(false);
+    expect(isRecipeFilter(null)).toBe(false);
+    expect(isRecipeFilter(undefined)).toBe(false);
+    expect(isRecipeFilter(1)).toBe(false);
+  });
+});
+
+describe('rankRecipesByIngredients', () => {
+  const zutatenJeRezept = new Map<string, RecipeIngredient[]>([
+    ['r-auflauf', zutaten(zutat('Nudeln'), zutat('Zucchini'), zutat('Kaese'))],
+    ['r-pfanne', zutaten(zutat('Zucchini'), zutat('Paprika'))],
+    ['r-suppe', zutaten(zutat('Kartoffel'), zutat('Lauch'))],
+  ]);
+  const rows = [zeile('Auflauf', 2), zeile('Pfanne', 0), zeile('Suppe', 1)];
+
+  it('leere Auswahl zeigt alle Zeilen in ihrer Reihenfolge, matchCount 0 (T-17.1)', () => {
+    const result = rankRecipesByIngredients(rows, zutatenJeRezept, []);
+
+    expect(ids(result)).toEqual(['r-auflauf', 'r-pfanne', 'r-suppe']);
+    expect(result.every((row) => row.matchCount === 0 && row.matchNames.length === 0)).toBe(true);
+  });
+
+  it('eine Zutat zeigt nur die Gerichte, die sie verwenden (T-17.1)', () => {
+    const result = rankRecipesByIngredients(rows, zutatenJeRezept, ['p-lauch']);
+
+    expect(ids(result)).toEqual(['r-suppe']);
+    expect(result[0]?.matchCount).toBe(1);
+    expect(result[0]?.matchNames).toEqual(['Lauch']);
+  });
+
+  it('zwei Zutaten: Gericht mit beiden vor Gericht mit einer (T-17.1)', () => {
+    // Der Pfanne fehlt nichts, dem Auflauf fehlen zwei - die Trefferzahl entscheidet trotzdem zuerst.
+    const result = rankRecipesByIngredients(rows, zutatenJeRezept, ['p-zucchini', 'p-kaese']);
+
+    expect(ids(result)).toEqual(['r-auflauf', 'r-pfanne']);
+    expect(result.map((row) => row.matchCount)).toEqual([2, 1]);
+  });
+
+  it('bei gleicher Trefferzahl zuerst weniger fehlende, dann deutsches Alphabet (T-17.1)', () => {
+    const items = {
+      'r-oel': zutaten(zutat('Zucchini')),
+      'r-aepfel': zutaten(zutat('Zucchini')),
+      'r-zebra': zutaten(zutat('Zucchini')),
+      'r-wenig': zutaten(zutat('Zucchini')),
+    };
+    const kandidaten = [
+      zeile('Zebra', 1),
+      zeile('Öl', 1, 'r-oel'),
+      zeile('Äpfel', 1, 'r-aepfel'),
+      zeile('Wenig', 0),
+    ];
+
+    const result = rankRecipesByIngredients(kandidaten, items, ['p-zucchini']);
+
+    expect(ids(result)).toEqual(['r-wenig', 'r-aepfel', 'r-oel', 'r-zebra']);
+  });
+
+  it('bei gleichem Namen entscheidet die ID (T-17.1)', () => {
+    const items = { 'r-2': zutaten(zutat('Zucchini')), 'r-1': zutaten(zutat('Zucchini')) };
+
+    const result = rankRecipesByIngredients(
+      [zeile('Pfanne', 0, 'r-2'), zeile('Pfanne', 0, 'r-1')],
+      items,
+      ['p-zucchini'],
+    );
+
+    expect(ids(result)).toEqual(['r-1', 'r-2']);
+  });
+
+  it('dieselbe Zutat zweimal im Rezept zaehlt einmal (T-17.1)', () => {
+    const items = { 'r-doppelt': zutaten(zutat('Zucchini'), zutat('Zucchini')) };
+
+    const result = rankRecipesByIngredients([zeile('Doppelt')], items, ['p-zucchini']);
+
+    expect(result[0]?.matchCount).toBe(1);
+    expect(result[0]?.matchNames).toEqual(['Zucchini']);
+  });
+
+  it('matchNames stehen in Rezeptreihenfolge, nicht in Auswahlreihenfolge (T-17.1)', () => {
+    const items = {
+      'r-mix': [
+        zutat('Paprika', 'p-paprika', 2),
+        zutat('Zwiebel', 'p-zwiebel', 0),
+        zutat('Reis', 'p-reis', 1),
+      ],
+    };
+
+    const result = rankRecipesByIngredients([zeile('Mix')], items, ['p-paprika', 'p-zwiebel']);
+
+    expect(result[0]?.matchNames).toEqual(['Zwiebel', 'Paprika']);
+  });
+
+  it('eine Zutat ohne productId matcht nie (T-17.1)', () => {
+    const items = { 'r-frei': zutaten(zutat('Zucchini', null)) };
+
+    expect(rankRecipesByIngredients([zeile('Frei')], items, ['p-zucchini'])).toEqual([]);
+  });
+
+  it('ein Gericht ohne Zutaten erscheint nicht (T-17.1)', () => {
+    const result = rankRecipesByIngredients(
+      [zeile('Leer'), zeile('Pfanne')],
+      { 'r-pfanne': zutaten(zutat('Zucchini')) },
+      ['p-zucchini'],
+    );
+
+    expect(ids(result)).toEqual(['r-pfanne']);
+  });
+
+  it('behaelt die Felder der Uebersichtszeile (T-17.1)', () => {
+    const row = { ...zeile('Pfanne', 0), inPlan: true, missingNames: ['Salz'] };
+
+    const [result] = rankRecipesByIngredients([row], zutatenJeRezept, ['p-paprika']);
+
+    expect(result).toEqual({ ...row, matchCount: 1, matchNames: ['Paprika'] });
+  });
+});
+
+describe('presentPantrySections', () => {
+  const sections: PantrySection[] = [
+    {
+      key: 'gemuese',
+      title: 'Gemüse',
+      items: [
+        { productId: 'p-zucchini', name: 'Zucchini', inPantry: true },
+        { productId: 'p-lauch', name: 'Lauch', inPantry: false },
+      ],
+    },
+    {
+      key: 'milch',
+      title: 'Milchprodukte',
+      items: [{ productId: 'p-milch', name: 'Milch', inPantry: false }],
+    },
+  ];
+
+  it('zeigt nur Vorhandene und laesst leere Abschnitte weg (T-17.1)', () => {
+    const result = presentPantrySections(sections);
+
+    expect(result).toHaveLength(1);
+    expect(namen(result[0]?.items ?? [])).toEqual(['Zucchini']);
+  });
+
+  it('behaelt key und title des Abschnitts (T-17.1)', () => {
+    const [result] = presentPantrySections(sections);
+
+    expect(result?.key).toBe('gemuese');
+    expect(result?.title).toBe('Gemüse');
+  });
+
+  it('ohne Vorhandenes bleibt nichts uebrig (T-17.1)', () => {
+    expect(presentPantrySections(sections.slice(1))).toEqual([]);
+  });
+});
+
+describe('parseWithParam / formatWithParam', () => {
+  it('Roundtrip ergibt die IDs (T-17.1)', () => {
+    const auswahl = ['p-zucchini', 'p-kaese', 'p-lauch'];
+
+    expect(formatWithParam(auswahl)).toBe('p-zucchini,p-kaese,p-lauch');
+    expect(parseWithParam(formatWithParam(auswahl))).toEqual(auswahl);
+  });
+
+  it('nimmt bei einem Array das erste Element (T-17.1)', () => {
+    expect(parseWithParam(['p-a,p-b', 'p-c'])).toEqual(['p-a', 'p-b']);
+    expect(parseWithParam([])).toEqual([]);
+  });
+
+  it('trimmt und verwirft Leeres (T-17.1)', () => {
+    expect(parseWithParam(' p-a , ,p-b,, ')).toEqual(['p-a', 'p-b']);
+    expect(parseWithParam('')).toEqual([]);
+    expect(parseWithParam(undefined)).toEqual([]);
+  });
+
+  it('dedupliziert beim Lesen und beim Schreiben (T-17.1)', () => {
+    expect(parseWithParam('p-a,p-b,p-a')).toEqual(['p-a', 'p-b']);
+    expect(formatWithParam(['p-a', 'p-a', 'p-b'])).toBe('p-a,p-b');
+    expect(parseWithParam(formatWithParam(['p-b', 'p-a', 'p-b']))).toEqual(['p-b', 'p-a']);
+  });
+
+  it('leere Auswahl wird zum leeren Parameter (T-17.1)', () => {
+    expect(formatWithParam([])).toBe('');
   });
 });

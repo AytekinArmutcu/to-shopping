@@ -321,6 +321,7 @@
     "missing_other": "{{count}} fehlen",
     "allThere": "Alles da",
     "addMissing": "Auf die Liste setzen",
+    "cook": "Was kann ich kochen?",
     "added_one": "1 Artikel auf die Liste gesetzt",
     "added_other": "{{count}} Artikel auf die Liste gesetzt",
     "addedNone": "Alles stand schon auf der Liste"
@@ -355,7 +356,23 @@
     "withUnresolved": "{{message}} – {{unresolved}}",
     "empty": "Keine Gerichte",
     "emptyHint": "Lege ein Gericht an, oder hol den Grundstock über das Menü zurück.",
-    "create": "Neues Gericht"
+    "create": "Neues Gericht",
+    "filterAll": "Alle",
+    "filterAllThere": "Alles da",
+    "filterAlmost": "Fast alles da",
+    "filterPick": "Zutat wählen…",
+    "filterWith": "Mit: {{names}}",
+    "filterClear": "Zutatenfilter aufheben",
+    "filterEmpty": "Nichts passt – stimmen die Haken im Vorrat?",
+    "openPantry": "Zum Vorrat",
+    "usesNames": "Mit {{names}}",
+    "pickTitle": "Zutat wählen",
+    "pickBack": "Zurück",
+    "pickApply": "Gerichte zeigen",
+    "pickCount_one": "1 gewählt",
+    "pickCount_other": "{{count}} gewählt",
+    "pickEmpty": "Dein Vorrat ist leer",
+    "pickEmptyHint": "Hake im Vorrat an, was da ist – dann kannst du hier daraus wählen."
   },
   "recipe": {
     "back": "Zurück",

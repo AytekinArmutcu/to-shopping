@@ -1,5 +1,6 @@
 import { asc, eq, inArray, sql } from 'drizzle-orm';
 
+import { getAppState, setAppState } from '@/db/appState';
 import { db } from '@/db/client';
 import { products, recipeItems, recipeSteps, recipes, weeklyPlan } from '@/db/schema';
 import { SEED_CATEGORIES, SEED_PRODUCTS, SEED_RECIPES } from '@/db/seed';
@@ -12,7 +13,9 @@ import {
   cleanRecipeNote,
   cleanRecipeSteps,
   detachMissingProducts,
+  isRecipeFilter,
   planRecipeReset,
+  type RecipeFilter,
   type RecipeIngredient,
   type RecipeStepLike,
 } from './logic';
@@ -276,6 +279,25 @@ export async function addRecipeMissingToList(
   productIds: string[],
 ): Promise<number> {
   return addProductsToList(listId, productIds);
+}
+
+/* ------------------------------------------------------------------ *
+ * Gemerkter Filter der Uebersicht (ADR-048, ADR-020)
+ * ------------------------------------------------------------------ */
+
+export const RECIPES_FILTER_KEY = 'recipes_filter';
+
+/**
+ * Der zuletzt gewaehlte Filter-Chip. Was in app_state steht, kann aus einer
+ * aelteren Version stammen oder fehlen - dann gilt "Alle".
+ */
+export async function getRecipeFilter(): Promise<RecipeFilter> {
+  const stored = await getAppState(RECIPES_FILTER_KEY);
+  return isRecipeFilter(stored) ? stored : 'all';
+}
+
+export async function setRecipeFilter(filter: RecipeFilter): Promise<void> {
+  await setAppState(RECIPES_FILTER_KEY, filter);
 }
 
 /* ------------------------------------------------------------------ *

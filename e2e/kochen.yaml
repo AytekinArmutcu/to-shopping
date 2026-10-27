@@ -1,0 +1,323 @@
+# E2E fuer M17: "Was kann ich kochen?" (T-17.3, FR-9.7, FR-10.11, FR-10.12,
+# ADR-048).
+#
+# Der Vorrat fuellt sich aus einem Einkauf, vom Vorrat fuehrt ein Knopf in die
+# Rezepte, und dort grenzen Filter-Chips die Gerichte ein: "Alles da", "Fast
+# alles da" (hoechstens eine Zutat fehlt) und "Zutat waehlen" (Gerichte, die
+# mindestens eine der gewaehlten Vorratszutaten verwenden). Der Chip-Filter
+# bleibt ueber einen Neustart gemerkt, der Zutatenfilter reist als
+# Routenparameter.
+#
+# Zahlen aus src/db/seed/recipes.json und products.json ("staple": true zaehlt
+# nie als fehlend, ADR-047):
+# - Pfannkuchen braucht ausser Grundvorrat genau Milch, Eier, Butter, Marmelade.
+#   Genau das wird eingekauft - danach "Alles da", und es ist das einzige
+#   Gericht mit "Alles da".
+# - Honig kommt dazu, weil er nur in "Quark mit Obst" vorkommt, und dem fehlen
+#   dann noch Quark, Bananen, Erdbeeren. Honig traegt zu keinem Gericht mit
+#   hoechstens einer fehlenden Zutat bei - er ist nur fuer den leeren Filter
+#   am Ende da.
+# - Arme Ritter (Toastbrot, Eier, Milch, Butter) fehlt nur Toastbrot: "Fast
+#   alles da". Kaiserschmarrn fehlen nur Aepfel: ebenfalls.
+# - Chili con Carne fehlen acht Zutaten - in keinem Filter ausser "Alle".
+# - Milchreis (Reis, Milch, Butter, Tiefkuehlbeeren) fehlen zwei und er
+#   verwendet keine Eier. Er steht in "Alle" weit oben, ist also beim
+#   Zutatenfilter "Eier" wirklich herausgefiltert und nicht nur aus dem Bild
+#   gescrollt.
+#
+# Kein hideKeyboard ohne sicher offene Tastatur, kein eraseText zum Leeren,
+# keine Umlaute in inputText.
+#
+# Laeuft gegen einen Release-Build (ADR-025): npm run android:release
+appId: de.toshopping.app
+---
+# --- Erster Start ---
+- launchApp:
+    clearState: true
+- extendedWaitUntil:
+    visible:
+      id: 'add-input'
+    timeout: 60000
+
+# --- Einkaufen: die Zutaten fuer Pfannkuchen, dazu Honig ---
+- tapOn:
+    id: 'add-input'
+- inputText: 'Milch'
+- extendedWaitUntil:
+    visible:
+      id: 'suggestion-Milch'
+    timeout: 30000
+- tapOn:
+    id: 'suggestion-Milch'
+- inputText: 'Eier'
+- extendedWaitUntil:
+    visible:
+      id: 'suggestion-Eier'
+    timeout: 15000
+- tapOn:
+    id: 'suggestion-Eier'
+- inputText: 'Butter'
+- extendedWaitUntil:
+    visible:
+      id: 'suggestion-Butter'
+    timeout: 15000
+- tapOn:
+    id: 'suggestion-Butter'
+- inputText: 'Marmelade'
+- extendedWaitUntil:
+    visible:
+      id: 'suggestion-Marmelade'
+    timeout: 15000
+- tapOn:
+    id: 'suggestion-Marmelade'
+- inputText: 'Honig'
+- extendedWaitUntil:
+    visible:
+      id: 'suggestion-Honig'
+    timeout: 15000
+- tapOn:
+    id: 'suggestion-Honig'
+- hideKeyboard
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: 'item-Honig'
+    timeout: 15000
+- assertVisible: '5 von 5 offen'
+
+- tapOn: 'Milch abhaken'
+- extendedWaitUntil:
+    notVisible:
+      id: 'item-Milch'
+    timeout: 15000
+- tapOn: 'Eier abhaken'
+- extendedWaitUntil:
+    notVisible:
+      id: 'item-Eier'
+    timeout: 15000
+- tapOn: 'Butter abhaken'
+- extendedWaitUntil:
+    notVisible:
+      id: 'item-Butter'
+    timeout: 15000
+- tapOn: 'Marmelade abhaken'
+- extendedWaitUntil:
+    notVisible:
+      id: 'item-Marmelade'
+    timeout: 15000
+- tapOn: 'Honig abhaken'
+- extendedWaitUntil:
+    notVisible:
+      id: 'item-Honig'
+    timeout: 15000
+# Nichts bleibt offen, also keine Rueckfrage.
+- tapOn:
+    id: 'finish-shopping'
+- extendedWaitUntil:
+    visible:
+      id: 'list-empty'
+    timeout: 15000
+
+# --- Vom Vorrat in die Rezepte (FR-9.7) ---
+- tapOn:
+    id: 'list-menu'
+- extendedWaitUntil:
+    visible:
+      id: 'menu-pantry'
+    timeout: 15000
+- tapOn:
+    id: 'menu-pantry'
+- extendedWaitUntil:
+    visible:
+      id: 'pantry-Marmelade'
+    timeout: 15000
+- tapOn:
+    id: 'pantry-cook'
+- extendedWaitUntil:
+    visible:
+      id: 'recipes-list'
+    timeout: 15000
+- extendedWaitUntil:
+    visible:
+      id: 'recipe-Pfannkuchen'
+    timeout: 15000
+
+# --- Filter "Alles da" (FR-10.11) ---
+- tapOn:
+    id: 'recipes-filter-allThere'
+- waitForAnimationToEnd
+- assertVisible:
+    text: 'Alles da'
+    childOf:
+      id: 'recipe-Pfannkuchen'
+- assertNotVisible:
+    id: 'recipe-Arme Ritter'
+- assertNotVisible:
+    id: 'recipe-Chili con Carne'
+
+# "Alle": Chili ist wieder da (die Liste ist laenger als ein Bildschirm).
+- tapOn:
+    id: 'recipes-filter-all'
+- scrollUntilVisible:
+    element:
+      id: 'recipe-Chili con Carne'
+    direction: DOWN
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: 'recipes-filter-almost'
+    direction: UP
+    timeout: 30000
+
+# --- Filter "Fast alles da": hoechstens eine Zutat fehlt ---
+- tapOn:
+    id: 'recipes-filter-almost'
+- waitForAnimationToEnd
+- extendedWaitUntil:
+    visible:
+      id: 'recipe-Arme Ritter'
+    timeout: 15000
+- assertVisible:
+    text: '1 fehlt: Toastbrot'
+    childOf:
+      id: 'recipe-Arme Ritter'
+# Schliesst "Alles da" ein
+- assertVisible:
+    id: 'recipe-Pfannkuchen'
+- assertNotVisible:
+    id: 'recipe-Milchreis'
+- assertNotVisible:
+    id: 'recipe-Chili con Carne'
+
+# --- Neustart: der Filter ist gemerkt ---
+- launchApp
+- extendedWaitUntil:
+    visible:
+      id: 'back-to-lists'
+    timeout: 30000
+- tapOn:
+    id: 'back-to-lists'
+- extendedWaitUntil:
+    visible:
+      id: 'list-Einkauf'
+    timeout: 15000
+- tapOn:
+    id: 'lists-menu'
+- extendedWaitUntil:
+    visible:
+      id: 'open-recipes'
+    timeout: 15000
+- tapOn:
+    id: 'open-recipes'
+- extendedWaitUntil:
+    visible:
+      id: 'recipe-Arme Ritter'
+    timeout: 15000
+- assertVisible:
+    id: 'recipes-filter-almost'
+    selected: true
+- assertNotVisible:
+    id: 'recipe-Milchreis'
+
+# --- Zutat waehlen (FR-10.12): Gerichte mit Eiern ---
+- tapOn:
+    id: 'recipes-filter-all'
+- waitForAnimationToEnd
+# Ohne Zutatenfilter steht Milchreis (zwei fehlen) weit oben.
+- extendedWaitUntil:
+    visible:
+      id: 'recipe-Milchreis'
+    timeout: 15000
+- tapOn:
+    id: 'recipes-filter-pick'
+- extendedWaitUntil:
+    visible:
+      id: 'pick-list'
+    timeout: 15000
+- tapOn:
+    id: 'pick-Eier'
+- extendedWaitUntil:
+    visible:
+      id: 'pick-count'
+      text: '1 gewählt'
+    timeout: 15000
+- tapOn:
+    id: 'pick-apply'
+- extendedWaitUntil:
+    visible:
+      id: 'recipes-filter-with'
+    timeout: 15000
+- extendedWaitUntil:
+    visible:
+      id: 'recipe-Pfannkuchen'
+    timeout: 15000
+# Die Zeile nennt zuerst die getroffene Zutat, dann den Vorratsstand.
+- assertVisible:
+    text: 'Mit Eier · Alles da'
+    childOf:
+      id: 'recipe-Pfannkuchen'
+- assertVisible:
+    id: 'recipe-Arme Ritter'
+- assertNotVisible:
+    id: 'recipe-Milchreis'
+- scrollUntilVisible:
+    element:
+      id: 'recipe-Rührei mit Brot'
+    direction: DOWN
+    timeout: 30000
+- scrollUntilVisible:
+    element:
+      id: 'recipes-filters'
+    direction: UP
+    timeout: 30000
+- extendedWaitUntil:
+    visible:
+      id: 'recipes-filter-clear'
+    timeout: 15000
+
+# Aufheben: die Zeile mit dem Zutatenfilter verschwindet
+- tapOn:
+    id: 'recipes-filter-clear'
+- extendedWaitUntil:
+    notVisible:
+      id: 'recipes-filter-with'
+    timeout: 15000
+- assertVisible:
+    id: 'recipes-filter-pick'
+
+# --- Leerer Filter: Honig mit "Alles da" ---
+# Honig steht nur in "Quark mit Obst", und dem fehlen noch drei Zutaten.
+- tapOn:
+    id: 'recipes-filter-pick'
+- extendedWaitUntil:
+    visible:
+      id: 'pick-list'
+    timeout: 15000
+- tapOn:
+    id: 'pick-Honig'
+- extendedWaitUntil:
+    visible:
+      id: 'pick-count'
+      text: '1 gewählt'
+    timeout: 15000
+- tapOn:
+    id: 'pick-apply'
+- extendedWaitUntil:
+    visible:
+      id: 'recipe-Quark mit Obst'
+    timeout: 15000
+- tapOn:
+    id: 'recipes-filter-allThere'
+- extendedWaitUntil:
+    visible:
+      id: 'recipes-filter-empty'
+    timeout: 15000
+- assertNotVisible:
+    id: 'recipe-Quark mit Obst'
+- assertVisible: 'Nichts passt – stimmen die Haken im Vorrat?'
+- tapOn:
+    id: 'recipes-open-pantry'
+- extendedWaitUntil:
+    visible:
+      id: 'pantry-Honig'
+    timeout: 15000

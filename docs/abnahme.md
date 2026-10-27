@@ -117,6 +117,7 @@ Nach einem echten Einkauf:
 - [ ] Übersicht → Menü → Vorrat: Was du gerade gekauft hast, **hat einen Haken**
 - [ ] Zu Hause die Checkliste durchgehen – das dauert **unter einer Minute**
 - [ ] Beim Tippen eines Artikels, der noch da ist, steht „Im Vorrat" am Vorschlag
+- [ ] Vorrat → **„Was kann ich kochen?"** → die Rezeptübersicht öffnet sich
 
 ## 9. Rezepte
 
@@ -135,6 +136,12 @@ Nach einem echten Einkauf:
 - [ ] Katalog → Salz → Haken **Grundvorrat** abwählen, speichern → bei
       Pfannkuchen fehlt jetzt **eins mehr**; Haken wieder setzen → die Zahl
       geht zurück
+- [ ] Nach gepflegtem Vorrat: Filter **„Alles da"** → es stehen nur Gerichte da,
+      die du heute wirklich kochen könntest; der Filter ist nach einem Neustart
+      noch gewählt
+- [ ] **„Zutat wählen…"** → eine Zutat aus dem Vorrat antippen → „Gerichte zeigen" →
+      jedes gezeigte Gericht verwendet sie (die Zeile beginnt mit „Mit …"),
+      und keins, das du erwartest, fehlt
 
 ## 10. Widget
 

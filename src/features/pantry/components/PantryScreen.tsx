@@ -1,4 +1,5 @@
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
+import { router } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SectionList, StyleSheet, View } from 'react-native';
@@ -177,15 +178,30 @@ export function PantryScreen({ listId }: Props) {
                 : t('pantry.missing', { count: missingCount })}
             </Text>
           </View>
-          <Button
-            mode="contained"
-            icon="cart-plus"
-            disabled={missingCount === 0 || busy}
-            onPress={addMissing}
-            testID="pantry-add-missing"
-          >
-            {t('pantry.addMissing')}
-          </Button>
+          {/* Nebeneinander, wenn Platz ist; bei grosser Systemschrift bricht der
+              zweite Knopf in eine eigene Zeile um, statt abgeschnitten zu werden. */}
+          <View style={styles.actions}>
+            <Button
+              mode="contained"
+              icon="cart-plus"
+              disabled={missingCount === 0 || busy}
+              onPress={addMissing}
+              testID="pantry-add-missing"
+              style={styles.action}
+            >
+              {t('pantry.addMissing')}
+            </Button>
+            {/* Vorwaerts in die Rezepte (FR-9.7, ADR-048) - deshalb push. */}
+            <Button
+              mode="outlined"
+              icon="chef-hat"
+              onPress={() => router.push('/rezepte')}
+              testID="pantry-cook"
+              style={styles.action}
+            >
+              {t('pantry.cook')}
+            </Button>
+          </View>
         </View>
       ) : null}
 
@@ -248,5 +264,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     minHeight: 40,
+  },
+  actions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  // Waechst in den freien Platz. Reicht die Zeile nicht fuer beide, bricht
+  // flexWrap um; flexShrink haelt einen allein stehenden Knopf in der Breite
+  // des Screens.
+  action: {
+    flexGrow: 1,
+    flexShrink: 1,
   },
 });

@@ -1053,6 +1053,31 @@ Nach einer Wiederherstellung aus einer älteren Sicherung fehlt das Kennzeichen 
 
 ---
 
+## ADR-048 – Rezepte filtern: nach Vorrat und nach gewählten Zutaten, Treffer bei mindestens einer
+
+**Datum:** 2026-10-27 · **Status:** Angenommen
+
+**Kontext**
+Die Rezeptübersicht sortiert seit M14 nach fehlenden Zutaten, „Alles da" zuerst (FR-10.3). Nach dem ersten Tag mit V2 fehlte dem Auftraggeber trotzdem die Antwort auf „Was kann ich aus meinem Vorrat kochen?" – aus zwei Gründen: Vom Vorrat führt kein Weg zu den Rezepten, und die Übersicht zeigt immer alle Gerichte, auch die mit acht fehlenden Zutaten. Dazu ein dritter Wunsch: „Ich will die Zucchini wegbekommen – was geht damit?"
+
+**Entscheidung**
+1. Im Vorrat ein zweiter Knopf **„Was kann ich kochen?"**, der in die Rezeptübersicht führt.
+2. Über der Rezeptliste drei Filter-Chips: **Alle · Alles da · Fast alles da** (höchstens eine fehlende Zutat, Grundvorrat zählt nicht – ADR-047). Die Wahl bleibt gemerkt (`app_state`, UI-Zustand im Sinne von ADR-020). Der Wochenplan oben ist vom Filter ausgenommen: Er ist Auswahl, kein Suchergebnis.
+3. Ein vierter Chip **„Zutat wählen…"** öffnet eine Auswahl, die **nur Vorratsartikel** zeigt. Die Liste zeigt danach Gerichte, die **mindestens eine** der gewählten Zutaten verwenden, sortiert nach der Zahl der verwendeten gewählten Zutaten (absteigend), dann nach fehlenden Zutaten (aufsteigend), dann nach Name.
+
+**Verworfene Alternativen**
+- *Nur Gerichte mit allen gewählten Zutaten.* Exakter, aber bei zwei Zutaten in einem Grundstock von 35 Gerichten meist leer. Das Ziel ist, etwas aufzubrauchen, nicht ein bestimmtes Gericht zu finden – deshalb „mindestens eine", und die mit mehreren stehen oben.
+- *Auswahl aus dem ganzen Katalog statt nur aus dem Vorrat.* Wer nach Gerichten mit Hummer sucht, den er nicht hat, sucht ein Kochbuch. Die Frage lautet „was kann ich mit dem kochen, was da ist" – also nur der Vorrat.
+- *Die Auswahl im Vorrat-Screen selbst.* Dort sind die Zeilen schon Haken für „ist da"; ein zweiter Auswahlmodus auf denselben Zeilen wäre zweideutig. Die Auswahl gehört zu den Rezepten.
+- *Filter als Suchfeld.* Eine Suche nach Namen ist etwas anderes und bei 35 plus eigenen Gerichten nicht nötig.
+
+**Konsequenz**
+Alles ist reine Logik über den vorhandenen Übersichtszeilen (`buildRecipeOverview`); keine neue Tabelle, keine Änderung an Repository-Schreibpfaden. Der Zutatenfilter reist als Routen-Parameter (`/rezepte?with=…`), damit Zurück und Neustart ihn verstehen.
+
+Ein leerer Filter bekommt eine Erklärung statt einer leeren Fläche: „Nichts passt – stimmen die Haken im Vorrat?" mit dem Weg dorthin. Denn der häufigste Grund für „nichts da" ist ein Vorrat, der nie gepflegt wurde.
+
+---
+
 ## Offene Entscheidungen (bewusst vertagt)
 
 | Thema | Wann zu entscheiden | Was dann abzuwägen ist |
@@ -1061,8 +1086,25 @@ Nach einer Wiederherstellung aus einer älteren Sicherung fehlt das Kennzeichen 
 | Live-Sync und Backend | nach V1 | Anbieterwahl, anonyme Identität vs. Konto, Selbsthosting, Kontolöschungspflicht, laufende Kosten |
 | iOS-Portierung | wenn Gerät und Budget vorhanden | Cloud-Build-Kosten, Share Extension, App-Store-Review |
 | Crash-Reporting (Sentry EU) | bei öffentlicher Veröffentlichung | AVV, Datenschutzerklärung, Einwilligung |
-| Homescreen-Widget | V2 | nativer Android-Code, Datenbankzugriff aus dem Widget |
+| ~~Homescreen-Widget~~ | *entschieden: ADR-045, M15* | — |
 | Barcode-Scan | V2 | Kameraberechtigung, Produktdatenquelle |
 | Monetarisierung | nur bei öffentlicher Veröffentlichung | DSA-Händlerdaten werden dann öffentlich |
 | Android Auto-Backup | jederzeit | siehe ADR-004 |
 | Endgültiger App-Name | vor öffentlicher Veröffentlichung | Auffindbarkeit im Store |
+| KI-Rezeptvorschläge aus dem Vorrat | nach vier Wochen mit M17, und erst nach der Frage, ob die App öffentlich wird | siehe unten: Daten verlassen das Gerät, Schlüsselfrage, Datenschutzerklärung – oder Gerätemodell mit unsicherer Qualität |
+
+### Vertagt am 27. Oktober 2026: KI-Rezeptvorschläge
+
+**Die Frage:** Eine KI, die aus dem Vorrat Gerichte vorschlägt – auch solche, die nicht im Grundstock oder unter den eigenen Rezepten stehen, und die Wünsche wie „etwas Schnelles ohne Fleisch" versteht.
+
+**Was heute schon da ist (M17, ADR-048):** Treffer und Sortierung nach dem Vorrat, Filter „Alles da", Gerichte zu gewählten Zutaten. Deterministisch, in Millisekunden, ohne dass etwas das Gerät verlässt. Das deckt „was kann ich kochen" ab; was fehlt, ist nur das *Erfinden* neuer Gerichte.
+
+**Die drei Wege und ihr Preis:**
+
+| Weg | Aufwand | Preis |
+|---|---|---|
+| **Cloud-KI** (Claude, GPT o. ä.) | 2–3 Abende Code, 1 Abend Compliance | Der Vorrat geht an ein Unternehmen, meist in die USA. Die Datenschutzerklärung („baut keine Verbindung auf") und das Data-Safety-Formular („nein") müssten neu; Drittlandtransfer, Einwilligung. Ein API-Schlüssel darf nicht in die App – entweder bringt jeder Nutzer seinen eigenen mit (Hürde für die Tester) oder es braucht einen eigenen Server (Backend, Konten, Kosten – das Nicht-Ziel aus PRD §6). Kosten pro Anfrage. |
+| **KI auf dem Gerät** (Gemini Nano auf dem S24, oder ein mitgeliefertes offenes Modell) | 1–2 Wochen, Ergebnis unsicher | Nichts verlässt das Gerät – der einzige Weg, der den Grundsatz hält. Aber: Gemini Nano nur auf wenigen Geräten und mit begrenzter Schnittstelle; ein eigenes Modell heißt 1–2 GB Download, langsam, auf Deutsch mittelmäßig, eine neue native Abhängigkeit. |
+| **Keine KI, bessere Regeln** | erledigt (M17) | Erfindet nichts Neues. Für „was kann ich aus dem kochen, was da ist" reicht es. |
+
+**Falls es je gebaut wird, dann nur so:** eigener Schlüssel des Nutzers, Funktion standardmäßig **aus**, ausdrücklich einzuschalten, und an der Stelle steht, was genau verschickt wird. Als eigenes ADR mit ehrlichem Preis – und sinnvoll erst, wenn entschieden ist, ob die App überhaupt öffentlich wird. Für zehn Tester aus Familie und Freundeskreis ist der Preis zu hoch für die eine Fähigkeit.

@@ -38,6 +38,7 @@ function renderApp(initialUrl: string) {
       vorrat: screenFor('vorrat'),
       rezepte: screenFor('rezepte'),
       rezept: screenFor('rezept'),
+      'rezepte-zutaten': screenFor('rezepte-zutaten'),
     },
     { initialUrl },
   );
@@ -50,6 +51,13 @@ function stackOf(app: App): string[] {
   const root = app.getRouterState();
   const stack = root?.routes[root.index ?? 0]?.state;
   return (stack?.routes ?? []).map((route) => route.name);
+}
+
+/** Der Schluessel des Stapeleintrags einer Route - bleibt gleich, solange es derselbe Screen ist. */
+function routeKeyOf(app: App, name: string): string | undefined {
+  const root = app.getRouterState();
+  const stack = root?.routes[root.index ?? 0]?.state;
+  return stack?.routes.find((route) => route.name === name)?.key;
 }
 
 /** Viermal ein Rezept oeffnen und mit `back` zur Uebersicht zurueck. */
@@ -116,5 +124,22 @@ describe('Zurueck zu einem benannten Ziel', () => {
     expect(app.getPathnameWithParams()).toBe('/liste?listId=l-1');
     expect(mounted.get('liste')).toBe(1);
     expect(mounted.get('vorrat')).toBe(0);
+  });
+
+  it('goTo mit Parametern setzt sie an der vorhandenen Uebersicht, statt eine zweite anzulegen', () => {
+    // Die Zutaten-Auswahl gibt ihr Ergebnis so zurueck (ADR-048, T-17.2).
+    const app = renderApp('/listen');
+    act(() => router.push('/rezepte'));
+    const overviewKey = routeKeyOf(app, 'rezepte');
+    act(() => router.push({ pathname: '/rezepte-zutaten', params: { with: '' } }));
+
+    act(() => goTo({ pathname: '/rezepte', params: { with: 'p-zucchini,p-ei' } }));
+
+    expect(stackOf(app)).toEqual(['listen', 'rezepte']);
+    // Derselbe Eintrag im Stapel, nicht ein ersetzter mit neuem Schluessel.
+    expect(routeKeyOf(app, 'rezepte')).toBe(overviewKey);
+    expect(app.getPathnameWithParams()).toBe('/rezepte?with=p-zucchini%2Cp-ei');
+    expect(mounted.get('rezepte')).toBe(1);
+    expect(mounted.get('rezepte-zutaten')).toBe(0);
   });
 });

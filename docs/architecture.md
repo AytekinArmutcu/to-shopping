@@ -294,6 +294,8 @@ Ein Vorlagen-Artikel wird übersprungen, wenn auf der Zielliste bereits ein **ni
 6. **Grundstock genau einmal:** Gesät wird über den Merker `recipes_seeded` in `app_state`, nicht über „Tabelle ist leer" – wer alle Gerichte löscht, soll sie nicht beim nächsten Start wiederfinden (ADR-044). Eine Wiederherstellung aus einer Sicherung ohne `recipes` setzt den Merker zurück (5.2).
 7. **Katalog-Nachsaat (`planCatalogUpgrade`, ADR-047):** Ein Bestandsgerät bekommt die mit M16 neuen Gewürze und die Grundvorrat-Kennzeichen **einmalig**, gesteuert über den Merker `catalog_seed_version`. Eingefügt wird nur, was fehlt; Kennzeichen werden nur an vorhandenen mitgelieferten Produkten gesetzt. Kein „bei jedem Start nachsäen" – das brächte gelöschte Produkte zurück (ADR-031).
 8. **Zurücksetzen (`planRecipeReset`, ADR-031):** Mitgelieferte Gerichte kehren in den Auslieferungszustand zurück, gelöschte kommen wieder, **eigene bleiben unangetastet** – auch eines, das zufällig dieselbe ID wie ein mitgeliefertes trägt.
+9. **Filter (`filterRecipeOverview`, ADR-048):** Drei Chips über der Rezeptliste – *Alle*, *Alles da* (nichts fehlt), *Fast alles da* (höchstens eine Zutat fehlt, schließt „Alles da“ also ein). Gezählt wird wie in 2., Grundvorrat fehlt nie (4.). Der Filter ändert die Reihenfolge nicht. Die Wahl ist UI-Zustand und bleibt in `app_state` gemerkt (ADR-020); der Wochenplan oben ist ausgenommen – er ist Auswahl, kein Suchergebnis. Passt nichts, erscheint statt einer leeren Fläche der Hinweis auf die Haken im Vorrat samt Weg dorthin.
+10. **Zutaten-Treffer (`rankRecipesByIngredients`, ADR-048):** Gewählt wird nur aus dem Vorrat. Ein Gericht passt, wenn es **mindestens eine** der gewählten Zutaten verwendet, verglichen über die `product_id` – eine Zutat ohne Produktbezug trifft nie, dieselbe Zutat zweimal zählt einmal. Sortiert nach Zahl der Treffer absteigend, dann fehlenden Zutaten aufsteigend, dann Name und ID. Der Zutatenfilter wirkt nach dem Chip-Filter und reist als Routenparameter `/rezepte?with=…`, damit Zurück und Neustart ihn verstehen.
 
 ### 4.8 Widget (FR-11)
 
@@ -395,7 +397,8 @@ To-Shopping/
 │   ├── vorlagen.tsx
 │   ├── sicherung.tsx             # Vollsicherung, Wiederherstellung
 │   ├── diagnose.tsx              # Fehlerspeicher, Bericht senden
-│   └── import.tsx                # Ziel des Teilen-Intents, Vorschau
+│   ├── import.tsx                # Ziel des Teilen-Intents, Vorschau
+│   └── rezepte-zutaten.tsx       # Zutaten aus dem Vorrat wählen  ?with= (ADR-048)
 │
 │   Routen sind flach und tragen die Listen-ID als Parameter statt im
 │   Pfad – Begründung in ADR-030.

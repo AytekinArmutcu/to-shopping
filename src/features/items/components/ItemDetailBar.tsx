@@ -152,6 +152,7 @@ export function ItemDetailBar({ item, onChange, onClose, showNote = true }: Prop
               accessibilityLabel={t(`units.${unit}.other`)}
               testID={`unit-${unit}`}
               style={styles.chip}
+              hitSlop={CHIP_HIT_SLOP}
             >
               {t(`units.${unit}.short`)}
             </Chip>
@@ -182,6 +183,14 @@ export function ItemDetailBar({ item, onChange, onClose, showNote = true }: Prop
     </View>
   );
 }
+
+/**
+ * Ein Paper-Chip ist 32 dp hoch. minHeight macht die Flaeche 48 dp hoch, der
+ * tippbare Teil darin bleibt aber so hoch wie sein Inhalt und sitzt in der
+ * Mitte. hitSlop verlaengert ihn um je 8 dp nach oben und unten - auf
+ * genau die 48 dp der Flaeche (CLAUDE.md).
+ */
+const CHIP_HIT_SLOP = { top: 8, bottom: 8 };
 
 /** Zahl fuer das Eingabefeld: deutsches Komma, keine unnoetige Null. */
 function formatInput(value: number): string {
@@ -223,6 +232,7 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingHorizontal: 8,
   },
+  // 48 dp hoch, Inhalt in der Mitte - dazu CHIP_HIT_SLOP fuer die Tippflaeche.
   chip: {
     minHeight: 48,
     justifyContent: 'center',
