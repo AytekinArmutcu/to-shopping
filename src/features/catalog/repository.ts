@@ -78,6 +78,15 @@ export function catalogProductsQuery() {
     .from(products);
 }
 
+/**
+ * Die IDs aller Grundvorrat-Produkte (ADR-047, FR-10.10). Eigene Abfrage statt
+ * eines weiteren Felds in catalogProductsQuery: Nur Rezepte und Katalogpflege
+ * fragen danach, die anderen Screens bleiben, wie sie sind.
+ */
+export function stapleProductIdsQuery() {
+  return db.select({ id: products.id }).from(products).where(eq(products.isStaple, true));
+}
+
 export function categoriesQuery() {
   return db
     .select({
@@ -128,6 +137,16 @@ export async function updateProduct(
 
   await db.update(products).set({ name, categoryId }).where(eq(products.id, id));
   return true;
+}
+
+/**
+ * Schaltet das Grundvorrat-Kennzeichen eines Produkts um (ADR-047, FR-4.5).
+ *
+ * Eigene Funktion statt Teil von updateProduct: Wer nur den Namen aendert,
+ * soll das Kennzeichen nicht versehentlich mit ueberschreiben.
+ */
+export async function setProductStaple(id: string, isStaple: boolean): Promise<void> {
+  await db.update(products).set({ isStaple }).where(eq(products.id, id));
 }
 
 /**
@@ -196,6 +215,7 @@ export async function resetCatalog(): Promise<CatalogResetResult> {
             categoryId: product.categoryId,
             defaultUnit: product.defaultUnit,
             isBuiltin: true,
+            isStaple: product.isStaple,
           },
         });
     }

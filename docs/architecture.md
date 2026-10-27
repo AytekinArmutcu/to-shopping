@@ -55,8 +55,8 @@ categories ──┬── products ──┬── list_items ── lists ─�
              │              ├── template_items ── templates
              │              ├── purchase_history
              │              ├── pantry
-             │              └── recipe_items ── recipes ── weekly_plan
-             └── list_category_order
+             │              └── recipe_items ── recipes ──┬── weekly_plan
+             └── list_category_order        └── recipe_steps
 ```
 
 Grundregel: **Listeneinträge sind vom Katalog entkoppelt.** Jeder Eintrag trägt den Produktnamen als Kopie mit sich (`name`), zusätzlich optional die Produkt-Referenz (`product_id`). Wird ein Produkt gelöscht, bleibt der Listeneintrag als Text bestehen (PRD Flow 6.3). Dasselbe Prinzip gilt für Historie und Vorlagen.
@@ -80,6 +80,7 @@ Grundregel: **Listeneinträge sind vom Katalog entkoppelt.** Jeder Eintrag träg
 | `category_id` | TEXT, FK → `categories.id` | `ON DELETE SET NULL` → fällt auf „Sonstiges" |
 | `default_unit` | TEXT | eine der festen Einheiten, Standard `stueck` |
 | `is_builtin` | INTEGER (0/1) | für „Katalog zurücksetzen" |
+| `is_staple` | INTEGER (0/1), NOT NULL, Standard 0 | Grundvorrat (ADR-047): zählt in Rezepten nie als fehlend, geht nicht automatisch auf die Liste; im Katalog umschaltbar |
 | `created_at` | INTEGER | |
 
 > **Warum `UNIQUE COLLATE NOCASE` auf dem Namen:** Der Import geteilter Listen ordnet Produkte über den Namen zu (PRD FR-6.3). Ohne diese Einschränkung entstehen „Milch" und „milch" als zwei Produkte, und die Häufigkeitsstatistik zerfällt.
@@ -174,6 +175,16 @@ Zutaten, gebaut wie `template_items`: Name als Kopie (ADR-007), Produktbezug opt
 | `unit` | TEXT, NOT NULL, Standard `stueck` | |
 | `position` | INTEGER, NOT NULL, Standard 0 | Reihenfolge im Rezept |
 
+#### `recipe_steps`
+Zubereitungsschritte (ADR-047) – **nur Text**: keine Timer, Fotos, Portionen oder Zutatenbezüge.
+
+| Spalte | Typ | Bemerkung |
+|---|---|---|
+| `id` | TEXT, PK | |
+| `recipe_id` | TEXT, FK → `recipes.id`, NOT NULL | `ON DELETE CASCADE` |
+| `position` | INTEGER, NOT NULL, Standard 0 | Reihenfolge, angezeigt als 1, 2, 3 … |
+| `text` | TEXT, NOT NULL | höchstens 500 Zeichen (Eingabefeld); leere Schritte fallen beim Speichern weg |
+
 #### `weekly_plan`
 Die Gerichte dieser Woche – nur die Auswahl, keine Wochentage (ADR-044).
 
@@ -190,6 +201,7 @@ Schlüssel-Wert-Ablage für alles, was kein eigenes Schema verdient.
 | `last_route` | zuletzt genutzter Screen (FR-1.5) |
 | `last_backup_at` | Zeitstempel der letzten Sicherung (FR-6.6) |
 | `hint_share_copy_seen` | Hinweis „Teilen erzeugt eine Kopie" gezeigt (FR-6.7) |
+| `catalog_seed_version` | Stand des mitgelieferten Katalogs auf diesem Gerät, als Zahl (ADR-047); fehlt er, gilt 0 |
 | `schema_version` | von Drizzle verwaltet |
 
 ### 3.3 Feste Einheiten
@@ -277,8 +289,11 @@ Ein Vorlagen-Artikel wird übersprungen, wenn auf der Zielliste bereits ein **ni
 1. **Zutat einordnen (`planRecipeShopping`):** Jede Zutat ist *da*, *schon auf der Liste* oder *fehlt*. **Der Vorrat schlägt die Liste:** Ist eine Zutat zu Hause und steht zugleich offen auf der Liste, gilt sie als „da" – für das Rezept zählt, ob man kochen kann. „Auf der Liste" entscheidet `planTemplateApply` (4.4), keine eigene Regel. Eine Zutat ohne `product_id` kann nie „da" sein, weil der Vorrat nur Produkte kennt (ADR-043).
 2. **Übersicht (`buildRecipeOverview`):** Gezählt wird, was **nicht im Vorrat** ist – ob es schon auf der Liste steht, spielt keine Rolle, denn „Alles da" heißt „ich kann heute kochen". Sortiert nach Zahl der fehlenden Zutaten, dann alphabetisch, dann nach ID.
 3. **Wochenplan (`planWeeklyShopping`):** Jedes Rezept der Woche wird für sich eingeordnet, die fehlenden Zutaten werden dann **vereinigt** – brauchen zwei Gerichte Hackfleisch, kommt es einmal auf die Liste. Zutaten ohne Produktbezug werden gesondert gemeldet statt still verschluckt. Geschrieben wird über `addProductsToList` wie in 4.6.
-4. **Grundstock genau einmal:** Gesät wird über den Merker `recipes_seeded` in `app_state`, nicht über „Tabelle ist leer" – wer alle Gerichte löscht, soll sie nicht beim nächsten Start wiederfinden (ADR-044). Eine Wiederherstellung aus einer Sicherung ohne `recipes` setzt den Merker zurück (5.2).
-5. **Zurücksetzen (`planRecipeReset`, ADR-031):** Mitgelieferte Gerichte kehren in den Auslieferungszustand zurück, gelöschte kommen wieder, **eigene bleiben unangetastet** – auch eines, das zufällig dieselbe ID wie ein mitgeliefertes trägt.
+4. **Grundvorrat (ADR-047):** Eine Zutat, deren Produkt `is_staple` trägt, ist weder *da* noch *fehlt* sie – sie ist *Grundvorrat*. Das schlägt Vorrat und Liste: Sie zählt nie als fehlend, auch nicht in der Übersicht, und `planWeeklyShopping` setzt sie nie auf die Liste, sondern zählt sie gesondert (`staples`). In der Zutatenliste bleibt sie sichtbar, mit eigenem Kennzeichen – wer Salz wirklich braucht, setzt es von Hand auf die Liste. „Alles da" heißt damit: alles, was kein Grundvorrat ist, liegt im Vorrat. Das Kennzeichen sitzt am **Produkt**, nicht an der Zutat, und wirkt so in jedem Rezept zugleich.
+5. **Schritte:** nummerierte Textschritte unter den Zutaten, im Bearbeiten mit Pfeilen umsortierbar (ADR-028 – jede Umsortierung hat eine Antipp-Form). Gespeichert wird die Reihenfolge als `position` von 0 an; leere Schritte fallen weg. Mehr als Text ist ein Schritt nicht (ADR-047).
+6. **Grundstock genau einmal:** Gesät wird über den Merker `recipes_seeded` in `app_state`, nicht über „Tabelle ist leer" – wer alle Gerichte löscht, soll sie nicht beim nächsten Start wiederfinden (ADR-044). Eine Wiederherstellung aus einer Sicherung ohne `recipes` setzt den Merker zurück (5.2).
+7. **Katalog-Nachsaat (`planCatalogUpgrade`, ADR-047):** Ein Bestandsgerät bekommt die mit M16 neuen Gewürze und die Grundvorrat-Kennzeichen **einmalig**, gesteuert über den Merker `catalog_seed_version`. Eingefügt wird nur, was fehlt; Kennzeichen werden nur an vorhandenen mitgelieferten Produkten gesetzt. Kein „bei jedem Start nachsäen" – das brächte gelöschte Produkte zurück (ADR-031).
+8. **Zurücksetzen (`planRecipeReset`, ADR-031):** Mitgelieferte Gerichte kehren in den Auslieferungszustand zurück, gelöschte kommen wieder, **eigene bleiben unangetastet** – auch eines, das zufällig dieselbe ID wie ein mitgeliefertes trägt.
 
 ### 4.8 Widget (FR-11)
 
@@ -333,14 +348,15 @@ Einkaufsliste „Rewe" (2 Artikel)
     "categories": [], "products": [], "lists": [],
     "listCategoryOrder": [], "listItems": [],
     "templates": [], "templateItems": [], "purchaseHistory": [],
-    "pantry": [], "recipes": [], "recipeItems": [], "weeklyPlan": []
+    "pantry": [], "recipes": [], "recipeItems": [], "recipeSteps": [],
+    "weeklyPlan": []
   }
 }
 ```
 
-Die acht Tabellen aus V1 sind **Pflichttabellen**, alle später hinzugekommenen (`pantry`, `recipes`, `recipeItems`, `weeklyPlan`) sind **optional**: Fehlt eine optionale Tabelle in der Datei, gilt sie als leer, sodass Sicherungen aus V1 lesbar bleiben. Weil das eine verträgliche Änderung ist, bleibt `version` bei 1, und die Pflichtliste wächst nie mehr (ADR-046).
+Die acht Tabellen aus V1 sind **Pflichttabellen**, alle später hinzugekommenen (`pantry`, `recipes`, `recipeItems`, `recipeSteps`, `weeklyPlan`) sind **optional**: Fehlt eine optionale Tabelle in der Datei, gilt sie als leer, sodass Sicherungen aus V1 lesbar bleiben. Weil das eine verträgliche Änderung ist, bleibt `version` bei 1, und die Pflichtliste wächst nie mehr (ADR-046).
 
-`parseBackup` meldet zusätzlich, welche optionalen Tabellen fehlten (`missingOptional`). Fehlte `recipes`, setzt die Wiederherstellung nach ihrer Transaktion den Merker `recipes_seeded` zurück: Die Rezepttabelle ist nach dem Ersetzen leer, und ohne diesen Schritt käme der Grundstock nie zurück. Beim nächsten Start sät `seedRecipesOnce`. Eine vorhandene, aber leere `recipes`-Tabelle lässt den Merker stehen. `app_state` selbst gehört nie in die Sicherung.
+`parseBackup` meldet zusätzlich, welche optionalen Tabellen fehlten (`missingOptional`). Fehlte `recipes`, setzt die Wiederherstellung nach ihrer Transaktion den Merker `recipes_seeded` zurück: Die Rezepttabelle ist nach dem Ersetzen leer, und ohne diesen Schritt käme der Grundstock nie zurück. Beim nächsten Start sät `seedRecipesOnce`. Eine vorhandene, aber leere `recipes`-Tabelle lässt den Merker stehen. Fehlte `recipeSteps` (Datei aus der Zeit vor M16), setzt die Wiederherstellung außerdem `catalog_seed_version` auf `0`: Die Produkte der Datei kennen `is_staple` noch nicht, und die neuen Gewürze fehlen – der nächste Start trägt beides über `upgradeCatalogOnce` nach (ADR-047). `products.is_staple` selbst braucht keine Sonderbehandlung: Die Sicherung schreibt alle Spalten, die Wiederherstellung übernimmt nur bekannte (`pickKnownColumns`), eine ältere Datei ohne die Spalte bekommt den Standardwert 0. `app_state` selbst gehört nie in die Sicherung.
 
 Die Sicherung enthält im Gegensatz zur geteilten Liste **echte IDs**, weil sie den vollständigen Zustand wiederherstellt. Beim Wiederherstellen wird der bestehende Datenbestand **ersetzt**, nicht ergänzt – mit ausdrücklicher Warnung.
 

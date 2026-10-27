@@ -1,5 +1,4 @@
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
-import { router } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SectionList, StyleSheet, View } from 'react-native';
@@ -9,6 +8,7 @@ import { catalogProductsQuery, categoriesQuery } from '@/features/catalog/reposi
 import { getOrCreateActiveList } from '@/features/lists/repository';
 import { toProductStats } from '@/features/suggestions/logic';
 import { currentStatsQuery } from '@/features/suggestions/repository';
+import { goTo } from '@/lib/navigation';
 
 import { buildPantryChecklist, missingProductIds } from '../logic';
 import { addMissingToList, pantryQuery, setInPantry } from '../repository';
@@ -70,9 +70,9 @@ export function PantryScreen({ listId }: Props) {
   // kann ueber die Uebersicht oder ueber eine Liste erreicht werden.
   const goBack = useCallback(() => {
     if (listId) {
-      router.navigate({ pathname: '/liste', params: { listId } });
+      goTo({ pathname: '/liste', params: { listId } });
     } else {
-      router.navigate('/listen');
+      goTo('/listen');
     }
   }, [listId]);
 

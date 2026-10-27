@@ -17,10 +17,12 @@ import {
   useTheme,
 } from 'react-native-paper';
 
+import { stapleProductIdsQuery } from '@/features/catalog/repository';
 import { listItemsQuery } from '@/features/items/repository';
 import { getOrCreateActiveList } from '@/features/lists/repository';
 import { pantryQuery } from '@/features/pantry/repository';
 import type { TargetItem } from '@/features/templates/logic';
+import { goTo } from '@/lib/navigation';
 
 import {
   buildRecipeOverview,
@@ -105,6 +107,7 @@ export function RecipesScreen() {
   const itemRows = useLiveQuery(recipeItemsQuery());
   const pantryRows = useLiveQuery(pantryQuery());
   const planRows = useLiveQuery(weeklyPlanQuery());
+  const stapleRows = useLiveQuery(stapleProductIdsQuery());
   const targets = useActiveListTargets();
 
   const [menuOpen, setMenuOpen] = useState(false);
@@ -130,6 +133,9 @@ export function RecipesScreen() {
     [pantryRows.data],
   );
 
+  // Grundvorrat fehlt nie und geht nie automatisch auf die Liste (ADR-047).
+  const stapleIds = useMemo(() => (stapleRows.data ?? []).map((row) => row.id), [stapleRows.data]);
+
   const rows = useMemo(
     () =>
       buildRecipeOverview(
@@ -137,8 +143,9 @@ export function RecipesScreen() {
         itemsByRecipe,
         pantryIds,
         (planRows.data ?? []).map((row) => row.recipeId),
+        stapleIds,
       ),
-    [recipeRows.data, itemsByRecipe, pantryIds, planRows.data],
+    [recipeRows.data, itemsByRecipe, pantryIds, planRows.data, stapleIds],
   );
 
   const weekRows = useMemo(() => rows.filter((row) => row.inPlan), [rows]);
@@ -149,8 +156,9 @@ export function RecipesScreen() {
         weekRows.map((row) => itemsByRecipe.get(row.id) ?? []),
         pantryIds,
         targets,
+        stapleIds,
       ),
-    [weekRows, itemsByRecipe, pantryIds, targets],
+    [weekRows, itemsByRecipe, pantryIds, targets, stapleIds],
   );
   const weekCount = weekPlan.productIds.length;
 
@@ -281,7 +289,7 @@ export function RecipesScreen() {
       <Appbar.Header elevated>
         {/* Benanntes Ziel statt router.back() (ADR-036). */}
         <Appbar.BackAction
-          onPress={() => router.navigate('/listen')}
+          onPress={() => goTo('/listen')}
           accessibilityLabel={t('recipes.back')}
           testID="recipes-back"
         />

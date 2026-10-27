@@ -12,12 +12,13 @@ import {
   products,
   purchaseHistory,
   recipeItems,
+  recipeSteps,
   recipes,
   templateItems,
   templates,
   weeklyPlan,
 } from '@/db/schema';
-import { RECIPES_SEEDED_KEY } from '@/db/seed';
+import { CATALOG_SEED_VERSION_KEY, RECIPES_SEEDED_KEY } from '@/db/seed';
 
 import {
   BACKUP_TABLES,
@@ -201,6 +202,7 @@ const BACKUP_SOURCES = {
   pantry,
   recipes,
   recipeItems,
+  recipeSteps,
   weeklyPlan,
 } as const;
 
@@ -208,14 +210,16 @@ const BACKUP_SOURCES = {
  * Reihenfolge zum Loeschen: erst das, was auf anderes zeigt.
  *
  * `pantry` steht vorn, weil es auf `products` zeigt. Ebenso die Rezepte:
- * `weeklyPlan` und `recipeItems` zeigen auf `recipes`, die Zutaten ausserdem
- * auf `products` - also alle drei vor `products`, und `recipes` zuletzt.
+ * `weeklyPlan`, `recipeItems` und `recipeSteps` zeigen auf `recipes`, die
+ * Zutaten ausserdem auf `products` - also alle vor `products`, und `recipes`
+ * zuletzt.
  * Eingefuegt wird in der Reihenfolge von BACKUP_TABLES, dort stehen sie
  * hinter `products`.
  */
 const DELETE_ORDER = [
   'weeklyPlan',
   'recipeItems',
+  'recipeSteps',
   'recipes',
   'pantry',
   'purchaseHistory',
@@ -288,6 +292,21 @@ export async function restoreBackup(file: BackupFile): Promise<number> {
   // schreibt und keine Transaktion annimmt (wie in seedRecipesOnce).
   if (file.missingOptional?.includes('recipes')) {
     await setFlag(RECIPES_SEEDED_KEY, false);
+  }
+
+  // Eine Datei ohne `recipeSteps` stammt aus der Zeit vor M16 (ADR-047). Ihre
+  // Produkte kennen die Spalte `is_staple` noch nicht - pickKnownColumns laesst
+  // sie weg, also gilt ueberall der Standardwert false -, und die mit M16
+  // mitgelieferten Gewuerze fehlen. Der Merker CATALOG_SEED_VERSION_KEY steht
+  // auf diesem Geraet aber schon auf dem aktuellen Stand, upgradeCatalogOnce
+  // wuerde also nie wieder laufen. Darum zuruecksetzen auf '0': Der naechste
+  // Start traegt Grundvorrat-Kennzeichen und Gewuerze nach (ADR-047, letzter
+  // Absatz). Was genau nachgetragen wird, entscheidet planCatalogUpgrade:
+  // Kennzeichen nur an vorhandenen Seed-Produkten, Gewuerze nur, wo sie fehlen
+  // - und eine Datei von vor M16 kann sie nie gehabt haben, also auch nicht
+  // geloescht. Nach der Transaktion aus demselben Grund wie oben.
+  if (file.missingOptional?.includes('recipeSteps')) {
+    await setAppState(CATALOG_SEED_VERSION_KEY, '0');
   }
 
   return written;

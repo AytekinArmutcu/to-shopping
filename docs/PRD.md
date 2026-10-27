@@ -219,7 +219,7 @@ Die Anforderungen sind durchnummeriert und werden in `roadmap.md` auf Meilenstei
 
 | ID | Anforderung |
 |---|---|
-| FR-4.1 | 150–200 mitgelieferte Produkte in 10–12 Kategorien |
+| FR-4.1 | 150–250 mitgelieferte Produkte in 10–12 Kategorien (angehoben mit ADR-047: Gewürze und Grundzutaten) |
 | FR-4.2 | Produkte anlegen, umbenennen, Kategorie ändern, löschen – auch mitgelieferte |
 | FR-4.3 | Katalog durchsuchbar und nach Kategorien gruppiert |
 | FR-4.4 | „Katalog zurücksetzen" auf Auslieferungszustand |
@@ -294,6 +294,9 @@ Hebt zwei Nicht-Ziele aus Abschnitt 6 auf (Widget, Rezepte) und fügt den Vorrat
 | FR-10.6 | Wochenplan: Rezepte für diese Woche wählen, gesammelt Fehlendes auf die Liste, Plan leeren – keine Wochentage |
 | FR-10.7 | Zutaten werden über dasselbe Eingabefeld mit denselben Vorschlägen erfasst wie Listenartikel |
 | FR-10.8 | Rezepte und Wochenplan sind in der Sicherung enthalten (optional, ADR-046) |
+| FR-10.9 | Ein Rezept hat nummerierte Zubereitungsschritte – **nur Text**: keine Timer, Fotos, Portionen (ADR-047, ändert FR-10.1) |
+| FR-10.10 | Zutaten, deren Produkt „Grundvorrat" ist, zählen nicht als fehlend und gehen nicht automatisch auf die Liste |
+| FR-4.5 | Ein Produkt kann als „Grundvorrat" gekennzeichnet werden; mitgelieferte Gewürze und Grundzutaten sind es ab Werk (ADR-047) |
 
 ### FR-11 Widget
 

@@ -13,6 +13,8 @@ export type SeedProduct = {
   name: string;
   category: string;
   unit: string;
+  /** Grundvorrat (ADR-047): zaehlt in Rezepten nie als fehlend. Fehlt = false. */
+  staple?: boolean;
 };
 
 /** Fertige Zeile, wie sie in die Tabelle products geschrieben wird. */
@@ -22,6 +24,7 @@ export type ProductRow = {
   categoryId: string;
   defaultUnit: Unit;
   isBuiltin: true;
+  isStaple: boolean;
 };
 
 /**
@@ -47,6 +50,7 @@ export function buildProductRows(
     categoryId: knownCategories.has(product.category) ? product.category : fallbackCategoryId,
     defaultUnit: isUnit(product.unit) ? product.unit : DEFAULT_UNIT,
     isBuiltin: true,
+    isStaple: product.staple ?? false,
   }));
 }
 
@@ -86,11 +90,87 @@ export function findDuplicateIds(rows: ProductRow[]): string[] {
   return duplicates;
 }
 
+/**
+ * Stand des mitgelieferten Katalogs. Version 1 ist der Auslieferungsstand,
+ * Version 2 bringt die Gewuerze und das Grundvorrat-Kennzeichen (ADR-047).
+ */
+export const CATALOG_SEED_VERSION = 2;
+
+/**
+ * Was in welcher Katalogversion neu dazugekommen ist - und nur das.
+ *
+ * Warum eine Liste der Neuzugaenge statt "alles einfuegen, was fehlt": Ein
+ * mitgeliefertes Produkt, das auf dem Geraet fehlt, kann der Nutzer geloescht
+ * haben. Geloeschtes bleibt geloescht, bis er selbst "Katalog zuruecksetzen"
+ * waehlt (ADR-031). Nachgesaet wird deshalb nur, was das Geraet in seiner
+ * Version noch nie gesehen haben kann.
+ */
+export const CATALOG_SEED_ADDITIONS: Record<number, string[]> = {
+  2: [
+    'p-oregano',
+    'p-basilikum-getrocknet',
+    'p-thymian',
+    'p-currypulver',
+    'p-zimt',
+    'p-kuemmel',
+    'p-muskatnuss',
+    'p-chiliflocken',
+    'p-vanillezucker',
+  ],
+};
+
+export interface CatalogUpgradePlan {
+  insert: ProductRow[];
+  markStaple: string[];
+  version: number;
+}
+
+/**
+ * Plant das einmalige Nachsaeen auf einem Geraet mit aelterem Katalog
+ * (ADR-047, T-16.2).
+ *
+ * - insert: Neuzugaenge aus Versionen nach storedVersion, die es auf dem
+ *   Geraet noch nicht gibt. Ein eigenes Produkt mit derselben ID (gleicher
+ *   Name, siehe slugify) blockiert wie beim Zuruecksetzen (ADR-031); ein
+ *   gleichnamiges mit anderer ID faengt der eindeutige Namensindex mit
+ *   onConflictDoNothing ab.
+ * - markStaple: mitgelieferte Grundvorrat-Produkte, die noch vorhanden sind.
+ *   Nur Kennzeichen setzen, nie einfuegen - ein geloeschtes Salz kommt nicht
+ *   zurueck.
+ *
+ * storedVersion 0 bedeutet "nie gelaufen" (Version 1 = Auslieferungsstand).
+ */
+export function planCatalogUpgrade(
+  storedVersion: number,
+  seedRows: ProductRow[],
+  existingIds: string[],
+): CatalogUpgradePlan {
+  if (storedVersion >= CATALOG_SEED_VERSION) {
+    return { insert: [], markStaple: [], version: CATALOG_SEED_VERSION };
+  }
+
+  const existing = new Set(existingIds);
+  const added = new Set(
+    Object.entries(CATALOG_SEED_ADDITIONS)
+      .filter(([version]) => Number(version) > storedVersion)
+      .flatMap(([, ids]) => ids),
+  );
+
+  const insert = seedRows.filter((row) => added.has(row.id) && !existing.has(row.id));
+  const markStaple = seedRows
+    .filter((row) => row.isStaple && existing.has(row.id))
+    .map((row) => row.id);
+
+  return { insert, markStaple, version: CATALOG_SEED_VERSION };
+}
+
 /** Rohform eines Grundstock-Gerichts, wie es in recipes.json steht (ADR-044). */
 export interface SeedRecipe {
   name: string;
   note?: string;
   items: { product: string; quantity?: number; unit?: string }[];
+  /** Zubereitung als reiner Text, ein Eintrag pro Schritt (ADR-047). */
+  steps?: string[];
 }
 
 /** Fertige Zeile fuer die Tabelle der Gerichte. */
@@ -112,6 +192,17 @@ export interface RecipeItemRow {
   position: number;
 }
 
+/** Fertige Zeile fuer einen Zubereitungsschritt eines Gerichts (ADR-047). */
+export interface RecipeStepRow {
+  id: string;
+  recipeId: string;
+  position: number;
+  text: string;
+}
+
+/** Laengster erlaubter Text eines Zubereitungsschritts. */
+export const MAX_STEP_LENGTH = 500;
+
 /**
  * Wandelt die Grundstock-Gerichte in Datenbankzeilen um.
  *
@@ -120,14 +211,18 @@ export interface RecipeItemRow {
  * Fehler in den ausgelieferten Daten und soll laut auffallen, statt ein
  * halbes Gericht in die Datenbank zu schreiben. Der Name der Zutat wird als
  * Kopie gespeichert (ADR-007).
+ *
+ * Schritte werden getrimmt, leere verworfen; ein Schritt ueber
+ * MAX_STEP_LENGTH Zeichen wirft, damit der Seed nicht still kaputtgeht.
  */
 export function buildRecipeRows(
   recipes: SeedRecipe[],
   products: ProductRow[],
-): { recipes: RecipeRow[]; items: RecipeItemRow[] } {
+): { recipes: RecipeRow[]; items: RecipeItemRow[]; steps: RecipeStepRow[] } {
   const productsByName = new Map(products.map((product) => [product.name, product]));
   const recipeRows: RecipeRow[] = [];
   const itemRows: RecipeItemRow[] = [];
+  const stepRows: RecipeStepRow[] = [];
 
   for (const recipe of recipes) {
     const recipeId = `r-${slugify(recipe.name)}`;
@@ -159,9 +254,19 @@ export function buildRecipeRows(
         position: index,
       });
     });
+
+    const texts = (recipe.steps ?? []).map((step) => step.trim()).filter((text) => text !== '');
+    texts.forEach((text, index) => {
+      if (text.length > MAX_STEP_LENGTH) {
+        throw new Error(
+          `Gericht "${recipe.name}": Schritt ${index + 1} ist laenger als ${MAX_STEP_LENGTH} Zeichen`,
+        );
+      }
+      stepRows.push({ id: `${recipeId}-s${index}`, recipeId, position: index, text });
+    });
   }
 
-  return { recipes: recipeRows, items: itemRows };
+  return { recipes: recipeRows, items: itemRows, steps: stepRows };
 }
 
 /** Nennt die Gerichte, die auf ein Produkt ausserhalb des Katalogs verweisen. */

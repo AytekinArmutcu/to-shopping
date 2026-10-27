@@ -1,7 +1,7 @@
-import { asc, eq } from 'drizzle-orm';
+import { asc, eq, inArray, sql } from 'drizzle-orm';
 
 import { db } from '@/db/client';
-import { products, recipeItems, recipes, weeklyPlan } from '@/db/schema';
+import { products, recipeItems, recipeSteps, recipes, weeklyPlan } from '@/db/schema';
 import { SEED_CATEGORIES, SEED_PRODUCTS, SEED_RECIPES } from '@/db/seed';
 import { buildProductRows, buildRecipeRows } from '@/db/seed/logic';
 import { addProductsToList } from '@/features/items/repository';
@@ -10,9 +10,11 @@ import {
   buildRecipeIngredients,
   cleanRecipeName,
   cleanRecipeNote,
+  cleanRecipeSteps,
   detachMissingProducts,
   planRecipeReset,
   type RecipeIngredient,
+  type RecipeStepLike,
 } from './logic';
 
 /**
@@ -90,6 +92,20 @@ export function recipeItemsOfQuery(recipeId: string) {
     .orderBy(asc(recipeItems.position));
 }
 
+/** Die Zubereitungsschritte eines Rezepts, in der gespeicherten Reihenfolge (ADR-047). */
+export function recipeStepsOfQuery(recipeId: string) {
+  return db
+    .select({
+      id: recipeSteps.id,
+      recipeId: recipeSteps.recipeId,
+      position: recipeSteps.position,
+      text: recipeSteps.text,
+    })
+    .from(recipeSteps)
+    .where(eq(recipeSteps.recipeId, recipeId))
+    .orderBy(asc(recipeSteps.position));
+}
+
 export function weeklyPlanQuery() {
   return db.select({ recipeId: weeklyPlan.recipeId }).from(weeklyPlan);
 }
@@ -133,6 +149,29 @@ async function insertIngredients(
 }
 
 /**
+ * Schreibt die Zubereitungsschritte eines Rezepts. Die IDs folgen dem Muster
+ * des Grundstocks (`<rezept>-s<position>`, buildRecipeRows) - so hat jeder
+ * Schritt dieselbe ID, egal ob gesaet, zurueckgesetzt oder selbst angelegt.
+ */
+async function insertSteps(
+  tx: Transaction,
+  recipeId: string,
+  steps: RecipeStepLike[],
+): Promise<void> {
+  if (steps.length === 0) {
+    return;
+  }
+  await tx.insert(recipeSteps).values(
+    steps.map((step) => ({
+      id: `${recipeId}-s${step.position}`,
+      recipeId,
+      position: step.position,
+      text: step.text,
+    })),
+  );
+}
+
+/**
  * Legt ein eigenes Rezept an (FR-10.2). Rueckgabe: die neue ID.
  *
  * Die ID entsteht wie bei Vorlagen aus Zeit und Zufall, nicht aus dem Namen:
@@ -141,19 +180,25 @@ async function insertIngredients(
  *
  * In einer Transaktion (CLAUDE.md): Ein Rezept ohne seine Zutaten saehe aus
  * wie ein leeres und stuende in der Uebersicht ganz oben bei "Alles da".
+ *
+ * Die Schritte kommen als rohe Texte; leere fallen weg, die Reihenfolge der
+ * Eingabe bleibt (cleanRecipeSteps, FR-10.9).
  */
 export async function createRecipe(
   name: string,
   note: string | null,
   items: NewIngredient[],
+  steps: string[],
 ): Promise<string> {
   const header = cleanHeader(name, note);
   const ingredients = buildRecipeIngredients(items);
+  const cleanSteps = cleanRecipeSteps(steps);
   const id = newId('r');
 
   await db.transaction(async (tx) => {
     await tx.insert(recipes).values({ id, name: header.name, note: header.note, isBuiltin: false });
     await insertIngredients(tx, id, ingredients);
+    await insertSteps(tx, id, cleanSteps);
   });
 
   return id;
@@ -164,7 +209,8 @@ export async function createRecipe(
  *
  * Die Zutaten werden vollstaendig ersetzt statt einzeln abgeglichen: Ein
  * Rezept hat eine Handvoll Zutaten, und "loeschen und neu schreiben" kann
- * keine Position doppelt vergeben.
+ * keine Position doppelt vergeben. Fuer die Schritte gilt dasselbe - und dort
+ * erst recht, weil die ID die Position enthaelt.
  *
  * isBuiltin bleibt, wie es ist (ADR-031): Nur so findet "Rezepte
  * zuruecksetzen" ein geaendertes mitgeliefertes Gericht wieder.
@@ -174,9 +220,11 @@ export async function updateRecipe(
   name: string,
   note: string | null,
   items: NewIngredient[],
+  steps: string[],
 ): Promise<void> {
   const header = cleanHeader(name, note);
   const ingredients = buildRecipeIngredients(items);
+  const cleanSteps = cleanRecipeSteps(steps);
 
   await db.transaction(async (tx) => {
     await tx
@@ -185,11 +233,13 @@ export async function updateRecipe(
       .where(eq(recipes.id, id));
     await tx.delete(recipeItems).where(eq(recipeItems.recipeId, id));
     await insertIngredients(tx, id, ingredients);
+    await tx.delete(recipeSteps).where(eq(recipeSteps.recipeId, id));
+    await insertSteps(tx, id, cleanSteps);
   });
 }
 
 /**
- * Loescht ein Rezept. Zutaten und Wochenplan-Eintrag gehen per
+ * Loescht ein Rezept. Zutaten, Schritte und Wochenplan-Eintrag gehen per
  * Fremdschluessel-Kaskade mit (schema.ts).
  */
 export async function deleteRecipe(id: string): Promise<void> {
@@ -263,23 +313,43 @@ export async function resetRecipes(): Promise<RecipeResetResult> {
     seed.items.filter((item) => restoreIds.has(item.recipeId)),
     existingProducts.map((product) => product.id),
   );
+  const stepRows = seed.steps.filter((step) => restoreIds.has(step.recipeId));
 
+  if (recipeRows.length === 0) {
+    return { restored: 0, untouched: untouched.length };
+  }
+
+  /*
+   * Fuenf Befehle statt fuenf je Gericht. Jeder Befehl ist ueber expo-sqlite
+   * ein eigener Weg von JavaScript zur Datenbank und zurueck; mit einer
+   * Schleife ueber 35 Gerichte waren das rund 175, und das Zuruecksetzen
+   * dauerte auf dem Emulator ueber 15 Sekunden ohne Rueckmeldung.
+   *
+   * Die Mengen bleiben weit unter der Grenze von SQLite (32766 Platzhalter je
+   * Befehl in der mitgelieferten Fassung 3.50): 35 Gerichte, gut 300 Zutaten
+   * mit je 7 Spalten, gut 150 Schritte mit je 4.
+   *
+   * Beim Gericht gewinnt der Grundstock (excluded = die einzufuegende Zeile),
+   * isBuiltin wird wieder gesetzt. Zutaten und Schritte - auch vom Nutzer
+   * geaenderte oder geloeschte (ADR-047) - werden geloescht und neu geschrieben.
+   */
   await db.transaction(async (tx) => {
-    for (const recipe of recipeRows) {
-      await tx
-        .insert(recipes)
-        .values(recipe)
-        .onConflictDoUpdate({
-          target: recipes.id,
-          set: { name: recipe.name, note: recipe.note, isBuiltin: true },
-        });
+    await tx
+      .insert(recipes)
+      .values(recipeRows)
+      .onConflictDoUpdate({
+        target: recipes.id,
+        set: { name: sql`excluded.name`, note: sql`excluded.note`, isBuiltin: true },
+      });
 
-      await tx.delete(recipeItems).where(eq(recipeItems.recipeId, recipe.id));
+    await tx.delete(recipeItems).where(inArray(recipeItems.recipeId, restore));
+    await tx.delete(recipeSteps).where(inArray(recipeSteps.recipeId, restore));
 
-      const items = itemRows.filter((item) => item.recipeId === recipe.id);
-      if (items.length > 0) {
-        await tx.insert(recipeItems).values(items);
-      }
+    if (itemRows.length > 0) {
+      await tx.insert(recipeItems).values(itemRows);
+    }
+    if (stepRows.length > 0) {
+      await tx.insert(recipeSteps).values(stepRows);
     }
   });
 

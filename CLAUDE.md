@@ -75,7 +75,7 @@ Vollständige Liste mit Begründungen: `docs/PRD.md`, Abschnitt 6.
 |---|---|
 | `docs/PRD.md` | Problem, Zielgruppe, User-Flows, Anforderungen (FR-1 bis FR-8 für V1, FR-9 bis FR-11 für V2), Nicht-Ziele, Erfolgskriterien |
 | `docs/architecture.md` | Stack, Datenmodell, Algorithmen, Dateiformate, Ordnerstruktur |
-| `docs/decisions.md` | 46 ADRs: warum so, was wurde verworfen, was kostet es |
+| `docs/decisions.md` | 47 ADRs: warum so, was wurde verworfen, was kostet es |
 | `docs/compliance.md` | Datenschutz, Play-Console-Pflichten, offene Aufgaben C-1 bis C-12 |
 | `docs/datenschutz.md` | Entwurf der Datenschutzerklärung (C-2), Lücken mit `[…]` markiert |
 | `docs/abnahme.md` | Prüfliste für die manuelle Abnahme (Gate 5) |

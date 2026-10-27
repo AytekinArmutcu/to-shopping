@@ -1,19 +1,22 @@
-import { sql } from 'drizzle-orm';
+import { inArray, sql } from 'drizzle-orm';
 
 import { detachMissingProducts } from '@/features/recipes/logic';
 
-import { getFlag, setFlag } from '../appState';
+import { getAppState, getFlag, setAppState, setFlag } from '../appState';
 import type { Database } from '../client';
 import {
   categories as categoriesTable,
   products as productsTable,
   recipeItems as recipeItemsTable,
   recipes as recipesTable,
+  recipeSteps as recipeStepsTable,
 } from '../schema';
 import categoriesJson from './categories.json';
 import {
   buildProductRows,
   buildRecipeRows,
+  CATALOG_SEED_VERSION,
+  planCatalogUpgrade,
   type ProductRow,
   type SeedCategory,
   type SeedProduct,
@@ -36,6 +39,12 @@ export const SEED_RECIPES = recipesJson as SeedRecipe[];
  * gesaet wurde oder ob der Nutzer aufgeraeumt hat; der Merker schon.
  */
 export const RECIPES_SEEDED_KEY = 'recipes_seeded';
+
+/**
+ * Merker in app_state: Stand des mitgelieferten Katalogs auf diesem Geraet,
+ * als Zahl in Textform (ADR-047). Fehlt er, ist es Version 0 - nie gelaufen.
+ */
+export const CATALOG_SEED_VERSION_KEY = 'catalog_seed_version';
 
 type Transaction = Parameters<Parameters<Database['transaction']>[0]>[0];
 
@@ -77,6 +86,52 @@ export async function seedIfEmpty(db: Database, force = false): Promise<boolean>
     await insertSeedRecipes(tx, productRows);
   });
   await setFlag(RECIPES_SEEDED_KEY, true);
+  await setAppState(CATALOG_SEED_VERSION_KEY, String(CATALOG_SEED_VERSION));
+
+  return true;
+}
+
+/**
+ * Bringt den Katalog eines Bestandsgeraets einmalig auf CATALOG_SEED_VERSION
+ * (ADR-047, T-16.2): neue Gewuerze einfuegen, Grundvorrat-Kennzeichen setzen.
+ *
+ * Warum ein Versionsmerker statt "fehlende Seed-Produkte einfuegen": Fehlende
+ * mitgelieferte Produkte koennen geloescht sein, und Geloeschtes bleibt
+ * geloescht bis "Katalog zuruecksetzen" (ADR-031). Was genau passiert,
+ * entscheidet die reine Funktion planCatalogUpgrade.
+ *
+ * Gehoert in _layout.tsx hinter seedRecipesOnce(db). Bei einer frischen
+ * Installation hat seedIfEmpty den Merker schon gesetzt.
+ *
+ * Wie bei seedRecipesOnce wird der Merker direkt nach der Transaktion gesetzt;
+ * ein zweiter Lauf schadet nicht (onConflictDoNothing, Kennzeichen idempotent).
+ */
+export async function upgradeCatalogOnce(db: Database): Promise<boolean> {
+  const stored = Number(await getAppState(CATALOG_SEED_VERSION_KEY));
+  const storedVersion = Number.isFinite(stored) ? stored : 0;
+  if (storedVersion >= CATALOG_SEED_VERSION) {
+    return false;
+  }
+
+  const existing = await db.select({ id: productsTable.id }).from(productsTable);
+  const plan = planCatalogUpgrade(
+    storedVersion,
+    buildProductRows(SEED_PRODUCTS, SEED_CATEGORIES),
+    existing.map((product) => product.id),
+  );
+
+  await db.transaction(async (tx) => {
+    if (plan.insert.length > 0) {
+      await tx.insert(productsTable).values(plan.insert).onConflictDoNothing();
+    }
+    if (plan.markStaple.length > 0) {
+      await tx
+        .update(productsTable)
+        .set({ isStaple: true })
+        .where(inArray(productsTable.id, plan.markStaple));
+    }
+  });
+  await setAppState(CATALOG_SEED_VERSION_KEY, String(plan.version));
 
   return true;
 }
@@ -118,7 +173,8 @@ export async function seedRecipesOnce(db: Database): Promise<boolean> {
 }
 
 /**
- * Schreibt die Grundstock-Rezepte, erst die Gerichte, dann ihre Zutaten.
+ * Schreibt die Grundstock-Rezepte, erst die Gerichte, dann ihre Zutaten und
+ * ihre Zubereitungsschritte (ADR-047).
  *
  * Die vorhandenen Produkt-IDs werden innerhalb der Transaktion gelesen: Bei
  * seedIfEmpty sind die Produkte gerade erst eingefuegt worden und muessen
@@ -139,5 +195,8 @@ async function insertSeedRecipes(tx: Transaction, productRows: ProductRow[]): Pr
   await tx.insert(recipesTable).values(rows.recipes).onConflictDoNothing();
   if (items.length > 0) {
     await tx.insert(recipeItemsTable).values(items).onConflictDoNothing();
+  }
+  if (rows.steps.length > 0) {
+    await tx.insert(recipeStepsTable).values(rows.steps).onConflictDoNothing();
   }
 }

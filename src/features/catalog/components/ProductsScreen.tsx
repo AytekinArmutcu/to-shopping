@@ -6,6 +6,7 @@ import { SectionList, StyleSheet, View } from 'react-native';
 import {
   Appbar,
   Button,
+  Checkbox,
   Dialog,
   FAB,
   HelperText,
@@ -36,6 +37,8 @@ import {
   deleteProduct,
   FALLBACK_CATEGORY_ID,
   resetCatalog,
+  setProductStaple,
+  stapleProductIdsQuery,
   updateProduct,
 } from '../repository';
 
@@ -44,6 +47,8 @@ type Draft = {
   id: string | null;
   name: string;
   categoryId: string;
+  /** Grundvorrat (FR-4.5, ADR-047). */
+  isStaple: boolean;
 };
 
 /**
@@ -65,6 +70,7 @@ export function ProductsScreen() {
 
   const catalog = useLiveQuery(catalogProductsQuery());
   const categoryRows = useLiveQuery(categoriesQuery());
+  const stapleRows = useLiveQuery(stapleProductIdsQuery());
 
   const [query, setQuery] = useState('');
   const [menuFor, setMenuFor] = useState<string | null>(null);
@@ -75,6 +81,10 @@ export function ProductsScreen() {
 
   const products: CatalogProduct[] = useMemo(() => catalog.data ?? [], [catalog.data]);
   const categories = useMemo(() => categoryRows.data ?? [], [categoryRows.data]);
+  const stapleIds = useMemo(
+    () => new Set((stapleRows.data ?? []).map((row) => row.id)),
+    [stapleRows.data],
+  );
 
   const sections = useMemo(
     () => buildCatalogSections(products, categories, query, t('catalog.uncategorized')),
@@ -89,13 +99,20 @@ export function ProductsScreen() {
       return;
     }
 
-    const { id, name, categoryId } = draft;
+    const { id, name, categoryId, isStaple } = draft;
     setDraft(null);
 
+    // Das Kennzeichen hat eine eigene Schreibfunktion (setProductStaple), damit
+    // eine Namensaenderung es nie nebenbei ueberschreibt. Hier gehoert es zum
+    // Dialog und wird deshalb gleich danach geschrieben.
     if (id === null) {
-      void createProduct(name, categoryId);
+      void createProduct(name, categoryId).then((created) =>
+        created && isStaple ? setProductStaple(created.id, true) : undefined,
+      );
     } else {
-      void updateProduct(id, name, categoryId);
+      void updateProduct(id, name, categoryId).then((updated) =>
+        updated ? setProductStaple(id, isStaple) : undefined,
+      );
     }
   }, [draft, canSave]);
 
@@ -176,11 +193,13 @@ export function ProductsScreen() {
         renderItem={({ item }) => (
           <List.Item
             title={item.name}
+            description={stapleIds.has(item.id) ? t('products.staple') : undefined}
             onPress={() =>
               setDraft({
                 id: item.id,
                 name: item.name,
                 categoryId: item.categoryId ?? FALLBACK_CATEGORY_ID,
+                isStaple: stapleIds.has(item.id),
               })
             }
             testID={`product-${item.name}`}
@@ -209,6 +228,7 @@ export function ProductsScreen() {
                       id: item.id,
                       name: item.name,
                       categoryId: item.categoryId ?? FALLBACK_CATEGORY_ID,
+                      isStaple: stapleIds.has(item.id),
                     });
                   }}
                 />
@@ -241,7 +261,9 @@ export function ProductsScreen() {
         icon="plus"
         label={t('products.create')}
         accessibilityLabel={t('products.create')}
-        onPress={() => setDraft({ id: null, name: query, categoryId: FALLBACK_CATEGORY_ID })}
+        onPress={() =>
+          setDraft({ id: null, name: query, categoryId: FALLBACK_CATEGORY_ID, isStaple: false })
+        }
         testID="product-create"
         style={styles.fab}
       />
@@ -268,6 +290,21 @@ export function ProductsScreen() {
                 schlechteste aller Rueckmeldungen. */}
             <HelperText type="error" visible={duplicate}>
               {t('products.duplicate')}
+            </HelperText>
+
+            <Checkbox.Item
+              label={t('products.staple')}
+              status={draft?.isStaple ? 'checked' : 'unchecked'}
+              onPress={() =>
+                setDraft((current) =>
+                  current ? { ...current, isStaple: !current.isStaple } : null,
+                )
+              }
+              testID="product-staple"
+              style={styles.radio}
+            />
+            <HelperText type="info" visible>
+              {t('products.stapleHint')}
             </HelperText>
 
             <Text variant="labelLarge" style={styles.categoryLabel}>

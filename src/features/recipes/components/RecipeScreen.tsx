@@ -1,6 +1,6 @@
 import { useLiveQuery } from 'drizzle-orm/expo-sqlite';
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { BackHandler, FlatList, StyleSheet, View } from 'react-native';
 import {
@@ -24,7 +24,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { DEFAULT_UNIT } from '@/db/units';
 import { AddItemBar } from '@/features/catalog/components/AddItemBar';
 import type { CatalogProduct } from '@/features/catalog/logic';
-import { catalogProductsQuery, createProduct } from '@/features/catalog/repository';
+import {
+  catalogProductsQuery,
+  createProduct,
+  stapleProductIdsQuery,
+} from '@/features/catalog/repository';
 import { ItemDetailBar, type ItemDetailChange } from '@/features/items/components/ItemDetailBar';
 import { formatQuantity } from '@/features/items/logic';
 import { getOrCreateActiveList } from '@/features/lists/repository';
@@ -32,11 +36,14 @@ import { pantryQuery } from '@/features/pantry/repository';
 import { toProductStats } from '@/features/suggestions/logic';
 import { currentStatsQuery } from '@/features/suggestions/repository';
 import { MAX_TEMPLATE_NAME_LENGTH } from '@/features/templates/logic';
+import { goTo } from '@/lib/navigation';
 import { useKeyboardHeight } from '@/lib/useKeyboardHeight';
 
 import {
   cleanRecipeName,
   MAX_RECIPE_NOTE_LENGTH,
+  MAX_STEP_LENGTH,
+  moveStep,
   planRecipeShopping,
   type IngredientStatus,
 } from '../logic';
@@ -46,6 +53,7 @@ import {
   deleteRecipe,
   recipeItemsOfQuery,
   recipesQuery,
+  recipeStepsOfQuery,
   setInWeeklyPlan,
   updateRecipe,
   weeklyPlanQuery,
@@ -60,20 +68,36 @@ type Props = {
 /** Eine Zutat im Entwurf. key traegt die Zeile durch Hinzufuegen und Entfernen. */
 type DraftIngredient = NewIngredient & { key: string };
 
+/**
+ * Ein Zubereitungsschritt im Entwurf (ADR-047: nur Text). key traegt die
+ * Zeile durch Umsortieren - sonst wanderte beim Pfeil der Fokus samt
+ * Tastatur in das falsche Feld.
+ */
+type DraftStep = { key: string; text: string };
+
 type Draft = {
   name: string;
   note: string;
   items: DraftIngredient[];
+  steps: DraftStep[];
 };
+
+type StepInput = ComponentRef<typeof TextInput>;
 
 /**
  * Hat sich am Entwurf etwas geaendert? Verglichen wird, was gespeichert
- * wuerde - Name und Notiz wie eingegeben, Zutaten in ihrer Reihenfolge.
+ * wuerde - Name und Notiz wie eingegeben, Zutaten und Schritte in ihrer
+ * Reihenfolge.
  */
 function sameDraft(a: Draft, b: Draft): boolean {
   return (
     a.name === b.name &&
     a.note === b.note &&
+    a.steps.length === b.steps.length &&
+    a.steps.every((step, index) => {
+      const other = b.steps[index];
+      return other !== undefined && step.key === other.key && step.text === other.text;
+    }) &&
     a.items.length === b.items.length &&
     a.items.every((item, index) => {
       const other = b.items[index];
@@ -102,8 +126,12 @@ function sameDraft(a: Draft, b: Draft): boolean {
  * Zutaten entstehen mit denselben Vorschlaegen wie Listenartikel (ADR-044).
  *
  * Bearbeitet wird ein Entwurf, gespeichert erst mit dem Haken: Ein Rezept ist
- * ein Ganzes (Name, Notiz, Zutaten), und updateRecipe schreibt es in einer
- * Transaktion.
+ * ein Ganzes (Name, Notiz, Zutaten, Schritte), und updateRecipe schreibt es in
+ * einer Transaktion.
+ *
+ * Die Zubereitung (FR-10.9, ADR-047) steht unter den Zutaten. Umsortiert wird
+ * sie nur mit Pfeilen, ohne Ziehen: ADR-028 nennt die Pfeile gleichwertig, und
+ * bei einer Handvoll Schritte reichen sie.
  */
 export function RecipeScreen({ recipeId }: Props) {
   const { t } = useTranslation();
@@ -115,6 +143,8 @@ export function RecipeScreen({ recipeId }: Props) {
 
   const recipeRows = useLiveQuery(recipesQuery());
   const itemRows = useLiveQuery(recipeItemsOfQuery(recipeId), [recipeId]);
+  const stepRows = useLiveQuery(recipeStepsOfQuery(recipeId), [recipeId]);
+  const stapleRows = useLiveQuery(stapleProductIdsQuery());
   const pantryRows = useLiveQuery(pantryQuery());
   const planRows = useLiveQuery(weeklyPlanQuery());
   const catalog = useLiveQuery(catalogProductsQuery());
@@ -125,12 +155,14 @@ export function RecipeScreen({ recipeId }: Props) {
     ? null
     : ((recipeRows.data ?? []).find((row) => row.id === recipeId) ?? null);
   const items = useMemo(() => itemRows.data ?? [], [itemRows.data]);
+  const steps = useMemo(() => stepRows.data ?? [], [stepRows.data]);
   const inPlan = (planRows.data ?? []).some((row) => row.recipeId === recipeId);
 
   const pantryIds = useMemo(
     () => (pantryRows.data ?? []).map((row) => row.productId),
     [pantryRows.data],
   );
+  const stapleIds = useMemo(() => (stapleRows.data ?? []).map((row) => row.id), [stapleRows.data]);
   const products: CatalogProduct[] = catalog.data ?? [];
   const stats = useMemo(() => toProductStats(historyRows.data ?? []), [historyRows.data]);
 
@@ -138,6 +170,7 @@ export function RecipeScreen({ recipeId }: Props) {
   const [draftName, setDraftName] = useState('');
   const [draftNote, setDraftNote] = useState('');
   const [draftItems, setDraftItems] = useState<DraftIngredient[]>([]);
+  const [draftSteps, setDraftSteps] = useState<DraftStep[]>([]);
   const [nameError, setNameError] = useState(false);
   // Stand beim Wechsel in den Bearbeitungsmodus - Grundlage fuer "geaendert?".
   const [baseline, setBaseline] = useState<Draft | null>(null);
@@ -155,17 +188,24 @@ export function RecipeScreen({ recipeId }: Props) {
     return `entwurf-${nextKey.current}`;
   }, []);
 
+  const listRef = useRef<FlatList<DraftIngredient>>(null);
+  // Die Eingabefelder der Schritte, nach key - fuer den Fokus beim Hinzufuegen.
+  const stepInputs = useRef(new Map<string, StepInput>());
+  // Der Schritt, der den Fokus bekommen soll, sobald sein Feld da ist.
+  const pendingFocus = useRef<string | null>(null);
+
   /* ---------------------------------------------------------------- *
    * Ansichtsmodus
    * ---------------------------------------------------------------- */
 
   const plan = useMemo(
-    () => planRecipeShopping(items, pantryIds, targets),
-    [items, pantryIds, targets],
+    () => planRecipeShopping(items, pantryIds, targets, stapleIds),
+    [items, pantryIds, targets, stapleIds],
   );
 
   const statusById = useMemo(() => {
     const map = new Map<string, IngredientStatus>();
+    plan.staple.forEach((item) => map.set(item.id, 'staple'));
     plan.have.forEach((item) => map.set(item.id, 'have'));
     plan.onList.forEach((item) => map.set(item.id, 'onList'));
     plan.missing.forEach((item) => map.set(item.id, 'missing'));
@@ -174,6 +214,8 @@ export function RecipeScreen({ recipeId }: Props) {
 
   // Was nicht im Vorrat liegt - wie die Zahl in der Uebersicht (FR-10.3).
   // "Alles da" heisst: kochen koennen, nicht "steht auf der Liste".
+  // Grundvorrat zaehlt nie mit (ADR-047): Er steht in plan.staple, nicht in
+  // onList oder missing.
   const notInPantry = plan.onList.length + plan.missing.length;
 
   const addableIds = useMemo(
@@ -226,15 +268,17 @@ export function RecipeScreen({ recipeId }: Props) {
         quantity: item.quantity,
         unit: item.unit,
       })),
+      steps: steps.map((step) => ({ key: step.id, text: step.text })),
     };
     setDraftName(start.name);
     setDraftNote(start.note);
     setDraftItems(start.items);
+    setDraftSteps(start.steps);
     setBaseline(start);
     setEditingKey(null);
     setNameError(false);
     setEditing(true);
-  }, [recipe, items]);
+  }, [recipe, items, steps]);
 
   const draftProductIds = useMemo(
     () => draftItems.map((item) => item.productId).filter((id): id is string => id !== null),
@@ -299,16 +343,81 @@ export function RecipeScreen({ recipeId }: Props) {
   }, []);
 
   /*
+   * Zubereitungsschritte (FR-10.9). Ein neuer Schritt kommt leer ans Ende und
+   * bekommt sofort den Fokus - wer "Schritt hinzufuegen" tippt, will
+   * schreiben. Leere Schritte fallen beim Speichern weg (cleanRecipeSteps).
+   */
+  const addStep = useCallback(() => {
+    const key = makeKey();
+    pendingFocus.current = key;
+    setDraftSteps((current) => [...current, { key, text: '' }]);
+  }, [makeKey]);
+
+  const focusIfPending = useCallback((key: string, input: StepInput) => {
+    if (pendingFocus.current === key) {
+      pendingFocus.current = null;
+      input.focus();
+    }
+  }, []);
+
+  // Das Feld des neuen Schritts gibt es erst nach dem Rendern. Steht es schon
+  // da, bekommt es hier den Fokus. Sonst (lange Zutatenliste, die Fusszeile
+  // ist noch nicht gerendert) bringt das Scrollen ans Ende sie herein, und
+  // der Fokus kommt, sobald das Feld sich anmeldet (registerStepInput).
+  useEffect(() => {
+    const key = pendingFocus.current;
+    if (key === null) {
+      return;
+    }
+    listRef.current?.scrollToEnd({ animated: true });
+    const input = stepInputs.current.get(key);
+    if (input) {
+      focusIfPending(key, input);
+    }
+  }, [draftSteps, focusIfPending]);
+
+  const registerStepInput = useCallback(
+    (key: string, input: StepInput | null) => {
+      if (input === null) {
+        stepInputs.current.delete(key);
+        return;
+      }
+      stepInputs.current.set(key, input);
+      focusIfPending(key, input);
+    },
+    [focusIfPending],
+  );
+
+  const changeStep = useCallback((key: string, text: string) => {
+    setDraftSteps((current) =>
+      current.map((step) => (step.key === key ? { ...step, text } : step)),
+    );
+  }, []);
+
+  const shiftStep = useCallback((from: number, to: number) => {
+    setDraftSteps((current) => moveStep(current, from, to));
+  }, []);
+
+  const removeStep = useCallback((key: string) => {
+    setDraftSteps((current) => current.filter((step) => step.key !== key));
+  }, []);
+
+  /*
    * Ungespeicherte Aenderungen. Beim Anlegen zaehlt als Aenderung, was
-   * eingegeben wurde: ein Name oder mindestens eine Zutat. Beim Bearbeiten
-   * der Vergleich mit dem Stand beim Oeffnen.
+   * eingegeben wurde: ein Name, mindestens eine Zutat oder ein Schritt. Beim
+   * Bearbeiten der Vergleich mit dem Stand beim Oeffnen.
    */
   const dirty =
     editing &&
     (isNew
-      ? draftName.trim().length > 0 || draftItems.length > 0
+      ? draftName.trim().length > 0 || draftItems.length > 0 || draftSteps.length > 0
       : baseline !== null &&
-        !sameDraft(baseline, { name: draftName, note: draftNote, items: draftItems }));
+        !sameDraft(baseline, {
+          name: draftName,
+          note: draftNote,
+          items: draftItems,
+          steps: draftSteps,
+        }));
 
   // Zurueck ist ein benanntes Ziel (ADR-036). Mit ungespeicherten Aenderungen
   // fragt der Screen erst - ein Tipp daneben soll keine Arbeit verwerfen.
@@ -317,12 +426,12 @@ export function RecipeScreen({ recipeId }: Props) {
       setDiscardOpen(true);
       return;
     }
-    router.navigate('/rezepte');
+    goTo('/rezepte');
   }, [dirty]);
 
   const discard = useCallback(() => {
     setDiscardOpen(false);
-    router.navigate('/rezepte');
+    goTo('/rezepte');
   }, []);
 
   // Die Zuruecktaste von Android geht an der Appbar vorbei. Nur bei
@@ -360,13 +469,17 @@ export function RecipeScreen({ recipeId }: Props) {
       }),
     );
 
+    // Rohe Texte - das Bereinigen (leere weg, Positionen neu) macht das
+    // Repository mit cleanRecipeSteps.
+    const stepTexts = draftSteps.map((step) => step.text);
+
     setBusy(true);
     const run = async () => {
       if (isNew) {
-        const id = await createRecipe(name, draftNote, ingredients);
+        const id = await createRecipe(name, draftNote, ingredients, stepTexts);
         router.replace({ pathname: '/rezept', params: { recipeId: id } });
       } else {
-        await updateRecipe(recipeId, name, draftNote, ingredients);
+        await updateRecipe(recipeId, name, draftNote, ingredients, stepTexts);
       }
       setEditingKey(null);
       setBaseline(null);
@@ -374,7 +487,7 @@ export function RecipeScreen({ recipeId }: Props) {
     };
 
     void run().finally(() => setBusy(false));
-  }, [busy, draftName, draftNote, draftItems, isNew, recipeId]);
+  }, [busy, draftName, draftNote, draftItems, draftSteps, isNew, recipeId]);
 
   const remove = useCallback(() => {
     setDeleteOpen(false);
@@ -383,7 +496,7 @@ export function RecipeScreen({ recipeId }: Props) {
     }
     setBusy(true);
     void deleteRecipe(recipeId)
-      .then(() => router.navigate('/rezepte'))
+      .then(() => goTo('/rezepte'))
       .finally(() => setBusy(false));
   }, [busy, recipeId]);
 
@@ -457,6 +570,7 @@ export function RecipeScreen({ recipeId }: Props) {
       {editing ? (
         <View style={styles.container}>
           <FlatList
+            ref={listRef}
             data={draftItems}
             keyExtractor={(item) => item.key}
             keyboardShouldPersistTaps="handled"
@@ -525,9 +639,83 @@ export function RecipeScreen({ recipeId }: Props) {
                 />
               );
             }}
+            // Als Element, nicht als Funktion: Eine Funktion waere bei jedem
+            // Tastendruck eine neue Komponente, und das Feld verloere den Fokus.
+            ListFooterComponent={
+              <View style={styles.form}>
+                <Text
+                  variant="titleSmall"
+                  style={[styles.formHeader, { color: theme.colors.primary }]}
+                >
+                  {t('recipe.steps')}
+                </Text>
+                {draftSteps.map((step, index) => {
+                  const n = index + 1;
+                  return (
+                    <View key={step.key} style={styles.stepEditRow}>
+                      <Text
+                        variant="labelLarge"
+                        style={[styles.stepNumber, { color: theme.colors.primary }]}
+                      >
+                        {n}
+                      </Text>
+                      <TextInput
+                        ref={(input: StepInput | null) => registerStepInput(step.key, input)}
+                        mode="outlined"
+                        value={step.text}
+                        onChangeText={(text) => changeStep(step.key, text)}
+                        placeholder={t('recipe.stepPlaceholder')}
+                        accessibilityLabel={t('recipe.stepLabel', { n, text: step.text })}
+                        multiline
+                        maxLength={MAX_STEP_LENGTH}
+                        testID={`step-input-${index}`}
+                        style={styles.stepInput}
+                      />
+                      <IconButton
+                        icon="arrow-up"
+                        onPress={() => shiftStep(index, index - 1)}
+                        disabled={index === 0}
+                        accessibilityLabel={t('recipe.stepUp', { n })}
+                        testID={`step-up-${index}`}
+                        style={styles.iconButton}
+                      />
+                      <IconButton
+                        icon="arrow-down"
+                        onPress={() => shiftStep(index, index + 1)}
+                        disabled={index === draftSteps.length - 1}
+                        accessibilityLabel={t('recipe.stepDown', { n })}
+                        testID={`step-down-${index}`}
+                        style={styles.iconButton}
+                      />
+                      <IconButton
+                        icon="delete"
+                        onPress={() => removeStep(step.key)}
+                        accessibilityLabel={t('recipe.stepRemove', { n })}
+                        testID={`step-remove-${index}`}
+                        style={styles.iconButton}
+                      />
+                    </View>
+                  );
+                })}
+                <Button
+                  mode="outlined"
+                  icon="plus"
+                  onPress={addStep}
+                  accessibilityLabel={t('recipe.stepAdd')}
+                  testID="step-add"
+                  contentStyle={styles.buttonContent}
+                  style={styles.stepAdd}
+                >
+                  {t('recipe.stepAdd')}
+                </Button>
+              </View>
+            }
           />
 
-          {/* Wie auf der Liste: Das Eingabefeld folgt der Tastatur (ADR-035). */}
+          {/* Wie auf der Liste: Das Eingabefeld folgt der Tastatur (ADR-035).
+              Ein fokussiertes Schrittfeld bleibt dabei sichtbar: Das Polster
+              unten verkleinert die Liste, und Androids ScrollView holt das
+              fokussierte Feld bei einer Groessenaenderung wieder ins Bild. */}
           {/* Unten entweder das Eingabefeld oder die Detailzeile, nie beides -
               wie auf der Liste. */}
           <Animated.View style={keyboardPadding}>
@@ -608,15 +796,23 @@ export function RecipeScreen({ recipeId }: Props) {
                   title={item.name}
                   testID={`ingredient-${item.name}`}
                   accessibilityLabel={
-                    status === 'have'
-                      ? t('recipe.statusHave', { name: item.name })
-                      : status === 'onList'
-                        ? t('recipe.statusOnList', { name: item.name })
-                        : t('recipe.statusMissing', { name: item.name })
+                    status === 'staple'
+                      ? t('recipe.statusStaple', { name: item.name })
+                      : status === 'have'
+                        ? t('recipe.statusHave', { name: item.name })
+                        : status === 'onList'
+                          ? t('recipe.statusOnList', { name: item.name })
+                          : t('recipe.statusMissing', { name: item.name })
                   }
                   style={styles.row}
                   left={(props) =>
-                    status === 'have' ? (
+                    status === 'staple' ? (
+                      <List.Icon
+                        {...props}
+                        icon="home-outline"
+                        color={theme.colors.onSurfaceVariant}
+                      />
+                    ) : status === 'have' ? (
                       <List.Icon {...props} icon="check" color={theme.colors.primary} />
                     ) : status === 'onList' ? (
                       <List.Icon {...props} icon="playlist-check" />
@@ -641,17 +837,54 @@ export function RecipeScreen({ recipeId }: Props) {
               );
             }}
             ListFooterComponent={
-              recipe?.note ? (
+              recipe && (steps.length > 0 || recipe.note) ? (
                 <View>
-                  <Text
-                    variant="titleSmall"
-                    style={[styles.sectionHeader, { color: theme.colors.primary }]}
-                  >
-                    {t('recipe.note')}
-                  </Text>
-                  <Text variant="bodyMedium" style={styles.note} testID="recipe-note-text">
-                    {recipe.note}
-                  </Text>
+                  {/* Zubereitung direkt unter den Zutaten, nur wenn es Schritte gibt. */}
+                  {steps.length > 0 ? (
+                    <View>
+                      <Text
+                        variant="titleSmall"
+                        style={[styles.sectionHeader, { color: theme.colors.primary }]}
+                      >
+                        {t('recipe.steps')}
+                      </Text>
+                      {steps.map((step, index) => (
+                        <View
+                          key={step.id}
+                          accessible
+                          accessibilityLabel={t('recipe.stepLabel', {
+                            n: index + 1,
+                            text: step.text,
+                          })}
+                          testID={`step-${index}`}
+                          style={styles.stepRow}
+                        >
+                          <Text
+                            variant="labelLarge"
+                            style={[styles.stepNumber, { color: theme.colors.primary }]}
+                          >
+                            {index + 1}
+                          </Text>
+                          <Text variant="bodyMedium" style={styles.stepText}>
+                            {step.text}
+                          </Text>
+                        </View>
+                      ))}
+                    </View>
+                  ) : null}
+                  {recipe.note ? (
+                    <View>
+                      <Text
+                        variant="titleSmall"
+                        style={[styles.sectionHeader, { color: theme.colors.primary }]}
+                      >
+                        {t('recipe.note')}
+                      </Text>
+                      <Text variant="bodyMedium" style={styles.note} testID="recipe-note-text">
+                        {recipe.note}
+                      </Text>
+                    </View>
+                  ) : null}
                 </View>
               ) : null
             }
@@ -756,6 +989,34 @@ const styles = StyleSheet.create({
   note: {
     paddingHorizontal: 16,
     paddingBottom: 16,
+  },
+  stepRow: {
+    flexDirection: 'row',
+    gap: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+  },
+  stepNumber: {
+    minWidth: 20,
+    textAlign: 'right',
+  },
+  stepText: {
+    flex: 1,
+  },
+  stepEditRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  stepInput: {
+    flex: 1,
+  },
+  stepAdd: {
+    alignSelf: 'flex-start',
+    marginBottom: 16,
+  },
+  buttonContent: {
+    minHeight: 48,
   },
   // Wie der Fussbereich von Vorrat und Einkaufsliste.
   footer: {

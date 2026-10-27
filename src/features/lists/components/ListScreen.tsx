@@ -67,6 +67,7 @@ import { buildShareText, SHARE_COPY_HINT_KEY } from '@/features/transfer/logic';
 import { buildSharedListForList } from '@/features/transfer/repository';
 import { shareList } from '@/features/transfer/share';
 import { getFlag, setFlag } from '@/db/appState';
+import { goTo } from '@/lib/navigation';
 import { useKeyboardHeight } from '@/lib/useKeyboardHeight';
 
 /**
@@ -351,12 +352,13 @@ export function ListScreen({ listId }: Props) {
             router.back() war hier falsch: Startet die App direkt auf einer
             Liste, liegt darunter die Einstiegsroute "/", und die leitet sofort
             wieder auf dieselbe Liste. Der Knopf tat dann sichtbar nichts.
-            navigate springt zu einer schon vorhandenen Uebersicht zurueck und
-            legt sonst eine an. */}
+            goTo geht zu einer schon vorhandenen Uebersicht zurueck und setzt
+            sonst eine an die Stelle der Liste. router.navigate tat das nicht,
+            es legte jedes Mal eine neue Uebersicht obendrauf (ADR-036). */}
         <Appbar.BackAction
           onPress={() => {
             void setLastRoute(ROUTE_OVERVIEW);
-            router.navigate('/listen');
+            goTo('/listen');
           }}
           accessibilityLabel={t('list.back')}
           testID="back-to-lists"

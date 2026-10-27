@@ -8,11 +8,15 @@
 # "Rezepte zuruecksetzen" (ADR-031: Zuruecksetzen fasst nur Mitgeliefertes an).
 #
 # Nebenbei prueft der Flow die i18next-Pluralformen auf dem Geraet
-# ("5 fehlen", "5 Artikel auf die Liste gesetzt", "35 Gerichte
+# ("4 fehlen", "4 Artikel auf die Liste gesetzt", "35 Gerichte
 # wiederhergestellt") - die Unit-Tests laufen unter Node, nicht unter Hermes.
 #
-# Zahlen aus src/db/seed/recipes.json: 35 Gerichte; Pfannkuchen hat fuenf
-# Zutaten (Mehl, Milch, Eier, Butter, Marmelade).
+# Zahlen aus src/db/seed/recipes.json: 35 Gerichte; Pfannkuchen hat seit M16
+# sieben Zutaten (Mehl, Milch, Eier, Butter, Marmelade, Salz, Vanillezucker).
+# Drei davon sind Grundvorrat (products.json: "staple": true fuer Mehl, Salz,
+# Vanillezucker) und zaehlen weder als fehlend noch kommen sie auf die Liste
+# (ADR-047). Bleiben vier: Milch, Eier, Butter, Marmelade. Bis M15 waren es
+# fuenf - Mehl war damals keine Grundzutat und stand mit auf der Liste.
 #
 # Die Rezeptliste ist laenger als ein Bildschirm, deshalb scrollUntilVisible
 # statt eines blossen Wartens auf die Zeile.
@@ -63,10 +67,11 @@ appId: de.toshopping.app
     timeout: 15000
 - assertVisible:
     id: 'ingredient-Eier'
-# Nichts im Vorrat: alle fuenf Zutaten fehlen.
+# Nichts im Vorrat, aber Mehl, Salz und Vanillezucker sind Grundvorrat:
+# Von sieben Zutaten fehlen vier (ADR-047).
 - assertVisible:
     id: 'recipe-missing'
-    text: '5 fehlen'
+    text: '4 fehlen'
 - tapOn:
     id: 'recipe-week-switch'
 - waitForAnimationToEnd
@@ -88,7 +93,8 @@ appId: de.toshopping.app
     visible:
       id: 'recipes-snackbar'
     timeout: 15000
-- assertVisible: '5 Artikel auf die Liste gesetzt'
+# Vier, nicht sieben: Grundvorrat geht nicht automatisch auf die Liste.
+- assertVisible: '4 Artikel auf die Liste gesetzt'
 
 # --- Einkaufen: alles abhaken, abschliessen ---
 - tapOn:
@@ -99,16 +105,14 @@ appId: de.toshopping.app
     timeout: 15000
 - tapOn:
     id: 'list-Einkauf'
+# Mehl steht nicht auf der Liste - es ist Grundvorrat (ADR-047).
 - extendedWaitUntil:
     visible:
-      id: 'item-Mehl'
+      id: 'item-Milch'
     timeout: 15000
 - waitForAnimationToEnd
-- tapOn: 'Mehl abhaken'
-- extendedWaitUntil:
-    notVisible:
-      id: 'item-Mehl'
-    timeout: 15000
+- assertNotVisible:
+    id: 'item-Mehl'
 - tapOn: 'Milch abhaken'
 - extendedWaitUntil:
     notVisible:
@@ -227,6 +231,12 @@ appId: de.toshopping.app
     timeout: 15000
 - tapOn:
     id: 'recipes-reset-confirm'
+# Seit M16 schreibt das Zuruecksetzen zu jedem der 35 Gerichte auch die
+# Schritte neu (ADR-047), rund 1000 Zeilen. Auf dem Emulator dauert das etwa
+# 4 Sekunden. Die 19 Sekunden, fuer die hier zeitweise 60 s Wartezeit standen,
+# kamen nicht vom Schreiben, sondern von liegengebliebenen Screens: Jeder
+# Zurueck-Tipp legte die Uebersicht neu obendrauf, und jede hoerte mit
+# (ADR-036, Korrektur vom 2026-10-27).
 - extendedWaitUntil:
     visible:
       id: 'recipes-snackbar'

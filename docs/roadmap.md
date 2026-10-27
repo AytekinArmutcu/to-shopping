@@ -53,6 +53,7 @@ Die beiden zuletzt geplanten Meilensteine **M10 (Vorschläge) und M11 (Vorlagen)
 | M13 | Vorrat | 8 | Was zu Hause ist, ohne Buchführung |
 | M14 | Rezepte und Wochenplan | 12 | Kochen aus dem, was da ist |
 | M15 | Widget | 8 | Die Liste ohne App-Start |
+| M16 | Rezepte vertiefen | 14 | Schritte und Gewürze, Grundvorrat zählt nicht als fehlend |
 
 ---
 
@@ -336,6 +337,23 @@ Entschieden am 27. Oktober 2026, nachdem die App sieben Wochen täglich in Gebra
 | T-15.3 | Abschnitt in `abnahme.md`, Pflichtpunkt in `architecture.md` §3.4 (zweite Stelle, die das Schema kennt), Doku | – | 1 | Gate 5 deckt ab, was Gate 4 nicht kann |
 
 **Abnahme:** Das Widget überlebt einen Neustart des Telefons und einen `expo prebuild --clean`.
+
+---
+
+### M16 – Rezepte vertiefen
+
+**Ziel:** Schritte und Gewürze, ohne dass der Rezeptteil zum Kochbuch wird (ADR-047). Entschieden am 27. Oktober 2026 nach dem ersten Blick auf den Grundstock – gegen die Empfehlung eines Freitextfelds, auf Wunsch des Auftraggebers.
+
+| ID | Aufgabe | FR | h | Fertig, wenn … |
+|---|---|---|---|---|
+| T-16.1 | Tabelle `recipe_steps` (recipe_id CASCADE, position, text ≤ 500), Spalte `products.is_staple`, Migration 0003, Schema-Tests | FR-10.9, FR-4.5 | 1 | Migration liegt vor, 0000–0002 unverändert |
+| T-16.2 | Katalog: ~10 gängige Gewürze als Grundvorrat; Staple-Kennzeichen für Salz, Pfeffer, Zucker, Mehl, Öle, Essig, Senf, Gemüsebrühe; einmaliges Nachsäen auf Bestandsgeräten über `catalog_seed_version` | FR-4.5 | 2 | Test: alle Seed-Grundvorrat-IDs existieren; Nachsäen fasst gelöschte/umbenannte Produkte nicht an |
+| T-16.3 | Reine Logik: Status `staple` in `planRecipeShopping`, Übersicht und Wochenplan zählen Grundvorrat nicht; Schritt-Helfer (säubern, renummerieren, leere verwerfen) | FR-10.9, FR-10.10 | 2 | Tests: Grundvorrat nie „fehlt", nie auf der Liste; Schritte 1..n |
+| T-16.4 | Grundstock: Schritte (3–6 je Gericht) und Gewürze in `recipes.json`; `buildRecipeRows` liefert Schritt-Zeilen; Validierung | FR-10.2 | 3 | Jedes Gericht hat Schritte; jede Zutat existiert; Schritte ≤ 500 Zeichen |
+| T-16.5 | Repository (Schritte in create/update/reset; Staple-Umschalter im Katalog) und Screens: Schritte in Ansicht und Editor mit Pfeilen (ADR-028), Grundvorrat-Kennzeichen an Zutaten, Checkbox „Grundvorrat" im Produkt-Dialog | FR-10.9, 10.10, 4.5 | 4 | Skizze umgesetzt, 48 dp, Beschriftungen, hell und dunkel |
+| T-16.6 | Sicherung (`recipeSteps` optional, Versionsmerker zurücksetzen), E2E `rezept-schritte.yaml`, Doku | FR-10.8 | 2 | Flow grün; `architecture.md` kennt Tabelle, Spalte und Regel |
+
+**Abnahme:** Pfannkuchen zeigt Schritte und „Alles da", obwohl Salz draufsteht. Ein eigener Schritt lässt sich anlegen, umsortieren, löschen.
 
 ---
 

@@ -7,6 +7,7 @@ import {
   products,
   purchaseHistory,
   recipeItems,
+  recipeSteps,
   recipes,
   templateItems,
   weeklyPlan,
@@ -92,5 +93,18 @@ describe('Fremdschluessel-Regeln', () => {
     expect(config.uniqueConstraints).toHaveLength(0);
     // Gegenprobe: bei products greift dieselbe Abfrage.
     expect(getTableConfig(products).indexes.some((entry) => entry.config.unique)).toBe(true);
+  });
+});
+
+describe('Rezeptschritte und Grundvorrat (T-16.1)', () => {
+  it('nimmt beim Loeschen eines Rezepts seine Schritte mit (T-16.1)', () => {
+    expect(onDeleteOf(recipeSteps, 'recipe_id')).toBe('cascade');
+  });
+
+  it('fuehrt products.is_staple mit Default false (T-16.1)', () => {
+    const column = getTableConfig(products).columns.find((entry) => entry.name === 'is_staple');
+    expect(column).toBeDefined();
+    expect(column?.notNull).toBe(true);
+    expect(column?.default).toBe(false);
   });
 });

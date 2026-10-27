@@ -50,6 +50,7 @@ describe('buildBackup und serializeBackup', () => {
         'pantry',
         'recipes',
         'recipeItems',
+        'recipeSteps',
         'weeklyPlan',
       ].sort(),
     );
@@ -153,7 +154,15 @@ describe('optionale Tabellen (ADR-046)', () => {
       'templateItems',
       'purchaseHistory',
     ]);
-    expect([...OPTIONAL_BACKUP_TABLES]).toEqual(['pantry', 'recipes', 'recipeItems', 'weeklyPlan']);
+    // recipeSteps kam mit M16 dazu (T-16.6) - hinten an die optionale Liste,
+    // nie an die Pflichtliste.
+    expect([...OPTIONAL_BACKUP_TABLES]).toEqual([
+      'pantry',
+      'recipes',
+      'recipeItems',
+      'recipeSteps',
+      'weeklyPlan',
+    ]);
     expect(BACKUP_VERSION).toBe(1);
   });
 
@@ -220,12 +229,18 @@ describe('missingOptional (T-14.6)', () => {
       unknown
     >;
 
-  it('nennt bei einer V1-Datei alle vier optionalen Tabellen (T-14.6)', () => {
+  it('nennt bei einer V1-Datei alle optionalen Tabellen (T-14.6, T-16.6)', () => {
     const result = parseBackup(datei(v1Daten()), 1);
 
     expect(result.ok).toBe(true);
     if (result.ok) {
-      expect(result.missingOptional).toEqual(['pantry', 'recipes', 'recipeItems', 'weeklyPlan']);
+      expect(result.missingOptional).toEqual([
+        'pantry',
+        'recipes',
+        'recipeItems',
+        'recipeSteps',
+        'weeklyPlan',
+      ]);
       expect(result.file.missingOptional).toEqual(result.missingOptional);
       expect(result.file.data.recipes).toEqual([]);
     }
@@ -252,6 +267,32 @@ describe('missingOptional (T-14.6)', () => {
       expect(result.missingOptional).toEqual(['weeklyPlan']);
       expect(result.file.data.recipes).toEqual([{ id: 'r-1', name: 'Pfannkuchen' }]);
     }
+  });
+
+  it('nennt genau recipeSteps bei einer V2-Datei aus der Zeit vor M16 (T-16.6)', () => {
+    // So sah eine Sicherung zwischen M14 und M16 aus: Rezepte und Zutaten da,
+    // Schritte gab es noch nicht. restoreBackup setzt daraufhin den
+    // Katalog-Merker zurueck (ADR-047, letzter Absatz).
+    const data = { ...leer() } as Record<string, unknown>;
+    data.recipes = [{ id: 'r-1', name: 'Pfannkuchen' }];
+    delete data.recipeSteps;
+
+    const result = parseBackup(datei(data), 1);
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.missingOptional).toEqual(['recipeSteps']);
+      expect(result.file.missingOptional).toEqual(['recipeSteps']);
+      expect(result.file.data.recipeSteps).toEqual([]);
+      expect(result.file.data.recipes).toEqual([{ id: 'r-1', name: 'Pfannkuchen' }]);
+    }
+  });
+
+  it('lehnt eine Datei ab, deren recipeSteps keine Liste von Zeilen ist (T-16.6)', () => {
+    expect(parseBackup(datei({ ...leer(), recipeSteps: 'Teig ruehren' }), 1)).toEqual({
+      ok: false,
+      reason: 'unlesbar',
+    });
   });
 
   it('buildBackup schreibt die Angabe nicht in die Datei (T-14.6)', () => {

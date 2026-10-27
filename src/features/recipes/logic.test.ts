@@ -5,8 +5,11 @@ import {
   buildRecipeOverview,
   cleanRecipeName,
   cleanRecipeNote,
+  cleanRecipeSteps,
   detachMissingProducts,
   MAX_RECIPE_NOTE_LENGTH,
+  MAX_STEP_LENGTH,
+  moveStep,
   planRecipeReset,
   planRecipeShopping,
   planWeeklyShopping,
@@ -138,7 +141,12 @@ describe('planRecipeShopping', () => {
   });
 
   it('kommt mit einem leeren Rezept zurecht (T-14.3)', () => {
-    expect(planRecipeShopping([], ['p-milch'], [])).toEqual({ have: [], onList: [], missing: [] });
+    expect(planRecipeShopping([], ['p-milch'], [])).toEqual({
+      staple: [],
+      have: [],
+      onList: [],
+      missing: [],
+    });
   });
 });
 
@@ -309,11 +317,13 @@ describe('planWeeklyShopping', () => {
       productIds: [],
       unresolvedNames: [],
       skipped: 0,
+      staples: 0,
     });
     expect(planWeeklyShopping([[]], [], [])).toEqual({
       productIds: [],
       unresolvedNames: [],
       skipped: 0,
+      staples: 0,
     });
   });
 });
@@ -423,5 +433,191 @@ describe('detachMissingProducts', () => {
     ];
 
     expect(detachMissingProducts(items, ['p-ei'])).toEqual(items);
+  });
+});
+
+describe('Grundvorrat', () => {
+  it('eine Grundvorrat-Zutat landet in staple, nie in missing, auch ohne Vorrat (T-16.3)', () => {
+    const plan = planRecipeShopping([zutat('Salz'), zutat('Nudeln')], [], [], ['p-salz']);
+
+    expect(namen(plan.staple)).toEqual(['Salz']);
+    expect(namen(plan.missing)).toEqual(['Nudeln']);
+    expect(plan.have).toEqual([]);
+    expect(plan.onList).toEqual([]);
+  });
+
+  it('Grundvorrat gewinnt ueber Vorrat (T-16.3)', () => {
+    const plan = planRecipeShopping([zutat('Salz')], ['p-salz'], [], ['p-salz']);
+
+    expect(namen(plan.staple)).toEqual(['Salz']);
+    expect(plan.have).toEqual([]);
+  });
+
+  it('Grundvorrat gewinnt ueber "auf der Liste" (T-16.3)', () => {
+    const plan = planRecipeShopping([zutat('Salz')], [], [eintrag('Salz', 'p-salz')], ['p-salz']);
+
+    expect(namen(plan.staple)).toEqual(['Salz']);
+    expect(plan.onList).toEqual([]);
+    expect(plan.missing).toEqual([]);
+  });
+
+  it('eine Zutat ohne productId ist nie Grundvorrat (T-16.3)', () => {
+    // Das Kennzeichen haengt am Produkt (ADR-047) - ohne Produkt kein Grundvorrat,
+    // auch nicht ueber einen gleichlautenden Namen.
+    const plan = planRecipeShopping([zutat('Salz', null)], [], [], ['p-salz']);
+
+    expect(plan.staple).toEqual([]);
+    expect(namen(plan.missing)).toEqual(['Salz']);
+  });
+
+  it('behaelt in staple die Reihenfolge der Eingabe (T-16.3)', () => {
+    const plan = planRecipeShopping(
+      [zutat('Pfeffer'), zutat('Nudeln'), zutat('Salz'), zutat('Oel')],
+      ['p-nudeln'],
+      [],
+      ['p-oel', 'p-salz', 'p-pfeffer'],
+    );
+
+    expect(namen(plan.staple)).toEqual(['Pfeffer', 'Salz', 'Oel']);
+    expect(namen(plan.have)).toEqual(['Nudeln']);
+  });
+
+  it('Uebersicht: missingCount ohne Grundvorrat, totalCount mit (T-16.3)', () => {
+    const rows = buildRecipeOverview(
+      [rezept('Bolognese')],
+      { 'r-bolognese': zutaten(zutat('Salz'), zutat('Nudeln'), zutat('Pfeffer'), zutat('Hack')) },
+      ['p-nudeln'],
+      [],
+      ['p-salz', 'p-pfeffer'],
+    );
+
+    expect(rows[0]?.totalCount).toBe(4);
+    expect(rows[0]?.missingCount).toBe(1);
+  });
+
+  it('Uebersicht: nur Grundvorrat und Vorrat heisst "Alles da" (T-16.3)', () => {
+    const rows = buildRecipeOverview(
+      [rezept('Bolognese'), rezept('Pfannkuchen')],
+      {
+        'r-bolognese': zutaten(zutat('Nudeln'), zutat('Hack')),
+        'r-pfannkuchen': zutaten(zutat('Salz'), zutat('Ei'), zutat('Mehl')),
+      },
+      ['p-ei'],
+      [],
+      ['p-salz', 'p-mehl'],
+    );
+
+    expect(rows.map((row) => [row.name, row.missingCount])).toEqual([
+      ['Pfannkuchen', 0],
+      ['Bolognese', 2],
+    ]);
+  });
+
+  it('Uebersicht: missingNames nennt keinen Grundvorrat (T-16.3)', () => {
+    const rows = buildRecipeOverview(
+      [rezept('Bolognese')],
+      { 'r-bolognese': zutaten(zutat('Salz'), zutat('Pfeffer'), zutat('Nudeln'), zutat('Hack')) },
+      [],
+      [],
+      ['p-salz', 'p-pfeffer'],
+    );
+
+    expect(rows[0]?.missingNames).toEqual(['Nudeln', 'Hack']);
+  });
+
+  it('Wochenplan: Grundvorrat nicht in productIds, nicht in skipped, gezaehlt in staples (T-16.3)', () => {
+    const plan = planWeeklyShopping(
+      [
+        zutaten(zutat('Salz'), zutat('Nudeln'), zutat('Zwiebel')),
+        zutaten(zutat('Salz'), zutat('Pfeffer'), zutat('Kartoffeln')),
+      ],
+      ['p-zwiebel', 'p-salz'],
+      [eintrag('Pfeffer', 'p-pfeffer')],
+      ['p-salz', 'p-pfeffer'],
+    );
+
+    expect(plan.productIds).toEqual(['p-nudeln', 'p-kartoffeln']);
+    // Nur die Zwiebel war da - Salz und Pfeffer waren nie gefragt.
+    expect(plan.skipped).toBe(1);
+    // Vor der Vereinigung: Salz zweimal, Pfeffer einmal.
+    expect(plan.staples).toBe(3);
+  });
+
+  it('Wochenplan: Zutat ohne Produkt bleibt unaufgeloest, auch bei Grundvorrat-Namen (T-16.3)', () => {
+    const plan = planWeeklyShopping([zutaten(zutat('Salz', null))], [], [], ['p-salz']);
+
+    expect(plan.unresolvedNames).toEqual(['Salz']);
+    expect(plan.staples).toBe(0);
+  });
+
+  it('ohne Grundvorrat verhaelt sich alles wie bisher (T-16.3)', () => {
+    const items = zutaten(zutat('Salz'), zutat('Nudeln'), zutat('Hack'));
+    const targets = [eintrag('Hack', 'p-hack')];
+
+    expect(planRecipeShopping(items, ['p-salz'], targets, [])).toEqual(
+      planRecipeShopping(items, ['p-salz'], targets),
+    );
+    expect(planRecipeShopping(items, ['p-salz'], targets).staple).toEqual([]);
+    expect(planWeeklyShopping([items], [], targets).staples).toBe(0);
+    expect(
+      buildRecipeOverview([rezept('Bolognese')], { 'r-bolognese': items }, [], [])[0]?.missingCount,
+    ).toBe(3);
+  });
+});
+
+describe('cleanRecipeSteps', () => {
+  it('verwirft leere Schritte und zaehlt die Positionen 0..n durch (T-16.3)', () => {
+    expect(cleanRecipeSteps(['', 'Wasser kochen', '   ', ' \n\t ', 'Nudeln rein'])).toEqual([
+      { position: 0, text: 'Wasser kochen' },
+      { position: 1, text: 'Nudeln rein' },
+    ]);
+  });
+
+  it('kollabiert Leerraum innerhalb einer Zeile, Zeilenumbrueche bleiben (T-16.3)', () => {
+    expect(cleanRecipeSteps(['  Zwiebel   wuerfeln\t und \n  glasig   anbraten  '])).toEqual([
+      { position: 0, text: 'Zwiebel wuerfeln und\nglasig anbraten' },
+    ]);
+  });
+
+  it('kuerzt auf 500 Zeichen (T-16.3)', () => {
+    const [step] = cleanRecipeSteps(['x'.repeat(800)]);
+
+    expect(MAX_STEP_LENGTH).toBe(500);
+    expect(step?.text).toHaveLength(MAX_STEP_LENGTH);
+  });
+
+  it('behaelt die Reihenfolge der Eingabe (T-16.3)', () => {
+    expect(cleanRecipeSteps(['c', 'a', 'b']).map((step) => step.text)).toEqual(['c', 'a', 'b']);
+    expect(cleanRecipeSteps([])).toEqual([]);
+  });
+});
+
+describe('moveStep', () => {
+  it('verschiebt einen Schritt nach vorn (T-16.3)', () => {
+    expect(moveStep(['a', 'b', 'c'], 2, 1)).toEqual(['a', 'c', 'b']);
+    expect(moveStep(['a', 'b', 'c'], 2, 0)).toEqual(['c', 'a', 'b']);
+  });
+
+  it('verschiebt einen Schritt nach hinten (T-16.3)', () => {
+    expect(moveStep(['a', 'b', 'c'], 0, 1)).toEqual(['b', 'a', 'c']);
+    expect(moveStep(['a', 'b', 'c'], 0, 2)).toEqual(['b', 'c', 'a']);
+  });
+
+  it('laesst die Reihenfolge bei ungueltigem Index unveraendert (T-16.3)', () => {
+    const steps = ['a', 'b', 'c'];
+
+    expect(moveStep(steps, -1, 0)).toEqual(steps);
+    expect(moveStep(steps, 0, 3)).toEqual(steps);
+    expect(moveStep(steps, 3, 0)).toEqual(steps);
+    expect(moveStep(steps, 0.5, 1)).toEqual(steps);
+    expect(moveStep([], 0, 0)).toEqual([]);
+  });
+
+  it('veraendert die Eingabe nicht und gibt ein neues Array zurueck (T-16.3)', () => {
+    const steps = ['a', 'b', 'c'];
+    const moved = moveStep(steps, 0, 2);
+
+    expect(steps).toEqual(['a', 'b', 'c']);
+    expect(moved).not.toBe(steps);
   });
 });

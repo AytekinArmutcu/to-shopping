@@ -722,10 +722,23 @@ Der Zurueck-Pfeil im Listen-Screen fuehrte `router.back()` aus, mit `router.repl
 Der Grund: Startet die App direkt auf einer Liste, liegt darunter die Einstiegsroute `/`. Die zeigt nichts an, sondern leitet auf die zuletzt genutzte Liste weiter (FR-1.5). Ein Schritt zurueck landet also auf `/` – und `/` schickt einen sofort dorthin zurueck, wo man herkam. Dasselbe gilt fuer die **System-Zurueck-Taste**.
 
 **Entscheidung**
-Der Zurueck-Pfeil navigiert zur Uebersicht als benanntem Ziel (`router.navigate('/listen')`), statt einen Schritt im Verlauf zurueckzugehen.
+Der Zurueck-Pfeil fuehrt zur Uebersicht als benanntem Ziel, statt einen Schritt im Verlauf zurueckzugehen. Seit dem 2026-10-27 geschieht das in allen Screens mit benanntem Ziel ueber `goTo(href)` aus `src/lib/navigation.ts`, das `router.dismissTo(href)` aufruft: Liegt das Ziel im Verlauf, geht es bis dorthin zurueck und schliesst alles darueber; liegt es nicht darin, ersetzt es den aktuellen Screen. Bis dahin stand hier `router.navigate('/listen')` – warum das falsch war, steht in der Korrektur unten.
 
 **Konsequenz**
 Der Knopf tut immer dasselbe, unabhaengig davon, wie der Nutzer auf die Liste gekommen ist. Allgemeiner: Eine Route, die nur weiterleitet, darf kein Ziel im Verlauf sein – wer dorthin zurueckkehrt, dreht sich im Kreis.
+
+**Korrektur vom 2026-10-27: `navigate` ging nie zurueck**
+Die urspruengliche Entscheidung nahm an, `router.navigate` springe zu einer schon vorhandenen Uebersicht zurueck und lege nur sonst eine an. In expo-router 57 (React Navigation 7) stimmt das nicht. Der Stack-Router (`node_modules/expo-router/build/layouts/StackClient.js`, Fall `NAVIGATE`) nimmt einen vorhandenen Screen nur, wenn er **ganz oben** liegt. Liegt das Ziel weiter unten, legt `navigate` einen neuen Screen obendrauf; zurueck ginge es nur mit der Option `pop`, die `router.navigate` nicht durchreicht. Verglichen wird dabei nur der Routenname – Parameter wie `/rezept?recipeId=…` spielen keine Rolle.
+
+Auf dem Emulator nachgewiesen, mit voruebergehenden Protokollausgaben beim Mounten und Unmounten: Nach viermal „Pfannkuchen oeffnen, Zurueck" lag der Stapel bei `liste > listen > rezepte > rezept > rezepte > … > rezepte` – fuenf Rezeptuebersichten und vier Rezeptscreens, keiner je unmountet. Jeder hielt seine Live-Abfragen (ADR-027), und expo-sqlite meldet jede geaenderte Zeile einzeln. „Rezepte zuruecksetzen" erzeugt 979 Meldungen (35 Gerichte, 636 Zutaten, 308 Schritte), und jede loeste die passenden Abfragen in allen neun Screens aus statt in einem. Bis zur Snackbar vergingen 22 s statt rund 4 s. Derselbe Aufruf steckte im Listen-Screen und im Vorrat; nach demselben Router-Code liess dort jede Runde ebenso einen Screen liegen.
+
+`dismissTo` erfuellt beide Anforderungen: Das Ziel ist benannt (nie `/`), und der Verlauf waechst nicht. Nachher, gleicher Ablauf: ein Rezeptscreen, der beim Zurueck unmountet, eine einzige Rezeptuebersicht, und der Reset dauert 3,4–4,1 s – nach vier Runden so lange wie nach einem frischen Start.
+
+*Verworfen:* `router.back()` mit `canGoBack()` – das ist der Schritt zurueck, den diese Entscheidung ausschliesst. `router.replace` – ersetzt nur den obersten Screen und laesst alles darunter liegen. `dismissAll` – geht zum ersten Screen des Stapels, und das muss nicht die Uebersicht sein.
+
+*Was es kostet:* Startet die App auf einer Liste, liegt darunter keine Uebersicht; `goTo('/listen')` ersetzt dann die Liste, statt die Uebersicht darueberzulegen. Von der Uebersicht aus verlaesst die System-Zurueck-Taste danach die App, statt zur Startliste zurueckzufuehren.
+
+*Was bleibt:* Screens, die nur per `push` erreichbar sind (Katalog, Produkte, Ladenlayout, Vorlagen, Sicherung, Diagnose), gehen weiter mit `router.back()` zurueck: Dort fuehrt ein Schritt zurueck immer zum Aufrufer, und `back` stapelt nichts. Der Test `src/lib/navigation.test.tsx` faehrt den echten Router und haelt fest, dass `navigate` stapelt und `goTo` nicht – aendert ein Update von expo-router dieses Verhalten, schlaegt er fehl.
 
 ---
 
@@ -1008,6 +1021,35 @@ Eine wiederhergestellte V1-Sicherung hat einen leeren Vorrat und nur den Rezept-
 Damit der Grundstock nach einer V1-Wiederherstellung tatsächlich zurückkommt, braucht es einen Zusatz (T-14.6): Die Wiederherstellung **ersetzt** den Bestand, die Rezepttabelle ist danach leer – aber der Merker `recipes_seeded` in `app_state` steht noch, und `seedRecipesOnce` würde nie wieder säen. `parseBackup` meldet deshalb zusätzlich `missingOptional`, welche optionalen Tabellen in der Datei fehlten. Fehlte `recipes`, setzt `restoreBackup` den Merker **nach** seiner Transaktion auf `false`; beim nächsten Start sät `seedRecipesOnce`. Eine Datei mit vorhandener, aber leerer `recipes`-Tabelle lässt den Merker stehen – dort hat der Nutzer seine Gerichte bewusst gelöscht. `app_state` selbst bleibt aus der Sicherung ausgeschlossen; verworfen wurde, den Merker in die Sicherung aufzunehmen, weil er eine Geräte-Angabe ist und eine V1-Datei ihn ohnehin nicht hätte.
 
 Jede weitere neue Tabelle kommt in die optionale Liste. Die Pflichtliste wächst nie mehr.
+
+---
+
+## ADR-047 – Rezepte bekommen nummerierte Schritte, aber nur Text; Grundzutaten zählen nicht als fehlend
+
+**Datum:** 2026-10-27 · **Status:** Angenommen · **Ändert ADR-044 in einem Punkt**
+
+**Kontext**
+ADR-044 hat Zubereitungsschritte ausgeschlossen: „Ein Rezept ist eine Zutatenliste mit Namen und einer Notiz." Nach dem ersten Blick auf den Grundstock wünscht sich der Auftraggeber Schritte – und fragt nach Gewürzen, die im Grundstock fehlen. Der Tech Lead hat ein Freitextfeld empfohlen, der Auftraggeber hat sich für nummerierte Schritte entschieden. Das ist seine Entscheidung; dieses ADR hält fest, wie weit die Tür damit aufgeht.
+
+Zu den Gewürzen zeigten die Zahlen zwei getrennte Probleme: Dem Katalog fehlen gängige Gewürze (Oregano, Curry, Zimt, Kümmel, Muskat), und Grundzutaten wie Salz, Pfeffer und Öl würden jedes Gericht als „3 fehlen" zeigen, bis der Vorrat sie kennt – weshalb der Grundstock Salz bisher gar nicht nennt.
+
+**Entscheidung**
+1. **Schritte:** Tabelle `recipe_steps` (`recipe_id` → CASCADE, `position`, `text` ≤ 500 Zeichen). In der Ansicht eine nummerierte Liste unter den Zutaten, im Bearbeiten Textfelder mit Pfeilen zum Umsortieren (ADR-028). **Die Grenze: Ein Schritt ist Text.** Keine Timer, keine Fotos, keine Portionen, keine Zutaten-Verknüpfung innerhalb eines Schritts. Wer das will, baut ein Kochbuch – und das ist weiterhin das Nicht-Ziel aus PRD §6.
+2. **Grundvorrat:** Kennzeichen `is_staple` am **Produkt**, im Katalog umschaltbar. Eine Zutat, deren Produkt Grundvorrat ist, steht im Rezept, zählt aber nicht als fehlend und geht nicht automatisch auf die Liste. Mitgeliefert gesetzt für Salz, Pfeffer, Zucker, Mehl, Speiseöl, Olivenöl, Essig, Senf, Gemüsebrühe und die neuen Gewürze.
+3. **Gewürze:** Rund zehn gängige Gewürze kommen in den Katalog, als Grundvorrat. Bestandsgeräte bekommen sie **einmalig** nachgesät (Merker `catalog_seed_version` in `app_state`), ohne dass gelöschte oder umbenannte Produkte angefasst werden (ADR-031).
+
+**Verworfene Alternativen**
+- *Ein Freitextfeld „Zubereitung".* Die Empfehlung: kleinste Form, kein neues Risiko. Vom Auftraggeber abgelehnt – er will die Schritte einzeln.
+- *Grundzutaten nur im Text erwähnen.* Kein Schema, aber eine Zutatenliste, die lügt: „Salz" fehlt dann in der Liste, obwohl man es braucht.
+- *Kennzeichen an der Zutat statt am Produkt.* Müsste in jedem Rezept neu gesetzt werden. Salz ist Grundvorrat, egal in welchem Gericht.
+- *Neue Katalogprodukte bei jedem Start nachsäen.* Würde gelöschte mitgelieferte Produkte zurückbringen – genau das, was ADR-031 verbietet. Deshalb ein Versionsmerker.
+
+**Konsequenz**
+Der Rezeptteil wächst um eine Tabelle und einen Editor. Die Grenze „nur Text" ist der Preis dafür, dass er nicht weiterwächst; sie steht hier, damit die nächste Erweiterung begründet werden muss.
+
+„Alles da" heißt ab jetzt: alles, was kein Grundvorrat ist, liegt im Vorrat. Wer Salz tatsächlich braucht, sieht es in der Zutatenliste mit eigenem Kennzeichen – und setzt es von Hand auf die Liste.
+
+Nach einer Wiederherstellung aus einer älteren Sicherung fehlt das Kennzeichen an den Produkten; die Wiederherstellung setzt deshalb den Versionsmerker zurück, und der nächste Start trägt die mitgelieferten Grundvorrat-Kennzeichen erneut ein (nur bei Seed-Produkten, nur wo das Kennzeichen fehlt).
 
 ---
 

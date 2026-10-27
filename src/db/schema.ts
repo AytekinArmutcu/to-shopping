@@ -39,6 +39,8 @@ export const products = sqliteTable(
     categoryId: text('category_id').references(() => categories.id, { onDelete: 'set null' }),
     defaultUnit: text('default_unit').notNull().default(DEFAULT_UNIT),
     isBuiltin: integer('is_builtin', { mode: 'boolean' }).notNull().default(false),
+    /** Grundvorrat (ADR-047): Salz, Pfeffer, Oel - steht im Rezept, zaehlt aber nicht als fehlend. */
+    isStaple: integer('is_staple', { mode: 'boolean' }).notNull().default(false),
     createdAt: integer('created_at').notNull().default(now),
   },
   (table) => [
@@ -176,6 +178,19 @@ export const weeklyPlan = sqliteTable('weekly_plan', {
   addedAt: integer('added_at').notNull().default(now),
 });
 
+/**
+ * Zubereitungsschritte eines Rezepts (ADR-047): bewusst nur Text, keine
+ * Zeiten, Bilder oder Zutatenbezuege. Reihenfolge ueber position.
+ */
+export const recipeSteps = sqliteTable('recipe_steps', {
+  id: text('id').primaryKey(),
+  recipeId: text('recipe_id')
+    .notNull()
+    .references(() => recipes.id, { onDelete: 'cascade' }),
+  position: integer('position').notNull().default(0),
+  text: text('text').notNull(),
+});
+
 /** Schluessel-Wert-Ablage fuer alles, was kein eigenes Schema verdient. */
 export const appState = sqliteTable('app_state', {
   key: text('key').primaryKey(),
@@ -193,3 +208,4 @@ export type PantryEntry = typeof pantry.$inferSelect;
 export type Recipe = typeof recipes.$inferSelect;
 export type RecipeItem = typeof recipeItems.$inferSelect;
 export type WeeklyPlanEntry = typeof weeklyPlan.$inferSelect;
+export type RecipeStep = typeof recipeSteps.$inferSelect;

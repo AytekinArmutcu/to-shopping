@@ -127,6 +127,14 @@ Nach einem echten Einkauf:
       Liste steht jede Zutat **einmal**, nichts, was im Vorrat ist
 - [ ] Ein eigenes Gericht anlegen, ein mitgeliefertes löschen →
       „Rezepte zurücksetzen" → das gelöschte ist zurück, **das eigene steht noch**
+- [ ] Pfannkuchen öffnen: Die **Schritte** stehen nummeriert unter den Zutaten
+      und sind ohne Zoomen lesbar, auch lange Schritte umbrechen sauber
+- [ ] Bearbeiten → Schritt hinzufügen, Text eingeben, mit dem Pfeil eine Stelle
+      nach oben schieben, speichern → er steht an der neuen Stelle; danach
+      wieder löschen → er ist weg, die Nummern schließen lückenlos auf
+- [ ] Katalog → Salz → Haken **Grundvorrat** abwählen, speichern → bei
+      Pfannkuchen fehlt jetzt **eins mehr**; Haken wieder setzen → die Zahl
+      geht zurück
 
 ## 10. Widget
 

@@ -41,13 +41,33 @@ export const MAX_RECIPE_NOTE_LENGTH = 200;
 /** Wie viele fehlende Zutaten eine Zeile der Uebersicht nennt (FR-10.3). */
 export const MISSING_NAMES_LIMIT = 2;
 
+/** Laenge eines Zubereitungsschritts - ein Schritt ist Text, kein Kapitel (ADR-047). */
+export const MAX_STEP_LENGTH = 500;
+
+/*
+ * Grundvorrat (FR-10.10, ADR-047): Salz, Pfeffer, Oel stehen im Rezept, weil
+ * man sie braucht - aber wuerde jedes Gericht "3 fehlen: Salz, Pfeffer, Oel"
+ * zeigen, bis der Vorrat sie kennt, waere die Zahl nur Rauschen. Deshalb gilt
+ * eine Zutat, deren Produkt Grundvorrat ist, nie als fehlend und geht nie
+ * automatisch auf die Liste. Das Kennzeichen haengt am Produkt; eine Zutat
+ * ohne productId kann deshalb nie Grundvorrat sein. Der Grundvorrat wird vor
+ * dem Vorrat geprueft: Liegt Salz zufaellig auch im Vorrat, bleibt es
+ * trotzdem Grundvorrat - so zeigt die Ansicht es immer mit demselben
+ * Kennzeichen.
+ */
+function isStaple(item: { productId: string | null }, staples: Set<string>): boolean {
+  return item.productId !== null && staples.has(item.productId);
+}
+
 /* ------------------------------------------------------------------ *
  * Zutat gegen Vorrat und Liste
  * ------------------------------------------------------------------ */
 
-export type IngredientStatus = 'have' | 'onList' | 'missing';
+export type IngredientStatus = 'staple' | 'have' | 'onList' | 'missing';
 
 export interface RecipeShoppingPlan<T> {
+  /** Produkt ist Grundvorrat - fehlt nie, geht nie automatisch auf die Liste (ADR-047). */
+  staple: T[];
   /** Liegt im Vorrat. */
   have: T[];
   /** Nicht im Vorrat, steht aber offen auf der Liste. */
@@ -75,29 +95,39 @@ export interface RecipeShoppingPlan<T> {
  * ja schon auf die Liste kommt. So geht sie nur einmal auf die Liste, und
  * darauf kommt es an.
  *
+ * Grundvorrat schlaegt beides (ADR-047, siehe isStaple): Eine Zutat, deren
+ * Produkt in stapleProductIds steht, landet in "staple" - auch wenn sie im
+ * Vorrat liegt oder offen auf der Liste steht. Ohne stapleProductIds (der
+ * Standard) ist "staple" leer und alles verhaelt sich wie vor T-16.3.
+ *
  * Jede Gruppe behaelt die Reihenfolge der Eingabe.
  */
 export function planRecipeShopping<T extends { productId: string | null; name: string }>(
   items: T[],
   pantryProductIds: string[],
   openListItems: TargetItem[],
+  stapleProductIds: string[] = [],
 ): RecipeShoppingPlan<T> {
   const pantry = new Set(pantryProductIds);
-  const statuses: IngredientStatus[] = items.map((item) =>
-    item.productId !== null && pantry.has(item.productId) ? 'have' : 'missing',
-  );
+  const staples = new Set(stapleProductIds);
+  const statuses: IngredientStatus[] = items.map((item) => {
+    if (isStaple(item, staples)) {
+      return 'staple';
+    }
+    return item.productId !== null && pantry.has(item.productId) ? 'have' : 'missing';
+  });
 
   // Ueber den Index statt ueber das Objekt selbst zuordnen: Dasselbe Objekt
   // kann zweimal in der Eingabe stehen, dann waere die Identitaet mehrdeutig.
   const candidates = items
     .map((item, index) => ({ productId: item.productId, name: item.name, index }))
-    .filter((candidate) => statuses[candidate.index] !== 'have');
+    .filter((candidate) => statuses[candidate.index] === 'missing');
 
   for (const candidate of planTemplateApply(candidates, openListItems).skipped) {
     statuses[candidate.index] = 'onList';
   }
 
-  const plan: RecipeShoppingPlan<T> = { have: [], onList: [], missing: [] };
+  const plan: RecipeShoppingPlan<T> = { staple: [], have: [], onList: [], missing: [] };
   items.forEach((item, index) => {
     plan[statuses[index] ?? 'missing'].push(item);
   });
@@ -125,6 +155,11 @@ export interface RecipeOverviewRow {
  * steht, spielt keine Rolle - "Alles da" soll heissen "ich kann heute kochen",
  * und was erst noch eingekauft werden muss, ist eben nicht da.
  *
+ * Grundvorrat fehlt nie (ADR-047, siehe isStaple): Er zaehlt weder in
+ * missingCount noch erscheint er in missingNames. totalCount bleibt die Zahl
+ * aller Zutaten, Grundvorrat eingeschlossen - die Zeile zeigt, wie gross das
+ * Rezept ist.
+ *
  * Sortiert nach Zahl der fehlenden Zutaten, dann alphabetisch nach deutschem
  * Alphabet, dann nach ID, damit gleichnamige Rezepte nicht springen.
  *
@@ -141,15 +176,20 @@ export function buildRecipeOverview(
   itemsByRecipe: Map<string, RecipeIngredient[]> | Record<string, RecipeIngredient[]>,
   pantryProductIds: string[],
   plannedRecipeIds: string[],
+  stapleProductIds: string[] = [],
 ): RecipeOverviewRow[] {
   const pantry = new Set(pantryProductIds);
   const planned = new Set(plannedRecipeIds);
+  const staples = new Set(stapleProductIds);
 
   const rows = recipes.map((recipe): RecipeOverviewRow => {
     const items = [...ingredientsOf(itemsByRecipe, recipe.id)].sort(
       (a, b) => a.position - b.position,
     );
-    const missing = items.filter((item) => item.productId === null || !pantry.has(item.productId));
+    const missing = items.filter(
+      (item) =>
+        !isStaple(item, staples) && (item.productId === null || !pantry.has(item.productId)),
+    );
 
     return {
       id: recipe.id,
@@ -199,6 +239,11 @@ export interface WeeklyShoppingPlan {
   unresolvedNames: string[];
   /** Zutaten, die wegen Vorrat oder Liste nicht gebraucht wurden, ueber alle Rezepte gezaehlt. */
   skipped: number;
+  /**
+   * Grundvorrat-Zutaten ueber alle Rezepte gezaehlt (ADR-047). Getrennt von
+   * skipped: Sie wurden nicht uebersprungen, sie waren nie gefragt.
+   */
+  staples: number;
 }
 
 /**
@@ -219,21 +264,27 @@ export interface WeeklyShoppingPlan {
  *
  * skipped zaehlt vor der Vereinigung: Wie viele Zutaten ueber alle Rezepte
  * hinweg schon da waren oder schon auf der Liste standen.
+ *
+ * Grundvorrat (ADR-047, siehe isStaple) kommt nie auf die Liste und zaehlt
+ * nicht in skipped, sondern - ebenfalls vor der Vereinigung - in staples.
  */
 export function planWeeklyShopping(
   plannedItems: RecipeIngredient[][],
   pantryProductIds: string[],
   openListItems: TargetItem[],
+  stapleProductIds: string[] = [],
 ): WeeklyShoppingPlan {
   const productIds: string[] = [];
   const unresolvedNames: string[] = [];
   const seenProducts = new Set<string>();
   const seenNames = new Set<string>();
   let skipped = 0;
+  let staples = 0;
 
   for (const items of plannedItems) {
-    const plan = planRecipeShopping(items, pantryProductIds, openListItems);
+    const plan = planRecipeShopping(items, pantryProductIds, openListItems, stapleProductIds);
     skipped += plan.have.length + plan.onList.length;
+    staples += plan.staple.length;
 
     for (const item of plan.missing) {
       if (item.productId !== null) {
@@ -252,7 +303,7 @@ export function planWeeklyShopping(
     }
   }
 
-  return { productIds, unresolvedNames, skipped };
+  return { productIds, unresolvedNames, skipped, staples };
 }
 
 /* ------------------------------------------------------------------ *
@@ -357,4 +408,56 @@ export function buildRecipeIngredients(
       unit: item.unit,
       position: index,
     }));
+}
+
+/* ------------------------------------------------------------------ *
+ * Zubereitungsschritte
+ * ------------------------------------------------------------------ */
+
+export interface RecipeStepLike {
+  position: number;
+  text: string;
+}
+
+/**
+ * Macht aus den eingegebenen Texten die Schritte eines Rezepts (FR-10.9,
+ * ADR-047: ein Schritt ist nur Text).
+ *
+ * Innerhalb einer Zeile werden Leerzeichen und Tabs zu einem Leerzeichen
+ * zusammengezogen und die Zeilenraender abgeschnitten; Zeilenumbrueche bleiben
+ * stehen - ein Schritt darf mehrzeilig sein. Was danach leer ist, faellt weg.
+ * Zu lange Schritte werden auf MAX_STEP_LENGTH Zeichen gekuerzt. Die
+ * Positionen werden lueckenlos neu durchgezaehlt, in der Reihenfolge der
+ * Eingabe.
+ */
+export function cleanRecipeSteps(texts: string[]): RecipeStepLike[] {
+  return texts
+    .map((text) =>
+      text
+        .split('\n')
+        .map((line) => line.replace(/\s+/g, ' ').trim())
+        .join('\n')
+        .trim()
+        .slice(0, MAX_STEP_LENGTH)
+        .trimEnd(),
+    )
+    .filter((text) => text.length > 0)
+    .map((text, index) => ({ position: index, text }));
+}
+
+/**
+ * Verschiebt einen Schritt von Index from nach Index to - fuer die Pfeile im
+ * Bearbeiten (ADR-028: jede Umsortierung auch per Antippen). Gibt immer ein
+ * neues Array zurueck. Ein ungueltiger Index (ausserhalb, keine ganze Zahl)
+ * aendert nichts an der Reihenfolge.
+ */
+export function moveStep<T>(steps: T[], from: number, to: number): T[] {
+  const result = [...steps];
+  const valid = (index: number) => Number.isInteger(index) && index >= 0 && index < steps.length;
+  if (!valid(from) || !valid(to) || from === to) {
+    return result;
+  }
+  const moved = result.splice(from, 1);
+  result.splice(to, 0, ...moved);
+  return result;
 }

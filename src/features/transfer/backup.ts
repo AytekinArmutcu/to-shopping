@@ -42,10 +42,18 @@ export const REQUIRED_BACKUP_TABLES = [
 /**
  * Seit V2. Duerfen in einer Datei fehlen (ADR-046).
  *
- * Die Reihenfolge ist zugleich die Einfuegereihenfolge: `recipeItems` und
- * `weeklyPlan` zeigen auf `recipes`, also muss `recipes` davor stehen.
+ * Die Reihenfolge ist zugleich die Einfuegereihenfolge: `recipeItems`,
+ * `recipeSteps` und `weeklyPlan` zeigen auf `recipes`, also muss `recipes`
+ * davor stehen. `recipeSteps` kam mit M16 dazu (ADR-047) - eine Datei aus der
+ * Zeit davor hat die Tabelle nicht, und das ist erlaubt.
  */
-export const OPTIONAL_BACKUP_TABLES = ['pantry', 'recipes', 'recipeItems', 'weeklyPlan'] as const;
+export const OPTIONAL_BACKUP_TABLES = [
+  'pantry',
+  'recipes',
+  'recipeItems',
+  'recipeSteps',
+  'weeklyPlan',
+] as const;
 
 /**
  * Alle Tabellen, Pflicht zuerst. Die optionalen haengen hinten an - das passt

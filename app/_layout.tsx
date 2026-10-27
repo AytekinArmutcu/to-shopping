@@ -15,7 +15,7 @@ import { IncomingFileWatcher } from '@/features/transfer/IncomingFileWatcher';
 import { ensureFirstStart } from '@/db/appState';
 import { db } from '@/db/client';
 import migrations from '@/db/migrations/migrations';
-import { seedIfEmpty, seedRecipesOnce } from '@/db/seed';
+import { seedIfEmpty, seedRecipesOnce, upgradeCatalogOnce } from '@/db/seed';
 import '@/i18n';
 import { startWidgetRefresh } from '@/lib/widgetRefresh';
 import { navigationThemeFor, themeFor } from '@/theme';
@@ -71,6 +71,13 @@ export default function RootLayout() {
 
     let cancelled = false;
     seedIfEmpty(db)
+      // Bestandsgeraete bekommen die neuen Gewuerze und das Grundvorrat-
+      // Kennzeichen einmalig nachgereicht (ADR-047); bei frischer Installation
+      // tut es nichts. Das muss VOR den Rezepten laufen: Deren Zutaten zeigen
+      // auf Gewuerze, die es auf einem V1-Geraet erst durch diesen Schritt
+      // gibt - sonst wuerden sie ohne Produktbezug gespeichert und zaehlten
+      // als fehlend statt als Grundvorrat.
+      .then(() => upgradeCatalogOnce(db))
       // Der Rezept-Grundstock kommt auf Bestandsgeraeten erst mit diesem Update;
       // er wird einmalig gesaet, nach dem Katalog, dessen Produkte er braucht.
       .then(() => seedRecipesOnce(db))

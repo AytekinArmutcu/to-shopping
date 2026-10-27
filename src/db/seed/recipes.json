@@ -1,7 +1,6 @@
 [
   {
     "name": "Spaghetti Bolognese",
-    "note": "Soße mindestens 30 Minuten köcheln lassen.",
     "items": [
       { "product": "Spaghetti", "quantity": 1 },
       { "product": "Hackfleisch", "quantity": 500, "unit": "g" },
@@ -9,7 +8,19 @@
       { "product": "Zwiebeln", "quantity": 2, "unit": "stueck" },
       { "product": "Karotten", "quantity": 2, "unit": "stueck" },
       { "product": "Knoblauch" },
-      { "product": "Tomatenmark" }
+      { "product": "Tomatenmark" },
+      { "product": "Olivenöl" },
+      { "product": "Salz" },
+      { "product": "Pfeffer" },
+      { "product": "Oregano" },
+      { "product": "Basilikum (getrocknet)" }
+    ],
+    "steps": [
+      "Zwiebeln, Karotten und Knoblauch fein würfeln.",
+      "Hackfleisch in Olivenöl krümelig anbraten, dann das Gemüse kurz mitbraten.",
+      "Tomatenmark einrühren und kurz anrösten, danach die gehackten Tomaten zugeben.",
+      "Mit Salz, Pfeffer, Oregano und Basilikum würzen und die Soße mindestens 30 Minuten bei kleiner Hitze köcheln lassen.",
+      "Spaghetti in reichlich Salzwasser bissfest kochen, abgießen und mit der Soße servieren."
     ]
   },
   {
@@ -21,7 +32,17 @@
       { "product": "Zwiebeln", "quantity": 1, "unit": "stueck" },
       { "product": "Gemüsebrühe" },
       { "product": "Wiener Würstchen" },
-      { "product": "Petersilie" }
+      { "product": "Petersilie" },
+      { "product": "Speiseöl" },
+      { "product": "Salz" },
+      { "product": "Pfeffer" }
+    ],
+    "steps": [
+      "Kartoffeln und Karotten schälen und würfeln, Lauch in Ringe und Zwiebel in Würfel schneiden.",
+      "Zwiebel und Lauch in Öl andünsten, Kartoffeln und Karotten zugeben.",
+      "Mit Gemüsebrühe auffüllen, bis das Gemüse bedeckt ist, und etwa 20 Minuten köcheln lassen, bis die Kartoffeln weich sind.",
+      "Einen Teil der Suppe grob zerstampfen, damit sie sämig wird, und mit Salz und Pfeffer abschmecken.",
+      "Würstchen in Scheiben schneiden, in der Suppe erwärmen und mit gehackter Petersilie servieren."
     ]
   },
   {
@@ -31,18 +52,36 @@
       { "product": "Milch", "quantity": 500, "unit": "ml" },
       { "product": "Eier" },
       { "product": "Butter" },
-      { "product": "Marmelade" }
+      { "product": "Marmelade" },
+      { "product": "Salz" },
+      { "product": "Vanillezucker" }
+    ],
+    "steps": [
+      "Mehl, Milch, Eier, eine Prise Salz und Vanillezucker zu einem glatten Teig verrühren.",
+      "Den Teig kurz quellen lassen.",
+      "Etwas Butter in einer Pfanne erhitzen und eine dünne Schicht Teig hineingeben.",
+      "Den Pfannkuchen wenden, sobald die Unterseite goldbraun ist, und von der anderen Seite fertig backen.",
+      "Mit Marmelade bestreichen und aufrollen."
     ]
   },
   {
     "name": "Käsespätzle",
-    "note": "Die Zwiebeln langsam goldbraun rösten.",
     "items": [
       { "product": "Mehl", "quantity": 500, "unit": "g" },
       { "product": "Eier" },
       { "product": "Emmentaler", "quantity": 2 },
       { "product": "Zwiebeln", "quantity": 3, "unit": "stueck" },
-      { "product": "Butter" }
+      { "product": "Butter" },
+      { "product": "Salz" },
+      { "product": "Pfeffer" },
+      { "product": "Muskatnuss" }
+    ],
+    "steps": [
+      "Mehl, Eier, etwas Wasser und eine Prise Salz zu einem zähen Teig schlagen, bis er Blasen wirft.",
+      "Den Teig portionsweise in kochendes Salzwasser schaben oder pressen und die Spätzle abschöpfen, sobald sie oben schwimmen.",
+      "Zwiebeln in Ringe schneiden und in Butter langsam goldbraun rösten.",
+      "Spätzle und geriebenen Emmentaler abwechselnd in eine Form schichten, mit Pfeffer und Muskatnuss würzen.",
+      "Kurz im Ofen schmelzen lassen und mit den Röstzwiebeln belegen."
     ]
   },
   {
@@ -54,7 +93,16 @@
       { "product": "Lauch" },
       { "product": "Speck" },
       { "product": "Gemüsebrühe" },
-      { "product": "Essig" }
+      { "product": "Essig" },
+      { "product": "Salz" },
+      { "product": "Pfeffer" },
+      { "product": "Zucker" }
+    ],
+    "steps": [
+      "Speck würfeln und in einem Topf auslassen.",
+      "Kartoffeln und Karotten würfeln, Lauch in Ringe schneiden und alles kurz im Speckfett andünsten.",
+      "Linsen zugeben, mit Gemüsebrühe auffüllen und köcheln lassen, bis Linsen und Kartoffeln weich sind.",
+      "Mit Essig, einer Prise Zucker, Salz und Pfeffer süßsauer abschmecken."
     ]
   },
   {
@@ -65,7 +113,15 @@
       { "product": "Champignons" },
       { "product": "Zwiebeln", "quantity": 1, "unit": "stueck" },
       { "product": "Reis" },
-      { "product": "Speiseöl" }
+      { "product": "Speiseöl" },
+      { "product": "Salz" },
+      { "product": "Pfeffer" }
+    ],
+    "steps": [
+      "Reis nach Packungsangabe kochen.",
+      "Paprika, Zucchini und Champignons in mundgerechte Stücke schneiden, Zwiebel würfeln.",
+      "Zwiebel in Öl anbraten, dann das übrige Gemüse zugeben und bei starker Hitze braten, bis es leicht gebräunt, aber noch bissfest ist.",
+      "Mit Salz und Pfeffer abschmecken und zum Reis servieren."
     ]
   },
   {
@@ -76,7 +132,16 @@
       { "product": "Sahne", "quantity": 2 },
       { "product": "Eier" },
       { "product": "Gouda" },
-      { "product": "Tiefkühlerbsen" }
+      { "product": "Tiefkühlerbsen" },
+      { "product": "Salz" },
+      { "product": "Pfeffer" },
+      { "product": "Muskatnuss" }
+    ],
+    "steps": [
+      "Nudeln in Salzwasser knapp bissfest kochen und abgießen.",
+      "Kochschinken würfeln und mit Nudeln und Erbsen in einer Auflaufform mischen.",
+      "Sahne und Eier verquirlen, mit Salz, Pfeffer und Muskatnuss würzen und über die Nudeln gießen.",
+      "Mit geriebenem Gouda bestreuen und bei 200 Grad etwa 25 Minuten goldbraun überbacken."
     ]
   },
   {
@@ -87,7 +152,17 @@
       { "product": "Speck" },
       { "product": "Eier" },
       { "product": "Speiseöl" },
-      { "product": "Saure Gurken" }
+      { "product": "Saure Gurken" },
+      { "product": "Salz" },
+      { "product": "Pfeffer" },
+      { "product": "Kümmel" }
+    ],
+    "steps": [
+      "Kartoffeln in der Schale kochen, abkühlen lassen, pellen und in Scheiben schneiden.",
+      "Kartoffelscheiben in reichlich Öl von beiden Seiten knusprig braten, ohne sie zu oft zu wenden.",
+      "Speck und Zwiebeln würfeln, zugeben und mitbraten, bis die Zwiebeln goldbraun sind.",
+      "Mit Salz, Pfeffer und Kümmel würzen.",
+      "In einer zweiten Pfanne Spiegeleier braten und mit den Bratkartoffeln und sauren Gurken servieren."
     ]
   },
   {
@@ -100,7 +175,18 @@
       { "product": "Paprika", "quantity": 2 },
       { "product": "Zwiebeln", "quantity": 2, "unit": "stueck" },
       { "product": "Paprikapulver" },
-      { "product": "Reis" }
+      { "product": "Reis" },
+      { "product": "Speiseöl" },
+      { "product": "Salz" },
+      { "product": "Pfeffer" },
+      { "product": "Chiliflocken" }
+    ],
+    "steps": [
+      "Zwiebeln würfeln, Paprika in Stücke schneiden.",
+      "Hackfleisch in Öl krümelig anbraten, Zwiebeln und Paprika zugeben und mitbraten.",
+      "Mit Paprikapulver und Chiliflocken bestäuben, kurz rösten und die gehackten Tomaten zugeben.",
+      "Kidneybohnen und Mais abgießen, unterrühren und etwa 30 Minuten köcheln lassen.",
+      "Mit Salz und Pfeffer abschmecken und mit gekochtem Reis servieren."
     ]
   },
   {
@@ -111,12 +197,20 @@
       { "product": "Paprika", "quantity": 2 },
       { "product": "Tiefkühlerbsen" },
       { "product": "Zwiebeln", "quantity": 1, "unit": "stueck" },
-      { "product": "Speiseöl" }
+      { "product": "Speiseöl" },
+      { "product": "Salz" },
+      { "product": "Pfeffer" },
+      { "product": "Paprikapulver" }
+    ],
+    "steps": [
+      "Reis nach Packungsangabe kochen.",
+      "Hähnchenbrust in Streifen schneiden, mit Salz, Pfeffer und Paprikapulver würzen und in Öl rundum anbraten.",
+      "Zwiebel und Paprika würfeln, zum Fleisch geben und einige Minuten mitbraten.",
+      "Erbsen und Reis untermischen, alles gut durchwärmen und abschmecken."
     ]
   },
   {
     "name": "Ofengemüse",
-    "note": "Bei 200 Grad etwa 30 Minuten backen.",
     "items": [
       { "product": "Kartoffeln", "quantity": 1 },
       { "product": "Süßkartoffeln", "quantity": 500, "unit": "g" },
@@ -124,7 +218,17 @@
       { "product": "Zucchini" },
       { "product": "Zwiebeln", "quantity": 2, "unit": "stueck" },
       { "product": "Olivenöl" },
-      { "product": "Feta" }
+      { "product": "Feta" },
+      { "product": "Salz" },
+      { "product": "Pfeffer" },
+      { "product": "Thymian" }
+    ],
+    "steps": [
+      "Den Ofen auf 200 Grad vorheizen.",
+      "Kartoffeln, Süßkartoffeln, Paprika, Zucchini und Zwiebeln in grobe Stücke schneiden.",
+      "Das Gemüse mit Olivenöl, Salz, Pfeffer und Thymian mischen und auf einem Backblech verteilen.",
+      "Etwa 30 Minuten backen, bis die Kartoffeln weich und die Ränder gebräunt sind.",
+      "Feta darüberbröckeln und servieren."
     ]
   },
   {
@@ -135,7 +239,18 @@
       { "product": "Knoblauch" },
       { "product": "Gemüsebrühe" },
       { "product": "Sahne" },
-      { "product": "Baguette" }
+      { "product": "Baguette" },
+      { "product": "Olivenöl" },
+      { "product": "Salz" },
+      { "product": "Pfeffer" },
+      { "product": "Zucker" },
+      { "product": "Basilikum (getrocknet)" }
+    ],
+    "steps": [
+      "Zwiebel und Knoblauch fein würfeln und in Olivenöl glasig dünsten.",
+      "Passierte Tomaten und Gemüsebrühe zugeben und etwa 15 Minuten köcheln lassen.",
+      "Mit Salz, Pfeffer, einer Prise Zucker und Basilikum würzen.",
+      "Sahne einrühren, kurz erhitzen und mit Baguette servieren."
     ]
   },
   {
@@ -146,7 +261,16 @@
       { "product": "Eier" },
       { "product": "Butter" },
       { "product": "Zucker", "quantity": 100, "unit": "g" },
-      { "product": "Äpfel", "quantity": 500, "unit": "g" }
+      { "product": "Äpfel", "quantity": 500, "unit": "g" },
+      { "product": "Vanillezucker" },
+      { "product": "Zimt" }
+    ],
+    "steps": [
+      "Eier trennen. Mehl, Milch, Eigelb und Vanillezucker glatt rühren, Eiweiß steif schlagen und unterheben.",
+      "Butter in einer großen Pfanne erhitzen, den Teig hineingießen und stocken lassen, bis die Unterseite goldbraun ist.",
+      "Den Teig vierteln, wenden und mit zwei Gabeln in Stücke reißen.",
+      "Etwas Zucker darüberstreuen und unter Wenden karamellisieren lassen.",
+      "Äpfel schälen, in Spalten schneiden, mit Zimt und etwas Zucker in Butter weich dünsten und dazu servieren."
     ]
   },
   {
@@ -156,7 +280,15 @@
       { "product": "Milch", "quantity": 1 },
       { "product": "Zucker", "quantity": 80, "unit": "g" },
       { "product": "Butter" },
-      { "product": "Tiefkühlbeeren" }
+      { "product": "Tiefkühlbeeren" },
+      { "product": "Vanillezucker" },
+      { "product": "Zimt" }
+    ],
+    "steps": [
+      "Milch mit Butter, Zucker und Vanillezucker aufkochen.",
+      "Reis einrühren und bei kleiner Hitze etwa 30 Minuten quellen lassen, dabei regelmäßig umrühren, damit nichts ansetzt.",
+      "Die Beeren auftauen lassen oder kurz in einem kleinen Topf erwärmen.",
+      "Milchreis mit Zimt bestreuen und mit den Beeren servieren."
     ]
   },
   {
@@ -167,7 +299,15 @@
       { "product": "Butter" },
       { "product": "Brot" },
       { "product": "Cocktailtomaten" },
-      { "product": "Kochschinken" }
+      { "product": "Kochschinken" },
+      { "product": "Salz" },
+      { "product": "Pfeffer" }
+    ],
+    "steps": [
+      "Eier mit Milch, Salz und Pfeffer verquirlen.",
+      "Kochschinken würfeln und in Butter kurz anbraten.",
+      "Die Eiermasse zugeben und bei mittlerer Hitze langsam stocken lassen, dabei mit einem Pfannenwender zusammenschieben.",
+      "Cocktailtomaten halbieren und das Rührei mit Brot und Tomaten servieren."
     ]
   },
   {
@@ -177,19 +317,36 @@
       { "product": "Milch", "quantity": 100, "unit": "ml" },
       { "product": "Bananen", "quantity": 2 },
       { "product": "Erdbeeren" },
-      { "product": "Honig" }
+      { "product": "Honig" },
+      { "product": "Vanillezucker" }
+    ],
+    "steps": [
+      "Quark mit Milch cremig rühren und mit Honig und Vanillezucker süßen.",
+      "Bananen in Scheiben schneiden, Erdbeeren waschen, putzen und vierteln.",
+      "Das Obst auf dem Quark verteilen und sofort servieren."
     ]
   },
   {
     "name": "Gulasch mit Nudeln",
-    "note": "Das Fleisch mindestens 90 Minuten schmoren lassen.",
     "items": [
       { "product": "Gulasch", "quantity": 600, "unit": "g" },
       { "product": "Zwiebeln", "quantity": 3, "unit": "stueck" },
       { "product": "Paprika", "quantity": 2 },
       { "product": "Tomatenmark" },
       { "product": "Paprikapulver" },
-      { "product": "Nudeln" }
+      { "product": "Nudeln" },
+      { "product": "Speiseöl" },
+      { "product": "Salz" },
+      { "product": "Pfeffer" },
+      { "product": "Thymian" }
+    ],
+    "steps": [
+      "Zwiebeln grob würfeln, Paprika in Streifen schneiden.",
+      "Gulasch portionsweise in heißem Öl kräftig anbraten und herausnehmen.",
+      "Zwiebeln im Bratfett goldbraun rösten, Tomatenmark und Paprikapulver kurz mitrösten.",
+      "Fleisch zurück in den Topf geben, mit Wasser knapp bedecken, mit Salz, Pfeffer und Thymian würzen und zugedeckt mindestens 90 Minuten schmoren lassen.",
+      "Paprika in den letzten 20 Minuten zugeben.",
+      "Nudeln in Salzwasser kochen und mit dem Gulasch servieren."
     ]
   },
   {
@@ -199,7 +356,16 @@
       { "product": "Milch", "quantity": 200, "unit": "ml" },
       { "product": "Butter" },
       { "product": "Wiener Würstchen" },
-      { "product": "Senf" }
+      { "product": "Senf" },
+      { "product": "Salz" },
+      { "product": "Pfeffer" },
+      { "product": "Muskatnuss" }
+    ],
+    "steps": [
+      "Kartoffeln schälen, in Stücke schneiden und in Salzwasser weich kochen.",
+      "Kartoffeln abgießen, Milch und Butter zugeben und alles zu einem glatten Püree stampfen.",
+      "Mit Salz, Pfeffer und Muskatnuss abschmecken.",
+      "Würstchen in heißem, nicht kochendem Wasser erwärmen und mit Püree und Senf servieren."
     ]
   },
   {
@@ -210,31 +376,56 @@
       { "product": "Karotten", "quantity": 2, "unit": "stueck" },
       { "product": "Zwiebeln", "quantity": 1, "unit": "stueck" },
       { "product": "Gemüsebrühe" },
-      { "product": "Wiener Würstchen" }
+      { "product": "Wiener Würstchen" },
+      { "product": "Speiseöl" },
+      { "product": "Salz" },
+      { "product": "Pfeffer" }
+    ],
+    "steps": [
+      "Zwiebel würfeln, Kartoffeln und Karotten schälen und klein schneiden.",
+      "Zwiebel in Öl andünsten, Kartoffeln und Karotten zugeben und mit Gemüsebrühe auffüllen.",
+      "Etwa 15 Minuten köcheln lassen, dann die Erbsen zugeben und weitere 10 Minuten garen.",
+      "Die Suppe teilweise pürieren und mit Salz und Pfeffer abschmecken.",
+      "Würstchen in Scheiben schneiden und in der Suppe erwärmen."
     ]
   },
   {
     "name": "Pizza-Toast",
-    "note": "Bei 200 Grad etwa 10 Minuten überbacken.",
     "items": [
       { "product": "Toastbrot" },
       { "product": "Tomatenmark" },
       { "product": "Kochschinken" },
       { "product": "Gouda" },
       { "product": "Paprika" },
-      { "product": "Champignons" }
+      { "product": "Champignons" },
+      { "product": "Salz" },
+      { "product": "Pfeffer" },
+      { "product": "Oregano" }
+    ],
+    "steps": [
+      "Den Ofen auf 200 Grad vorheizen.",
+      "Tomatenmark mit etwas Wasser, Salz, Pfeffer und Oregano glatt rühren und dünn auf die Toastscheiben streichen.",
+      "Kochschinken, Paprika und Champignons klein schneiden und auf den Toasts verteilen.",
+      "Mit geriebenem Gouda bestreuen und etwa 10 Minuten überbacken, bis der Käse geschmolzen ist."
     ]
   },
   {
     "name": "Nudeln mit Kräuterpesto",
-    "note": "Kräuter, Nüsse, Käse und Öl fein pürieren.",
     "items": [
       { "product": "Nudeln" },
       { "product": "Petersilie", "quantity": 2 },
       { "product": "Walnüsse" },
       { "product": "Parmesan" },
       { "product": "Olivenöl" },
-      { "product": "Knoblauch" }
+      { "product": "Knoblauch" },
+      { "product": "Salz" },
+      { "product": "Pfeffer" }
+    ],
+    "steps": [
+      "Nudeln in Salzwasser bissfest kochen.",
+      "Walnüsse in einer Pfanne ohne Fett kurz rösten.",
+      "Petersilie, Walnüsse, Knoblauch, geriebenen Parmesan und Olivenöl fein pürieren und mit Salz und Pfeffer abschmecken.",
+      "Nudeln abgießen, dabei etwas Kochwasser auffangen, und mit dem Pesto und einem Schuss Kochwasser vermischen."
     ]
   },
   {
@@ -246,23 +437,42 @@
       { "product": "Spinat" },
       { "product": "Zwiebeln", "quantity": 1, "unit": "stueck" },
       { "product": "Ingwer" },
-      { "product": "Reis" }
+      { "product": "Reis" },
+      { "product": "Speiseöl" },
+      { "product": "Salz" },
+      { "product": "Pfeffer" },
+      { "product": "Currypulver" }
+    ],
+    "steps": [
+      "Reis nach Packungsangabe kochen.",
+      "Zwiebel und Ingwer fein würfeln, Süßkartoffeln schälen und in Würfel schneiden.",
+      "Zwiebel und Ingwer in Öl andünsten, Currypulver zugeben und kurz mitrösten.",
+      "Süßkartoffeln, abgetropfte Kichererbsen und Kokosmilch zugeben und köcheln lassen, bis die Süßkartoffeln weich sind.",
+      "Spinat unterrühren, zusammenfallen lassen, mit Salz und Pfeffer abschmecken und mit dem Reis servieren."
     ]
   },
   {
     "name": "Kartoffelgratin",
-    "note": "Bei 180 Grad etwa 50 Minuten backen.",
     "items": [
       { "product": "Kartoffeln", "quantity": 1 },
       { "product": "Sahne", "quantity": 2 },
       { "product": "Milch", "quantity": 200, "unit": "ml" },
       { "product": "Knoblauch" },
-      { "product": "Emmentaler" }
+      { "product": "Emmentaler" },
+      { "product": "Butter" },
+      { "product": "Salz" },
+      { "product": "Pfeffer" },
+      { "product": "Muskatnuss" }
+    ],
+    "steps": [
+      "Den Ofen auf 180 Grad vorheizen und eine Auflaufform mit Butter ausstreichen.",
+      "Kartoffeln schälen und in dünne Scheiben hobeln, dachziegelartig in die Form schichten.",
+      "Sahne und Milch mit gepresstem Knoblauch, Salz, Pfeffer und Muskatnuss verrühren und über die Kartoffeln gießen.",
+      "Mit geriebenem Emmentaler bestreuen und etwa 50 Minuten backen, bis die Kartoffeln weich sind und die Oberfläche goldbraun ist."
     ]
   },
   {
     "name": "Schnitzel mit Kartoffelsalat",
-    "note": "Den Kartoffelsalat am besten einige Stunden vorher anmachen.",
     "items": [
       { "product": "Schweineschnitzel", "quantity": 500, "unit": "g" },
       { "product": "Semmelbrösel" },
@@ -271,7 +481,18 @@
       { "product": "Kartoffeln", "quantity": 1 },
       { "product": "Saure Gurken" },
       { "product": "Zwiebeln", "quantity": 1, "unit": "stueck" },
-      { "product": "Zitronen" }
+      { "product": "Zitronen" },
+      { "product": "Speiseöl" },
+      { "product": "Essig" },
+      { "product": "Salz" },
+      { "product": "Pfeffer" }
+    ],
+    "steps": [
+      "Kartoffeln in der Schale kochen, noch warm pellen und in Scheiben schneiden.",
+      "Zwiebel fein würfeln, mit etwas heißem Wasser, Essig, Öl, Salz und Pfeffer verrühren und über die Kartoffeln gießen. Saure Gurken klein schneiden und unterheben; den Salat am besten einige Stunden durchziehen lassen.",
+      "Schnitzel flach klopfen und mit Salz und Pfeffer würzen.",
+      "Schnitzel nacheinander in Mehl, verquirltem Ei und Semmelbröseln wenden.",
+      "In reichlich heißem Öl von beiden Seiten goldbraun ausbacken und mit Zitronenspalten und dem Kartoffelsalat servieren."
     ]
   },
   {
@@ -281,7 +502,17 @@
       { "product": "Kartoffeln", "quantity": 1 },
       { "product": "Tiefkühlspinat" },
       { "product": "Butter" },
-      { "product": "Zitronen" }
+      { "product": "Zitronen" },
+      { "product": "Speiseöl" },
+      { "product": "Salz" },
+      { "product": "Pfeffer" },
+      { "product": "Muskatnuss" }
+    ],
+    "steps": [
+      "Kartoffeln schälen und in Salzwasser weich kochen.",
+      "Spinat mit etwas Butter in einem Topf auftauen und erhitzen, mit Salz, Pfeffer und Muskatnuss würzen.",
+      "Fischstäbchen in Öl von beiden Seiten goldbraun braten.",
+      "Kartoffeln abgießen, mit der restlichen Butter schwenken und alles mit Zitronenspalten servieren."
     ]
   },
   {
@@ -291,19 +522,36 @@
       { "product": "Reis" },
       { "product": "Brokkoli" },
       { "product": "Zitronen" },
-      { "product": "Butter" }
+      { "product": "Butter" },
+      { "product": "Salz" },
+      { "product": "Pfeffer" }
+    ],
+    "steps": [
+      "Reis nach Packungsangabe kochen.",
+      "Brokkoli in Röschen teilen und in Salzwasser bissfest garen.",
+      "Lachsfilet mit Salz und Pfeffer würzen und in Butter auf der Hautseite braten, dann wenden und kurz fertig garen.",
+      "Mit Zitronensaft beträufeln und mit Reis und Brokkoli servieren."
     ]
   },
   {
     "name": "Gefüllte Paprika",
-    "note": "Bei 180 Grad etwa 40 Minuten im Ofen garen.",
     "items": [
       { "product": "Paprika", "quantity": 4 },
       { "product": "Hackfleisch", "quantity": 400, "unit": "g" },
       { "product": "Reis" },
       { "product": "Zwiebeln", "quantity": 1, "unit": "stueck" },
       { "product": "Passierte Tomaten" },
-      { "product": "Gouda" }
+      { "product": "Gouda" },
+      { "product": "Salz" },
+      { "product": "Pfeffer" },
+      { "product": "Oregano" }
+    ],
+    "steps": [
+      "Den Ofen auf 180 Grad vorheizen und den Reis knapp gar kochen.",
+      "Von den Paprika einen Deckel abschneiden und die Kerne entfernen.",
+      "Hackfleisch mit Reis und gewürfelter Zwiebel mischen, mit Salz und Pfeffer würzen und in die Paprika füllen.",
+      "Passierte Tomaten mit Salz und Oregano würzen, in eine Auflaufform gießen und die Paprika hineinsetzen.",
+      "Mit geriebenem Gouda bestreuen und etwa 40 Minuten im Ofen garen."
     ]
   },
   {
@@ -314,7 +562,17 @@
       { "product": "Eier" },
       { "product": "Zwiebeln", "quantity": 1, "unit": "stueck" },
       { "product": "Senf" },
-      { "product": "Kartoffeln", "quantity": 1 }
+      { "product": "Kartoffeln", "quantity": 1 },
+      { "product": "Speiseöl" },
+      { "product": "Salz" },
+      { "product": "Pfeffer" },
+      { "product": "Paprikapulver" }
+    ],
+    "steps": [
+      "Brötchen in Wasser einweichen und gut ausdrücken.",
+      "Hackfleisch mit Brötchen, Ei, fein gewürfelter Zwiebel und Senf verkneten und mit Salz, Pfeffer und Paprikapulver würzen.",
+      "Aus der Masse flache Frikadellen formen und in Öl von beiden Seiten durchbraten.",
+      "Kartoffeln schälen, in Salzwasser weich kochen und zu den Frikadellen servieren."
     ]
   },
   {
@@ -324,7 +582,18 @@
       { "product": "Sauerkraut" },
       { "product": "Kartoffeln", "quantity": 1 },
       { "product": "Milch", "quantity": 200, "unit": "ml" },
-      { "product": "Butter" }
+      { "product": "Butter" },
+      { "product": "Speiseöl" },
+      { "product": "Salz" },
+      { "product": "Pfeffer" },
+      { "product": "Kümmel" },
+      { "product": "Muskatnuss" }
+    ],
+    "steps": [
+      "Sauerkraut mit etwas Wasser und Kümmel in einem Topf erhitzen und zugedeckt köcheln lassen.",
+      "Kartoffeln schälen, in Salzwasser weich kochen, abgießen und mit Milch und Butter zu Püree stampfen.",
+      "Das Püree mit Salz, Pfeffer und Muskatnuss abschmecken.",
+      "Bratwürste in Öl rundum braun braten und mit Sauerkraut und Püree servieren."
     ]
   },
   {
@@ -335,7 +604,17 @@
       { "product": "Kopfsalat" },
       { "product": "Tomaten", "quantity": 500, "unit": "g" },
       { "product": "Gurke" },
-      { "product": "Schmand" }
+      { "product": "Schmand" },
+      { "product": "Speiseöl" },
+      { "product": "Salz" },
+      { "product": "Pfeffer" },
+      { "product": "Paprikapulver" }
+    ],
+    "steps": [
+      "Hähnchenbrust in Streifen schneiden, mit Salz, Pfeffer und Paprikapulver würzen und in Öl durchbraten.",
+      "Salat in Streifen schneiden, Tomaten und Gurke würfeln.",
+      "Wraps kurz in einer trockenen Pfanne erwärmen und mit Schmand bestreichen.",
+      "Fleisch und Gemüse darauf verteilen, die Seiten einschlagen und fest aufrollen."
     ]
   },
   {
@@ -346,7 +625,18 @@
       { "product": "Passierte Tomaten" },
       { "product": "Zwiebeln", "quantity": 1, "unit": "stueck" },
       { "product": "Knoblauch" },
-      { "product": "Parmesan" }
+      { "product": "Parmesan" },
+      { "product": "Olivenöl" },
+      { "product": "Salz" },
+      { "product": "Pfeffer" },
+      { "product": "Oregano" }
+    ],
+    "steps": [
+      "Nudeln in Salzwasser bissfest kochen.",
+      "Zwiebel und Knoblauch fein würfeln und in Olivenöl glasig dünsten.",
+      "Passierte Tomaten zugeben, mit Salz, Pfeffer und Oregano würzen und einige Minuten köcheln lassen.",
+      "Thunfisch abtropfen lassen, zerpflücken und in der Soße nur noch erwärmen.",
+      "Mit den Nudeln mischen und mit geriebenem Parmesan servieren."
     ]
   },
   {
@@ -357,19 +647,35 @@
       { "product": "Lauch" },
       { "product": "Blumenkohl" },
       { "product": "Gemüsebrühe" },
-      { "product": "Petersilie" }
+      { "product": "Petersilie" },
+      { "product": "Salz" },
+      { "product": "Pfeffer" }
+    ],
+    "steps": [
+      "Karotten und Kartoffeln schälen und würfeln, Lauch in Ringe schneiden, Blumenkohl in kleine Röschen teilen.",
+      "Das Gemüse in Gemüsebrühe geben und köcheln lassen, bis alles weich ist.",
+      "Mit Salz und Pfeffer abschmecken und mit gehackter Petersilie bestreuen."
     ]
   },
   {
     "name": "Kartoffelpuffer mit Apfelmus",
-    "note": "Die geriebenen Kartoffeln gut ausdrücken.",
     "items": [
       { "product": "Kartoffeln", "quantity": 1 },
       { "product": "Zwiebeln", "quantity": 1, "unit": "stueck" },
       { "product": "Eier" },
       { "product": "Mehl", "quantity": 50, "unit": "g" },
       { "product": "Speiseöl" },
-      { "product": "Äpfel", "quantity": 1 }
+      { "product": "Äpfel", "quantity": 1 },
+      { "product": "Salz" },
+      { "product": "Zucker" },
+      { "product": "Zimt" }
+    ],
+    "steps": [
+      "Äpfel schälen, entkernen und mit wenig Wasser, Zucker und Zimt weich kochen, dann zu Mus zerdrücken.",
+      "Kartoffeln schälen und fein reiben, die Zwiebel dazureiben und die Masse in einem Tuch gut ausdrücken.",
+      "Kartoffelmasse mit Eiern, Mehl und Salz verrühren.",
+      "Portionsweise in reichlich heißem Öl flach drücken und von beiden Seiten knusprig braten.",
+      "Auf Küchenpapier abtropfen lassen und mit dem Apfelmus servieren."
     ]
   },
   {
@@ -379,7 +685,15 @@
       { "product": "Eier" },
       { "product": "Milch", "quantity": 250, "unit": "ml" },
       { "product": "Butter" },
-      { "product": "Zucker", "quantity": 50, "unit": "g" }
+      { "product": "Zucker", "quantity": 50, "unit": "g" },
+      { "product": "Vanillezucker" },
+      { "product": "Zimt" }
+    ],
+    "steps": [
+      "Eier, Milch und Vanillezucker in einem tiefen Teller verquirlen.",
+      "Toastscheiben kurz von beiden Seiten in der Eiermilch einweichen.",
+      "In Butter von beiden Seiten goldbraun braten.",
+      "Zucker und Zimt mischen und die warmen Scheiben darin wälzen."
     ]
   },
   {
@@ -389,7 +703,17 @@
       { "product": "Eier" },
       { "product": "Kartoffeln", "quantity": 1 },
       { "product": "Sahne" },
-      { "product": "Knoblauch" }
+      { "product": "Knoblauch" },
+      { "product": "Butter" },
+      { "product": "Salz" },
+      { "product": "Pfeffer" },
+      { "product": "Muskatnuss" }
+    ],
+    "steps": [
+      "Kartoffeln schälen und in Salzwasser weich kochen.",
+      "Knoblauch fein hacken und in Butter andünsten, den Spinat zugeben und auftauen lassen.",
+      "Sahne einrühren und den Spinat mit Salz, Pfeffer und Muskatnuss abschmecken.",
+      "Spiegeleier in Butter braten und mit Spinat und Kartoffeln servieren."
     ]
   }
 ]
