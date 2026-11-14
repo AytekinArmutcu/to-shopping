@@ -148,7 +148,14 @@ er beweist, dass FR-7.2 hält.
 ### 4.1 Datenschutzerklärung (C-3)
 
 URL eintragen: der Onepager `docs/index.html`, veröffentlicht über GitHub Pages,
-mit dem Anker `#datenschutz` – also `https://<benutzer>.github.io/<repo>/#datenschutz`.
+mit dem Anker `#datenschutz`:
+
+```
+https://aytekinarmutcu.github.io/to-shopping/#datenschutz
+```
+
+Repository: <https://github.com/AytekinArmutcu/to-shopping> (öffentlich, Pages aus
+`master`, Ordner `docs/`).
 Eine eigene Unterseite gibt es nicht mehr; der Anker reicht, weil Play nur eine
 öffentlich erreichbare URL ohne Login verlangt.
 
