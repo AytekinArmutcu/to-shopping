@@ -339,7 +339,7 @@ abgedeckt:
 |---|---|
 | C-1 | Name, Anschrift, Kontakt-E-Mail für die Datenschutzerklärung festlegen |
 | C-2 | `docs/datenschutz.md` ausfüllen – die Lücken sind mit `[…]` markiert |
-| C-3 | Datenschutzerklärung veröffentlichen, URL in der Play Console eintragen |
+| C-3 | `docs/index.html` über GitHub Pages veröffentlichen, URL mit `#datenschutz` in der Play Console eintragen |
 | C-4 | Data-Safety-Formular ausfüllen – seit ADR-040 durchgehend „nein" |
 | C-5 | IARC-Fragebogen zur Altersfreigabe |
 | C-6 | Manifest auf Berechtigungen prüfen – siehe unten |

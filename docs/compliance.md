@@ -86,11 +86,12 @@ Verworfene Alternativen: eigene Domain (Kosten, keine 0 €), Notion/Google Docs
 6. Keine Werbung, kein Tracking, keine Analyse, keine Profilbildung
 7. Betroffenenrechte (Auskunft, Löschung, Beschwerde bei der Aufsichtsbehörde) und wie sie hier praktisch aussehen: Löschung = App deinstallieren
 8. Google Play als Vertriebsweg: Google verarbeitet eigenständig Daten, Verweis auf Googles Datenschutzerklärung
-9. Stand und Änderungsdatum
+9. Diese Webseite: GitHub Pages als Host verarbeitet Verbindungsdaten; die Seite selbst setzt keine Cookies und lädt nichts nach
+10. Stand und Änderungsdatum
 
-Der frühere Punkt 3 („Automatische Updates") ist mit ADR-040 entfallen.
+Der frühere Punkt 3 („Automatische Updates") ist mit ADR-040 entfallen. Punkt 9 kam mit dem Onepager dazu: Wer eine Seite hostet, muss sagen, was der Host sieht.
 
-→ Aufgabe **C-2**, umgesetzt als Entwurf in [`datenschutz.md`](datenschutz.md).
+→ Aufgabe **C-2**, umgesetzt als Entwurf in [`datenschutz.md`](datenschutz.md); veröffentlichte Fassung ist der Abschnitt „Datenschutzerklärung" in [`index.html`](index.html) (Anker `#datenschutz`).
 
 ---
 
@@ -197,7 +198,7 @@ Fälligkeit: **IT** = vor dem internen Test · **ÖV** = vor öffentlicher Verö
 |---|---|---|---|
 | **C-1** | Verantwortlichen-Angaben festlegen (Name, Anschrift, Kontakt-E-Mail für die Datenschutzerklärung) | IT | 15 min |
 | **C-2** | Datenschutzerklärung nach der Gliederung in 3.2 verfassen – **Entwurf liegt in [`datenschutz.md`](datenschutz.md)**, es fehlen nur die Angaben aus C-1 | IT | 1–2 h |
-| **C-3** | Datenschutzerklärung auf GitHub Pages veröffentlichen, URL in die Play Console eintragen | IT | 30 min |
+| **C-3** | Onepager `docs/index.html` über GitHub Pages veröffentlichen (Quelle: Ordner `docs/`), URL mit Anker `#datenschutz` in die Play Console eintragen | IT | 30 min |
 | **C-4** | Data-Safety-Formular ausfüllen. **Vereinfacht seit ADR-040:** V1 liefert ohne OTA aus, es gibt keine Übertragung. Antwort auf „Werden Daten erhoben oder geteilt?" ist durchgehend **nein**. Kommt OTA später dazu, ist diese Aufgabe neu zu stellen | IT | 15 min |
 | **C-5** | IARC-Fragebogen zur Altersfreigabe ausfüllen | IT | 20 min |
 | **C-6** | Erzeugtes Android-Manifest auf ungewollte Berechtigungen prüfen und bereinigen – **durchgeführt in M12**: `READ_/WRITE_EXTERNAL_STORAGE` (aus expo-file-system) und `SYSTEM_ALERT_WINDOW` (aus der Expo-Vorlage) sind über `android.blockedPermissions` entfernt. Im Release-Manifest stehen nur noch `INTERNET`, `VIBRATE` und eine app-interne Signaturberechtigung. Vor jedem Upload und nach jedem neuen Paket zu wiederholen – Befehl im README | IT | 20 min |

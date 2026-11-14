@@ -1,0 +1,1484 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>To-Shopping</title>
+    <meta
+      name="description"
+      content="To-Shopping ist eine Einkaufsliste für Android, die sich merkt, was du kaufst. Ohne Konto, ohne Server, alles bleibt auf deinem Telefon."
+    />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#1e6c33" />
+    <link rel="icon" href="bilder/icon.png" />
+    <!--
+  Onepager der App: Vorstellung, Datenschutz-Versprechen, Datenschutzerklaerung
+  und Impressum auf einer Seite. Fuer GitHub Pages aus dem Ordner docs/.
+
+  Grundsatz wie in der App: Diese Seite laedt nichts nach. Keine Schrift von
+  Google, kein Skript von einem CDN, kein Zaehlpixel. Das einzige Skript
+  schaltet zwischen hell und dunkel und merkt sich die Wahl im Browser des
+  Lesers - nicht bei uns.
+
+  Die Datenschutzerklaerung hier ist dieselbe wie in datenschutz.md. Aendert
+  sich der Text, aendert er sich in beiden Dateien.
+-->
+    <style>
+      /* ---------- Farben: Material-3-Rollen der App, nichts Erfundenes ---------- */
+      :root {
+        color-scheme: light dark;
+        --grund: #fcfdf6;
+        --flaeche: #f3f5ec;
+        --kasten: #e8eedf;
+        --schrift: #1a1c19;
+        --gedaempft: #43483e;
+        --linie: #c3c8bc;
+        --akzent: #1e6c33;
+        --akzent-tief: #124f22;
+        --akzent-weich: #a7f5ac;
+        --auf-akzent: #ffffff;
+        --papier: #fffdf4;
+        --papier-tinte: #2b2e28;
+        --schatten: 0 24px 60px -24px rgb(26 28 25 / 0.35);
+        --radius: 22px;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme='light']) {
+          --grund: #1a1c19;
+          --flaeche: #20231f;
+          --kasten: #292d27;
+          --schrift: #e2e3dc;
+          --gedaempft: #c3c8bc;
+          --linie: #43483e;
+          --akzent: #8cd892;
+          --akzent-tief: #a7f5ac;
+          --akzent-weich: #0f4f22;
+          --auf-akzent: #00390f;
+          --papier: #f4f1e4;
+          --papier-tinte: #2b2e28;
+          --schatten: 0 24px 60px -24px rgb(0 0 0 / 0.8);
+        }
+      }
+      :root[data-theme='dark'] {
+        --grund: #1a1c19;
+        --flaeche: #20231f;
+        --kasten: #292d27;
+        --schrift: #e2e3dc;
+        --gedaempft: #c3c8bc;
+        --linie: #43483e;
+        --akzent: #8cd892;
+        --akzent-tief: #a7f5ac;
+        --akzent-weich: #0f4f22;
+        --auf-akzent: #00390f;
+        --papier: #f4f1e4;
+        --papier-tinte: #2b2e28;
+        --schatten: 0 24px 60px -24px rgb(0 0 0 / 0.8);
+      }
+
+      /* ---------- Grundlagen ---------- */
+      * {
+        box-sizing: border-box;
+      }
+      html {
+        scroll-behavior: smooth;
+        scroll-padding-top: 5rem;
+      }
+      body {
+        margin: 0;
+        background: var(--grund);
+        color: var(--schrift);
+        font:
+          400 17px/1.6 system-ui,
+          -apple-system,
+          'Segoe UI',
+          Roboto,
+          sans-serif;
+        -webkit-text-size-adjust: 100%;
+        overflow-x: hidden;
+      }
+      .serif {
+        font-family:
+          'Iowan Old Style', 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia,
+          'Times New Roman', serif;
+      }
+      .mono {
+        font-family: ui-monospace, 'Cascadia Mono', Consolas, 'Liberation Mono', Menlo, monospace;
+      }
+      a {
+        color: var(--akzent);
+        text-underline-offset: 0.15em;
+      }
+      h1,
+      h2,
+      h3 {
+        margin: 0;
+        line-height: 1.1;
+        letter-spacing: -0.02em;
+        font-weight: 500;
+      }
+      p {
+        margin: 0 0 1rem;
+      }
+      .hülle {
+        width: min(100% - 2rem, 70rem);
+        margin-inline: auto;
+      }
+      .eng {
+        width: min(100% - 2rem, 44rem);
+        margin-inline: auto;
+      }
+      section {
+        padding-block: clamp(4rem, 10vw, 8rem);
+      }
+      .vorzeile {
+        display: inline-block;
+        font-size: 0.8rem;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--akzent);
+        margin-bottom: 1rem;
+      }
+      .titel {
+        font-size: clamp(2rem, 5vw, 3.4rem);
+      }
+      .lead {
+        font-size: clamp(1.1rem, 1.6vw, 1.3rem);
+        color: var(--gedaempft);
+        max-width: 36rem;
+      }
+      :focus-visible {
+        outline: 3px solid var(--akzent);
+        outline-offset: 3px;
+        border-radius: 6px;
+      }
+
+      /* ---------- Kopfzeile ---------- */
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        backdrop-filter: blur(14px);
+        -webkit-backdrop-filter: blur(14px);
+        background: color-mix(in srgb, var(--grund) 78%, transparent);
+        border-bottom: 1px solid color-mix(in srgb, var(--linie) 60%, transparent);
+      }
+      .kopf {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        min-height: 4rem;
+      }
+      .marke {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+        color: inherit;
+        text-decoration: none;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+      }
+      .marke img {
+        width: 32px;
+        height: 32px;
+        border-radius: 9px;
+      }
+      nav {
+        margin-left: auto;
+        display: flex;
+        gap: 0.25rem;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+      nav a {
+        color: var(--gedaempft);
+        text-decoration: none;
+        font-size: 0.95rem;
+        padding: 0.65rem 0.8rem;
+        border-radius: 999px;
+        min-height: 44px;
+        display: inline-flex;
+        align-items: center;
+      }
+      nav a:hover {
+        background: var(--kasten);
+        color: var(--schrift);
+      }
+      .schalter {
+        margin-left: 0.25rem;
+        width: 44px;
+        height: 44px;
+        border-radius: 999px;
+        border: 1px solid var(--linie);
+        background: transparent;
+        color: var(--schrift);
+        cursor: pointer;
+        display: inline-grid;
+        place-items: center;
+      }
+      .schalter svg {
+        width: 20px;
+        height: 20px;
+      }
+      :root[data-theme='dark'] .schalter .sonne,
+      :root:not([data-theme]) .schalter .sonne {
+        display: none;
+      }
+      :root[data-theme='dark'] .schalter .mond,
+      :root:not([data-theme]) .schalter .mond {
+        display: block;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root:not([data-theme]) .schalter .sonne {
+          display: block;
+        }
+        :root:not([data-theme]) .schalter .mond {
+          display: none;
+        }
+      }
+      :root[data-theme='light'] .schalter .mond {
+        display: block;
+      }
+      :root[data-theme='light'] .schalter .sonne {
+        display: none;
+      }
+      @media (max-width: 760px) {
+        nav a:not(.wichtig) {
+          display: none;
+        }
+        nav {
+          flex-wrap: nowrap;
+        }
+        nav a {
+          padding-inline: 0.6rem;
+          font-size: 0.9rem;
+        }
+        .marke {
+          white-space: nowrap;
+        }
+      }
+      @media (max-width: 440px) {
+        /* Impressum steht auch im Fuss; oben reicht der Platz nur fuer eins */
+        nav a[href='#impressum'] {
+          display: none;
+        }
+      }
+
+      /* ---------- Bühne ---------- */
+      .buehne {
+        position: relative;
+        padding-block: clamp(3rem, 8vw, 7rem) clamp(4rem, 10vw, 9rem);
+        overflow: clip;
+      }
+      .buehne::before {
+        /* der Haken aus dem App-Symbol, riesig und blass im Hintergrund */
+        content: '';
+        position: absolute;
+        inset: -10% -20% auto auto;
+        width: min(80vw, 56rem);
+        aspect-ratio: 1;
+        background: var(--akzent);
+        opacity: 0.07;
+        -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round' d='M5 13l4 4L19 7'/%3E%3C/svg%3E")
+          center / contain no-repeat;
+        mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='none' stroke='%23000' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round' d='M5 13l4 4L19 7'/%3E%3C/svg%3E")
+          center / contain no-repeat;
+        pointer-events: none;
+      }
+      .buehne .hülle {
+        display: grid;
+        grid-template-columns: 1.05fr 0.95fr;
+        gap: clamp(2rem, 5vw, 5rem);
+        align-items: center;
+        position: relative;
+      }
+      .pille {
+        display: inline-flex;
+        gap: 0.5rem;
+        align-items: center;
+        padding: 0.4rem 0.9rem 0.4rem 0.5rem;
+        border-radius: 999px;
+        background: var(--kasten);
+        font-size: 0.85rem;
+        color: var(--gedaempft);
+        margin-bottom: 1.5rem;
+      }
+      .pille span {
+        background: var(--akzent);
+        color: var(--auf-akzent);
+        border-radius: 999px;
+        padding: 0.15rem 0.6rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        letter-spacing: 0.04em;
+      }
+      .buehne h1 {
+        font-size: clamp(2.6rem, 6.2vw, 5rem);
+        text-wrap: balance;
+        margin-bottom: 1.25rem;
+      }
+      .buehne h1 em {
+        font-style: italic;
+        color: var(--akzent);
+      }
+      .knoepfe {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-top: 2rem;
+      }
+      .knopf {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.6rem;
+        min-height: 52px;
+        padding: 0.8rem 1.4rem;
+        border-radius: 999px;
+        text-decoration: none;
+        font-weight: 600;
+        border: 1px solid transparent;
+        transition:
+          transform 0.15s ease,
+          background 0.15s ease;
+      }
+      .knopf:hover {
+        transform: translateY(-1px);
+      }
+      .knopf.voll {
+        background: var(--akzent);
+        color: var(--auf-akzent);
+      }
+      .knopf.leer {
+        border-color: var(--linie);
+        color: var(--schrift);
+      }
+      .knopf svg {
+        width: 20px;
+        height: 20px;
+      }
+      .klein {
+        font-size: 0.85rem;
+        color: var(--gedaempft);
+        margin-top: 0.75rem;
+      }
+
+      /* Telefone */
+      .telefone {
+        position: relative;
+        height: clamp(26rem, 48vw, 40rem);
+      }
+      .telefon {
+        position: absolute;
+        width: clamp(11rem, 20vw, 16rem);
+        aspect-ratio: 540 / 1170;
+        border-radius: 2rem;
+        padding: 0.45rem;
+        background: #0e100d;
+        box-shadow: var(--schatten);
+        overflow: hidden;
+      }
+      .telefon img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        border-radius: 1.6rem;
+        object-fit: cover;
+      }
+      .telefon.hinten {
+        right: 6%;
+        top: 0;
+        transform: rotate(7deg);
+      }
+      .telefon.vorn {
+        left: 6%;
+        bottom: 0;
+        transform: rotate(-5deg);
+      }
+      @media (max-width: 860px) {
+        .buehne .hülle {
+          grid-template-columns: 1fr;
+        }
+        .telefone {
+          height: clamp(24rem, 90vw, 30rem);
+          max-width: 26rem;
+          margin-inline: auto;
+          width: 100%;
+        }
+      }
+
+      /* ---------- Kennzahlen-Band ---------- */
+      .band {
+        border-block: 1px solid var(--linie);
+        background: var(--flaeche);
+        padding-block: 1.5rem;
+      }
+      .band .hülle {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+        gap: 1rem 2rem;
+        text-align: center;
+      }
+      .zahl {
+        font-size: clamp(1.8rem, 3.6vw, 2.6rem);
+        line-height: 1;
+        color: var(--akzent);
+      }
+      .zahl + div {
+        font-size: 0.85rem;
+        color: var(--gedaempft);
+        margin-top: 0.35rem;
+      }
+
+      /* ---------- Kassenzettel ---------- */
+      .beleg-abschnitt .hülle {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: clamp(2rem, 6vw, 6rem);
+        align-items: center;
+      }
+      @media (max-width: 860px) {
+        .beleg-abschnitt .hülle {
+          grid-template-columns: 1fr;
+        }
+      }
+      .beleg {
+        justify-self: center;
+        width: min(100%, 22rem);
+        background: var(--papier);
+        color: var(--papier-tinte);
+        padding: 1.75rem 1.5rem 2.5rem;
+        font-size: 0.92rem;
+        line-height: 1.5;
+        transform: rotate(-1.5deg);
+        box-shadow: var(--schatten);
+        /* gezackte Unterkante wie abgerissen */
+        -webkit-mask:
+          linear-gradient(#000 0 0) top / 100% calc(100% - 10px) no-repeat,
+          radial-gradient(circle at 50% 100%, transparent 7px, #000 7.5px) bottom / 20px 10px
+            repeat-x;
+        mask:
+          linear-gradient(#000 0 0) top / 100% calc(100% - 10px) no-repeat,
+          radial-gradient(circle at 50% 100%, transparent 7px, #000 7.5px) bottom / 20px 10px
+            repeat-x;
+      }
+      .beleg h3 {
+        text-align: center;
+        font-size: 1rem;
+        letter-spacing: 0.2em;
+        font-weight: 700;
+        margin-bottom: 0.25rem;
+      }
+      .beleg .meta {
+        text-align: center;
+        font-size: 0.8rem;
+        opacity: 0.7;
+        margin-bottom: 1.25rem;
+      }
+      .beleg table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      .beleg td {
+        padding: 0.25rem 0;
+        vertical-align: top;
+      }
+      .beleg td:last-child {
+        text-align: right;
+        white-space: nowrap;
+      }
+      .beleg tr.strich td {
+        border-top: 1px dashed currentColor;
+        padding-top: 0.6rem;
+        font-weight: 700;
+      }
+      .beleg .summe td {
+        font-size: 1.05rem;
+        font-weight: 700;
+        padding-top: 0.6rem;
+      }
+      .beleg .fuss {
+        text-align: center;
+        margin-top: 1.25rem;
+        font-size: 0.8rem;
+        opacity: 0.75;
+      }
+      .strichcode {
+        margin: 1rem auto 0;
+        height: 2.6rem;
+        width: 80%;
+        background: repeating-linear-gradient(
+          90deg,
+          currentColor 0 2px,
+          transparent 2px 4px,
+          currentColor 4px 5px,
+          transparent 5px 9px,
+          currentColor 9px 12px,
+          transparent 12px 14px
+        );
+        opacity: 0.85;
+      }
+
+      /* ---------- Funktionen ---------- */
+      .raster {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 1rem;
+        margin-top: 2.5rem;
+      }
+      @media (max-width: 1100px) {
+        .raster {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+      @media (max-width: 560px) {
+        .raster {
+          grid-template-columns: 1fr;
+        }
+      }
+      .karte {
+        background: var(--flaeche);
+        border: 1px solid color-mix(in srgb, var(--linie) 55%, transparent);
+        border-radius: var(--radius);
+        padding: 1.5rem;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+      }
+      .karte.neu {
+        background: var(--akzent-weich);
+        border-color: transparent;
+      }
+      .karte .symbol {
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+        display: grid;
+        place-items: center;
+        background: var(--grund);
+        color: var(--akzent);
+      }
+      .karte.neu .symbol {
+        background: color-mix(in srgb, var(--grund) 55%, transparent);
+      }
+      .karte .symbol svg {
+        width: 22px;
+        height: 22px;
+      }
+      .karte h3 {
+        font-size: 1.15rem;
+        font-weight: 600;
+        letter-spacing: -0.01em;
+      }
+      .karte p {
+        margin: 0;
+        color: var(--gedaempft);
+        font-size: 0.97rem;
+      }
+      .karte .etikett {
+        align-self: flex-start;
+        font-size: 0.7rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        font-weight: 700;
+        color: var(--akzent-tief);
+      }
+
+      /* ---------- Weg vom Vorrat zum Essen ---------- */
+      .weg {
+        background: var(--flaeche);
+        border-block: 1px solid var(--linie);
+      }
+      .schritte {
+        counter-reset: schritt;
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 1.25rem;
+        margin-top: 2.5rem;
+        padding: 0;
+        list-style: none;
+      }
+      .schritte li {
+        counter-increment: schritt;
+        position: relative;
+        padding-top: 3.25rem;
+      }
+      .schritte li::before {
+        content: counter(schritt);
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 2.5rem;
+        height: 2.5rem;
+        border-radius: 999px;
+        background: var(--akzent);
+        color: var(--auf-akzent);
+        display: grid;
+        place-items: center;
+        font-weight: 700;
+      }
+      .schritte li::after {
+        content: '';
+        position: absolute;
+        top: 1.2rem;
+        left: 2.9rem;
+        right: -1.25rem;
+        border-top: 2px dashed var(--linie);
+      }
+      .schritte li:last-child::after {
+        display: none;
+      }
+      .schritte strong {
+        display: block;
+        font-weight: 600;
+        margin-bottom: 0.25rem;
+      }
+      .schritte span {
+        color: var(--gedaempft);
+        font-size: 0.95rem;
+      }
+      @media (max-width: 900px) {
+        .schritte {
+          grid-template-columns: 1fr;
+          gap: 1.5rem;
+        }
+        .schritte li {
+          padding-top: 0;
+          padding-left: 3.5rem;
+          min-height: 2.5rem;
+        }
+        .schritte li::after {
+          display: none;
+        }
+      }
+
+      /* ---------- Galerie ---------- */
+      .galerie {
+        display: flex;
+        gap: 1.25rem;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        padding: 2.5rem 1rem 1.5rem;
+        margin-inline: -1rem;
+        scrollbar-width: thin;
+      }
+      .galerie figure {
+        flex: 0 0 auto;
+        width: clamp(11rem, 22vw, 15rem);
+        margin: 0;
+        scroll-snap-align: center;
+      }
+      .galerie .telefon {
+        position: static;
+        width: 100%;
+        transform: none;
+      }
+      .galerie figcaption {
+        text-align: center;
+        font-size: 0.9rem;
+        color: var(--gedaempft);
+        margin-top: 0.75rem;
+      }
+
+      /* ---------- Gebaut ---------- */
+      .spalten {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(15rem, 1fr));
+        gap: 2rem;
+        margin-top: 2.5rem;
+      }
+      .spalten h3 {
+        font-size: 1.05rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+      }
+      .spalten p {
+        color: var(--gedaempft);
+        font-size: 0.97rem;
+      }
+
+      /* ---------- Rechtliches ---------- */
+      .recht {
+        border-top: 1px solid var(--linie);
+      }
+      .recht h2 {
+        font-size: clamp(1.8rem, 3.5vw, 2.6rem);
+        margin-bottom: 0.5rem;
+      }
+      .recht h3 {
+        font-size: 1.15rem;
+        font-weight: 600;
+        margin: 2.5rem 0 0.75rem;
+        padding-top: 1.25rem;
+        border-top: 1px solid var(--linie);
+      }
+      .recht h3:first-of-type {
+        border-top: 0;
+        padding-top: 0;
+        margin-top: 2rem;
+      }
+      .recht ul {
+        padding-left: 1.25rem;
+      }
+      .recht li {
+        margin-bottom: 0.4rem;
+      }
+      address {
+        font-style: normal;
+        background: var(--kasten);
+        border-radius: 14px;
+        padding: 1rem 1.15rem;
+        line-height: 1.6;
+        display: inline-block;
+        min-width: 16rem;
+      }
+      .leitsatz {
+        background: var(--akzent-weich);
+        border-radius: 14px;
+        padding: 1rem 1.15rem;
+        margin: 0 0 1.25rem;
+        font-size: 1.05rem;
+      }
+      .leitsatz p:last-child {
+        margin-bottom: 0;
+      }
+      .hinweis {
+        color: var(--gedaempft);
+        font-size: 0.95rem;
+      }
+
+      /* ---------- Fuß ---------- */
+      footer {
+        border-top: 1px solid var(--linie);
+        padding: 2.5rem 0 4rem;
+        color: var(--gedaempft);
+        font-size: 0.9rem;
+      }
+      footer .hülle {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem 2rem;
+        justify-content: space-between;
+        align-items: center;
+      }
+      footer nav {
+        margin: 0;
+      }
+
+      /* ---------- Bewegung, nur wenn erwuenscht ---------- */
+      @media (prefers-reduced-motion: no-preference) {
+        @supports (animation-timeline: view()) {
+          .auftauchen {
+            animation: auftauchen linear both;
+            animation-timeline: view();
+            animation-range: entry 0% entry 40%;
+          }
+          @keyframes auftauchen {
+            from {
+              opacity: 0;
+              transform: translateY(24px);
+            }
+            to {
+              opacity: 1;
+              transform: none;
+            }
+          }
+        }
+        .telefon.vorn {
+          animation: schweben 7s ease-in-out infinite;
+        }
+        @keyframes schweben {
+          50% {
+            transform: rotate(-5deg) translateY(-10px);
+          }
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="hülle kopf">
+        <a class="marke" href="#oben"
+          ><img src="bilder/icon.png" alt="" width="32" height="32" />To-Shopping</a
+        >
+        <nav aria-label="Seite">
+          <a href="#funktionen">Funktionen</a>
+          <a href="#kassenzettel">Versprechen</a>
+          <a href="#datenschutz" class="wichtig">Datenschutz</a>
+          <a href="#impressum" class="wichtig">Impressum</a>
+          <button
+            class="schalter"
+            type="button"
+            id="theme"
+            aria-label="Hell oder dunkel umschalten"
+          >
+            <svg
+              class="mond"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" />
+            </svg>
+            <svg
+              class="sonne"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+              stroke-linejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="12" cy="12" r="4" />
+              <path
+                d="M12 2v2m0 16v2M4.9 4.9l1.4 1.4m11.4 11.4 1.4 1.4M2 12h2m16 0h2M4.9 19.1l1.4-1.4m11.4-11.4 1.4-1.4"
+              />
+            </svg>
+          </button>
+        </nav>
+      </div>
+    </header>
+
+    <main id="oben">
+      <!-- Bühne -->
+      <section class="buehne">
+        <div class="hülle">
+          <div>
+            <div class="pille"><span>Android</span> Deutsch · kostenlos · ohne Konto</div>
+            <h1 class="serif">Die Einkaufsliste, die sich merkt, <em>was du kaufst.</em></h1>
+            <p class="lead">
+              Nach ein paar Einkäufen stehen deine üblichen Artikel oben, sobald du tippst. Die
+              Liste ist sortiert wie dein Laden. Und alles davon bleibt auf deinem Telefon.
+            </p>
+            <div class="knoepfe">
+              <a
+                class="knopf voll"
+                href="https://play.google.com/store/apps/details?id=de.toshopping.app"
+              >
+                <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+                  <path
+                    d="M3.6 2.3 13.4 12l-9.8 9.7c-.4-.2-.6-.7-.6-1.3V3.6c0-.6.2-1.1.6-1.3Zm12.1 7.4L5.3 3.8l8.1 8.2-8.1 8.2 10.4-5.9 2.9-1.6c.9-.5.9-1.7 0-2.2l-2.9-1.6Z"
+                  />
+                </svg>
+                Bei Google Play
+              </a>
+              <a class="knopf leer" href="#kassenzettel">Was dein Telefon verlässt</a>
+            </div>
+            <p class="klein">
+              Der Play-Eintrag ist in Vorbereitung. Bis dahin gibt es die App im internen Test.
+            </p>
+          </div>
+          <div class="telefone" aria-hidden="true">
+            <div class="telefon hinten">
+              <img src="bilder/einkauf-dunkel.png" alt="" loading="eager" />
+            </div>
+            <div class="telefon vorn">
+              <img src="bilder/liste-hell.png" alt="" loading="eager" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Band -->
+      <div class="band">
+        <div class="hülle">
+          <div>
+            <div class="zahl serif">0</div>
+            <div>Konten</div>
+          </div>
+          <div>
+            <div class="zahl serif">0</div>
+            <div>Server</div>
+          </div>
+          <div>
+            <div class="zahl serif">0</div>
+            <div>Tracker</div>
+          </div>
+          <div>
+            <div class="zahl serif">200+</div>
+            <div>Produkte im Startkatalog</div>
+          </div>
+          <div>
+            <div class="zahl serif">35</div>
+            <div>Rezepte zum Loslegen</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Kassenzettel -->
+      <section class="beleg-abschnitt" id="kassenzettel">
+        <div class="hülle">
+          <div class="auftauchen">
+            <span class="vorzeile">Das Versprechen</span>
+            <h2 class="titel serif">Was dein Telefon verlässt: nichts.</h2>
+            <p class="lead" style="margin-top: 1rem">
+              Kein Konto, kein Server, kein Tracking. Deine Listen, dein Vorrat, deine Rezepte und
+              deine Kaufhistorie liegen in einer Datenbank auf deinem Gerät. Die App baut von sich
+              aus keine einzige Verbindung ins Netz auf.
+            </p>
+            <p class="lead">
+              Teilen und Sichern laufen über Dateien im Teilen-Menü deines Telefons. Du
+              entscheidest, wohin sie gehen. Wir sehen sie nie.
+            </p>
+          </div>
+          <div
+            class="beleg mono auftauchen"
+            role="img"
+            aria-label="Kassenzettel: alle Posten null, Summe übertragener Daten null Byte"
+          >
+            <h3>TO-SHOPPING</h3>
+            <div class="meta">Beleg · gilt immer · Kasse 1</div>
+            <table>
+              <tr>
+                <td>Benutzerkonto</td>
+                <td>0</td>
+              </tr>
+              <tr>
+                <td>Server</td>
+                <td>0</td>
+              </tr>
+              <tr>
+                <td>Analyse / Tracking</td>
+                <td>0</td>
+              </tr>
+              <tr>
+                <td>Werbung</td>
+                <td>0</td>
+              </tr>
+              <tr>
+                <td>In-App-Käufe</td>
+                <td>0</td>
+              </tr>
+              <tr>
+                <td>Laufzeitberechtigungen</td>
+                <td>0</td>
+              </tr>
+              <tr>
+                <td>Verbindungen ins Netz</td>
+                <td>0</td>
+              </tr>
+              <tr class="strich summe">
+                <td>SUMME übertragen</td>
+                <td>0 Byte</td>
+              </tr>
+            </table>
+            <div class="strichcode"></div>
+            <div class="fuss">Danke, dass du selbst entscheidest.</div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Funktionen -->
+      <section id="funktionen">
+        <div class="hülle">
+          <span class="vorzeile">Funktionen</span>
+          <h2 class="titel serif">Für den Laden gebaut, nicht für den Schreibtisch.</h2>
+          <div class="raster">
+            <article class="karte auftauchen">
+              <div class="symbol">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M12 8v4l3 3" />
+                  <circle cx="12" cy="12" r="9" />
+                </svg>
+              </div>
+              <h3>Merkt sich, was du kaufst</h3>
+              <p>
+                Vorschläge kommen aus deiner eigenen Kaufhistorie. Nicht alphabetisch, sondern nach
+                dem, was du wirklich nimmst.
+              </p>
+            </article>
+            <article class="karte auftauchen">
+              <div class="symbol">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M3 9h18M3 15h18M9 3v18M15 3v18" />
+                </svg>
+              </div>
+              <h3>Sortiert wie dein Laden</h3>
+              <p>
+                Obst zuerst, Kühlregal zuletzt, oder andersherum. Die Reihenfolge der Abteilungen
+                stellst du einmal ein.
+              </p>
+            </article>
+            <article class="karte auftauchen">
+              <div class="symbol">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M5 13l4 4L19 7" />
+                </svg>
+              </div>
+              <h3>Abhaken, einhändig</h3>
+              <p>
+                Wisch oder Tipp, beides geht. Alles mit dem Daumen erreichbar. Versehentlich
+                abgehakt? Rückgängig, in Ruhe.
+              </p>
+            </article>
+            <article class="karte neu auftauchen">
+              <span class="etikett">Neu</span>
+              <div class="symbol">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M4 7h16v13H4zM4 7l2-4h12l2 4M10 11h4" />
+                </svg>
+              </div>
+              <h3>Vorrat</h3>
+              <p>
+                Einkauf abgeschlossen, alles landet im Vorrat. Was aufgebraucht ist, hakst du ab und
+                schickst es mit einem Tipp zurück auf die Liste.
+              </p>
+            </article>
+            <article class="karte neu auftauchen">
+              <span class="etikett">Neu</span>
+              <div class="symbol">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M4 20h16M6 20V9a6 6 0 0 1 12 0v11M9 4l1-2M14 4l1-2" />
+                </svg>
+              </div>
+              <h3>Rezepte und Wochenplan</h3>
+              <p>
+                35 Gerichte mit Schritten zum Start, eigene dazu. „Was kann ich kochen?" zeigt,
+                wofür der Vorrat reicht. Fehlendes geht mit einem Tipp auf die Liste.
+              </p>
+            </article>
+            <article class="karte neu auftauchen">
+              <span class="etikett">Neu</span>
+              <div class="symbol">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <rect x="3" y="3" width="18" height="18" rx="3" />
+                  <path d="M7 8h10M7 12h7M7 16h4" />
+                </svg>
+              </div>
+              <h3>Widget auf dem Startbildschirm</h3>
+              <p>
+                Die offenen Artikel deiner Liste auf einen Blick, ohne die App zu öffnen. Liest nur,
+                schreibt nichts.
+              </p>
+            </article>
+            <article class="karte auftauchen">
+              <div class="symbol">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path d="M12 16V4m0 0-4 4m4-4 4 4M4 14v5a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-5" />
+                </svg>
+              </div>
+              <h3>Teilen und Sichern als Datei</h3>
+              <p>
+                Eine Liste an wen du willst, worüber du willst. Für den Umzug aufs neue Telefon:
+                Sicherung erstellen, Datei aufbewahren, zurückspielen.
+              </p>
+            </article>
+            <article class="karte auftauchen">
+              <div class="symbol">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <circle cx="12" cy="12" r="9" />
+                  <path d="M12 7v1M12 11v6" />
+                </svg>
+              </div>
+              <h3>Barrierefrei und durchgehend deutsch</h3>
+              <p>
+                Mit dem Screenreader bedienbar, große Systemschriften werden mitgetragen, hell und
+                dunkel, jedes Bedienelement mindestens 48 dp.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- Weg -->
+      <section class="weg">
+        <div class="hülle">
+          <span class="vorzeile">Vom Einkauf zum Abendessen</span>
+          <h2 class="titel serif">Ein Weg, fünf Tipps.</h2>
+          <ol class="schritte">
+            <li>
+              <strong>Einkauf abschließen</strong><span>Alles Abgehakte landet im Vorrat.</span>
+            </li>
+            <li>
+              <strong>Vorrat öffnen</strong
+              ><span>Aufgebrauchtes abhaken, der Rest bleibt stehen.</span>
+            </li>
+            <li>
+              <strong>„Was kann ich kochen?"</strong
+              ><span>Die Rezepte zeigen, wofür alles da ist.</span>
+            </li>
+            <li>
+              <strong>Rezept aussuchen</strong
+              ><span>Oder eine Zutat wählen und sehen, was daraus geht.</span>
+            </li>
+            <li>
+              <strong>Fehlendes auf die Liste</strong
+              ><span>Ein Tipp, fertig für den nächsten Einkauf.</span>
+            </li>
+          </ol>
+        </div>
+      </section>
+
+      <!-- Galerie -->
+      <section>
+        <div class="hülle">
+          <span class="vorzeile">Hell und dunkel</span>
+          <h2 class="titel serif">So sieht es aus.</h2>
+          <div class="galerie">
+            <figure>
+              <div class="telefon">
+                <img
+                  src="bilder/liste-hell.png"
+                  alt="Einkaufsliste nach Abteilungen sortiert, heller Modus"
+                  loading="lazy"
+                />
+              </div>
+              <figcaption>Die Liste, sortiert nach Abteilungen</figcaption>
+            </figure>
+            <figure>
+              <div class="telefon">
+                <img
+                  src="bilder/einkauf-dunkel.png"
+                  alt="Liste während des Einkaufs mit abgehakten Artikeln, dunkler Modus"
+                  loading="lazy"
+                />
+              </div>
+              <figcaption>Im Laden: abgehakt, mit Notiz</figcaption>
+            </figure>
+            <figure>
+              <div class="telefon">
+                <img
+                  src="bilder/vorschlaege-hell.png"
+                  alt="Eingabefeld mit Vorschlägen aus der Kaufhistorie"
+                  loading="lazy"
+                />
+              </div>
+              <figcaption>Vorschläge aus der Kaufhistorie</figcaption>
+            </figure>
+            <figure>
+              <div class="telefon">
+                <img
+                  src="bilder/ladenlayout-dunkel.png"
+                  alt="Reihenfolge der Abteilungen zum Verschieben, dunkler Modus"
+                  loading="lazy"
+                />
+              </div>
+              <figcaption>Ladenlayout: Abteilungen verschieben</figcaption>
+            </figure>
+            <figure>
+              <div class="telefon">
+                <img
+                  src="bilder/katalog-hell.png"
+                  alt="Produktkatalog mit Suchfeld"
+                  loading="lazy"
+                />
+              </div>
+              <figcaption>Der Produktkatalog</figcaption>
+            </figure>
+          </div>
+        </div>
+      </section>
+
+      <!-- Gebaut -->
+      <section class="weg">
+        <div class="hülle">
+          <span class="vorzeile">Hinter der App</span>
+          <h2 class="titel serif">Klein gehalten, mit Absicht.</h2>
+          <div class="spalten">
+            <div class="auftauchen">
+              <h3>Eine Datenbank, ein Gerät</h3>
+              <p>
+                Alle Daten liegen in einer SQLite-Datenbank auf deinem Telefon. Es gibt keine zweite
+                Kopie, nirgendwo.
+              </p>
+            </div>
+            <div class="auftauchen">
+              <h3>Keine Bibliothek, die nach Hause telefoniert</h3>
+              <p>
+                Kein Analyse-, Absturz- oder Werbe-Baukasten. Jede neue Abhängigkeit wird vor dem
+                Einbau auf ihre Berechtigungen geprüft.
+              </p>
+            </div>
+            <div class="auftauchen">
+              <h3>Ein Lernprojekt</h3>
+              <p>
+                Die App entsteht KI-gestützt, jede Entscheidung wird schriftlich begründet. Was
+                nicht gebaut wird, steht genauso fest wie das, was gebaut wird.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Datenschutzerklärung -->
+      <section class="recht" id="datenschutz">
+        <div class="eng">
+          <span class="vorzeile">Rechtliches</span>
+          <h2 class="serif">Datenschutzerklärung</h2>
+          <p class="hinweis">für die Android-App To-Shopping</p>
+
+          <h3>1. Verantwortlicher</h3>
+          <p>Verantwortlich für die Datenverarbeitung im Sinne der DSGVO ist:</p>
+          <address>
+            [Vor- und Nachname]<br />
+            [Straße und Hausnummer]<br />
+            [Postleitzahl und Ort]<br />
+            Deutschland<br /><br />
+            E-Mail: [kontakt@example.de]
+          </address>
+
+          <h3>2. Grundsatz: Deine Daten bleiben auf deinem Gerät</h3>
+          <div class="leitsatz">
+            <p>
+              To-Shopping ist eine Einkaufslisten-App <strong>ohne Konto und ohne Server</strong>.
+            </p>
+          </div>
+          <p>
+            Alle Inhalte, die du in der App anlegst – Listen, Artikel, Mengen, Notizen, Produkte,
+            Kategorien, Vorrat, Rezepte, Wochenplan und deine Kaufhistorie – werden ausschließlich
+            in einer Datenbank <strong>auf deinem Gerät</strong> gespeichert. Sie werden nicht an
+            den Entwickler und nicht an Dritte übertragen.
+          </p>
+          <p>Es gibt keine Registrierung, keine Anmeldung und kein Benutzerkonto.</p>
+          <p>
+            Das Widget für den Startbildschirm liest die offenen Artikel direkt aus dieser Datenbank
+            auf deinem Gerät. Auch dafür wird keine Verbindung aufgebaut.
+          </p>
+
+          <h3>3. Fehlerberichte</h3>
+          <p>
+            Stürzt die App ab, schreibt sie einen technischen Bericht
+            <strong>auf dein Gerät</strong>. Er enthält den Zeitpunkt, die App-Version, die
+            Android-Version, das Gerätemodell, die Fehlermeldung und die technische Aufrufkette.
+            Höchstens die letzten 20 Berichte werden aufbewahrt.
+          </p>
+          <p>
+            <strong>Diese Berichte werden nicht automatisch versendet.</strong> Sie verlassen dein
+            Gerät nur, wenn du in der App unter <em>Diagnose</em> ausdrücklich „An den Entwickler
+            senden“ auswählst. Dann öffnet sich das Teilen-Menü deines Telefons, und du entscheidest
+            selbst, ob und worüber du den Bericht verschickst.
+          </p>
+          <p>
+            Die Berichte enthalten <strong>keine Listeninhalte und keine Produktnamen</strong>. Es
+            wird kein Fehlerdienst eines Drittanbieters eingesetzt.
+          </p>
+
+          <h3>4. Teilen und Sichern</h3>
+          <p>
+            Die App kann Listen und vollständige Sicherungen als Datei erzeugen und an das
+            Teilen-Menü deines Telefons übergeben.
+          </p>
+          <p>
+            Ob und wohin diese Datei geht, entscheidest ausschließlich du. Der Entwickler erhält sie
+            nicht. Sobald du die Datei über eine andere App verschickst – etwa einen Messenger, eine
+            E-Mail-App oder einen Cloud-Speicher – gilt für diesen Vorgang die Datenschutzerklärung
+            der jeweiligen App.
+          </p>
+
+          <h3>5. Berechtigungen</h3>
+          <p>
+            Die App fordert <strong>keine Laufzeitberechtigungen</strong> an. Kein Zugriff auf
+            Standort, Kamera, Kontakte, Mikrofon oder Dateien. Auch das Widget braucht keine
+            Berechtigung.
+          </p>
+          <p>
+            Im Android-Manifest stehen lediglich zwei technische Einträge: Vibration (für die kurze
+            Rückmeldung beim Abhaken) und Internetzugang.
+          </p>
+          <p>
+            Der Internetzugang wird von der App <strong>nicht genutzt</strong>. Er steht im
+            Manifest, weil eine der eingesetzten Programmbibliotheken ihn dort einträgt. Die App
+            baut von sich aus keine Verbindung auf – es gibt keinen Server, keine Update-Abfrage und
+            keine Statistik.
+          </p>
+
+          <h3>6. Keine Werbung, kein Tracking</h3>
+          <p>Die App enthält:</p>
+          <ul>
+            <li>keine Werbung,</li>
+            <li>kein Tracking und keine Analyse-Werkzeuge,</li>
+            <li>keine Profilbildung,</li>
+            <li>keine In-App-Käufe,</li>
+            <li>keine Weitergabe von Daten an Dritte zu Werbezwecken.</li>
+          </ul>
+
+          <h3>7. Deine Rechte</h3>
+          <p>
+            Nach der DSGVO hast du das Recht auf Auskunft, Berichtigung, Löschung, Einschränkung der
+            Verarbeitung, Datenübertragbarkeit und Widerspruch.
+          </p>
+          <p>In der Praxis sieht das bei dieser App so aus:</p>
+          <ul>
+            <li>
+              <strong>Auskunft und Übertragbarkeit:</strong> Alle deine Daten liegen auf deinem
+              Gerät. Über <em>Sicherung</em> kannst du sie jederzeit vollständig als Datei
+              exportieren.
+            </li>
+            <li>
+              <strong>Löschung:</strong> Deinstalliere die App. Damit sind alle Daten gelöscht. Es
+              gibt keine Kopie beim Entwickler, die zu löschen wäre.
+            </li>
+            <li>
+              <strong>Beschwerde:</strong> Du kannst dich bei einer Datenschutz-Aufsichtsbehörde
+              beschweren, in der Regel bei der Behörde deines Bundeslandes.
+            </li>
+          </ul>
+          <p>
+            Für Anliegen erreichst du den Verantwortlichen unter der in Abschnitt 1 genannten
+            E-Mail-Adresse.
+          </p>
+          <p>
+            Der Verantwortliche hat keinen Zugriff auf deine Daten und kann dir deshalb auch keine
+            Auskunft darüber geben – es liegt schlicht nichts vor.
+          </p>
+
+          <h3>8. Google Play als Vertriebsweg</h3>
+          <p>
+            Die App wird über Google Play verteilt. Google verarbeitet dabei eigenständig Daten –
+            etwa zu Installation, Aktualisierung und Absturzstatistik des Play-Store-Dienstes.
+            Darauf hat der Entwickler dieser App keinen Einfluss.
+          </p>
+          <p>
+            Es gilt die Datenschutzerklärung von Google:
+            <a href="https://policies.google.com/privacy">policies.google.com/privacy</a>
+          </p>
+
+          <h3>9. Diese Webseite</h3>
+          <p>
+            Diese Seite wird über GitHub Pages ausgeliefert. Beim Abruf verarbeitet GitHub technisch
+            notwendige Verbindungsdaten wie die IP-Adresse; es gilt die
+            <a
+              href="https://docs.github.com/de/site-policy/privacy-policies/github-general-privacy-statement"
+              >Datenschutzerklärung von GitHub</a
+            >. Die Seite selbst setzt keine Cookies, lädt keine fremden Inhalte nach und misst
+            nichts. Die Wahl zwischen hell und dunkel wird nur in deinem Browser gespeichert.
+          </p>
+
+          <h3>10. Stand und Änderungen</h3>
+          <p>
+            Diese Datenschutzerklärung hat den Stand <strong>[Datum der Veröffentlichung]</strong>.
+          </p>
+          <p>
+            Ändert sich die App so, dass diese Angaben nicht mehr stimmen, wird die Erklärung
+            angepasst und das Datum aktualisiert.
+          </p>
+        </div>
+      </section>
+
+      <!-- Impressum -->
+      <section class="recht" id="impressum">
+        <div class="eng">
+          <h2 class="serif">Impressum</h2>
+          <p class="hinweis">Verantwortlich für diese Seite und die App To-Shopping</p>
+          <address>
+            [Vor- und Nachname]<br />
+            [Straße und Hausnummer]<br />
+            [Postleitzahl und Ort]<br />
+            Deutschland<br /><br />
+            E-Mail: [kontakt@example.de]
+          </address>
+          <p class="hinweis" style="margin-top: 1.5rem">
+            To-Shopping ist ein privates, kostenloses Angebot ohne Werbung und ohne Käufe. Google
+            Play und das Google-Play-Logo sind Marken von Google LLC. Android ist eine Marke von
+            Google LLC.
+          </p>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="hülle">
+        <div>To-Shopping · Einkaufsliste ohne Konto und ohne Server.</div>
+        <nav aria-label="Rechtliches">
+          <a href="#datenschutz">Datenschutz</a>
+          <a href="#impressum">Impressum</a>
+          <a href="#oben">Nach oben</a>
+        </nav>
+      </div>
+    </footer>
+
+    <script>
+      // Hell/dunkel: folgt dem System, bis der Leser umschaltet. Die Wahl
+      // bleibt in seinem Browser (localStorage) - das ist kein Cookie und
+      // verlaesst das Geraet nicht.
+      (function () {
+        var wurzel = document.documentElement;
+        var schluessel = 'to-shopping-theme';
+        try {
+          var gemerkt = localStorage.getItem(schluessel);
+          if (gemerkt === 'light' || gemerkt === 'dark') {
+            wurzel.setAttribute('data-theme', gemerkt);
+          }
+        } catch (e) {}
+        document.getElementById('theme').addEventListener('click', function () {
+          var dunkelJetzt =
+            wurzel.getAttribute('data-theme') === 'dark' ||
+            (!wurzel.getAttribute('data-theme') &&
+              window.matchMedia('(prefers-color-scheme: dark)').matches);
+          var neu = dunkelJetzt ? 'light' : 'dark';
+          wurzel.setAttribute('data-theme', neu);
+          try {
+            localStorage.setItem(schluessel, neu);
+          } catch (e) {}
+        });
+      })();
+    </script>
+  </body>
+</html>

@@ -48,3 +48,6 @@ yarn-error.*
 # Test-Artefakte
 /coverage
 /.maestro
+
+# Claude Code: lokale Vorschau-Konfiguration
+.claude/launch.json

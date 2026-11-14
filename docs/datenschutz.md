@@ -15,7 +15,13 @@
 > Dieser Entwurf ist keine Rechtsberatung. Er folgt der Gliederung aus
 > `compliance.md`, Abschnitt 3.2.
 >
-> **Stand dieses Entwurfs:** 26. August 2026
+> **Veröffentlichte Fassung:** `docs/index.html`, Abschnitt „Datenschutzerklärung"
+> (Anker `#datenschutz`). Ändert sich der Text, ändert er sich in beiden
+> Dateien – diese hier ist die, die im Repository gelesen wird, die HTML-Seite
+> die, die veröffentlicht wird.
+>
+> **Stand dieses Entwurfs:** 14. November 2026 (V2: Vorrat, Rezepte, Widget,
+> Abschnitt zur Webseite)
 
 ---
 
@@ -37,11 +43,14 @@ E-Mail: [kontakt@example.de]
 To-Shopping ist eine Einkaufslisten-App **ohne Konto und ohne Server**.
 
 Alle Inhalte, die du in der App anlegst – Listen, Artikel, Mengen, Notizen,
-Produkte, Kategorien und deine Kaufhistorie – werden ausschließlich in einer
-Datenbank **auf deinem Gerät** gespeichert. Sie werden nicht an den
-Entwickler und nicht an Dritte übertragen.
+Produkte, Kategorien, Vorrat, Rezepte, Wochenplan und deine Kaufhistorie –
+werden ausschließlich in einer Datenbank **auf deinem Gerät** gespeichert. Sie
+werden nicht an den Entwickler und nicht an Dritte übertragen.
 
 Es gibt keine Registrierung, keine Anmeldung und kein Benutzerkonto.
+
+Das Widget für den Startbildschirm liest die offenen Artikel direkt aus dieser
+Datenbank auf deinem Gerät. Auch dafür wird keine Verbindung aufgebaut.
 
 ## 3. Fehlerberichte
 
@@ -73,7 +82,8 @@ Vorgang die Datenschutzerklärung der jeweiligen App.
 ## 5. Berechtigungen
 
 Die App fordert **keine Laufzeitberechtigungen** an. Kein Zugriff auf
-Standort, Kamera, Kontakte, Mikrofon oder Dateien.
+Standort, Kamera, Kontakte, Mikrofon oder Dateien. Auch das Widget braucht
+keine Berechtigung.
 
 Im Android-Manifest stehen lediglich zwei technische Einträge: Vibration (für
 die kurze Rückmeldung beim Abhaken) und Internetzugang.
@@ -122,7 +132,16 @@ Play-Store-Dienstes. Darauf hat der Entwickler dieser App keinen Einfluss.
 Es gilt die Datenschutzerklärung von Google:
 <https://policies.google.com/privacy>
 
-## 9. Stand und Änderungen
+## 9. Diese Webseite
+
+Diese Seite wird über GitHub Pages ausgeliefert. Beim Abruf verarbeitet GitHub
+technisch notwendige Verbindungsdaten wie die IP-Adresse; es gilt die
+[Datenschutzerklärung von GitHub](https://docs.github.com/de/site-policy/privacy-policies/github-general-privacy-statement).
+Die Seite selbst setzt keine Cookies, lädt keine fremden Inhalte nach und
+misst nichts. Die Wahl zwischen hell und dunkel wird nur in deinem Browser
+gespeichert.
+
+## 10. Stand und Änderungen
 
 Diese Datenschutzerklärung hat den Stand **[Datum der Veröffentlichung]**.
 

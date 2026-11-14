@@ -147,7 +147,10 @@ er beweist, dass FR-7.2 hält.
 
 ### 4.1 Datenschutzerklärung (C-3)
 
-URL eintragen. Quelle: `docs/datenschutz.html`, veröffentlicht über GitHub Pages.
+URL eintragen: der Onepager `docs/index.html`, veröffentlicht über GitHub Pages,
+mit dem Anker `#datenschutz` – also `https://<benutzer>.github.io/<repo>/#datenschutz`.
+Eine eigene Unterseite gibt es nicht mehr; der Anker reicht, weil Play nur eine
+öffentlich erreichbare URL ohne Login verlangt.
 
 > **Noch offen:** Die Erklärung braucht eine ladungsfähige Anschrift, und die
 > Seite ist danach weltweit sichtbar. Entscheidung C-11 steht aus.
