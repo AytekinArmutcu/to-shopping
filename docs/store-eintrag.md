@@ -114,8 +114,10 @@ Beide erzeugt von `store/grafiken.py` aus den Farben in `src/theme/index.ts`.
 
 ### Screenshots
 
-Aufgenommen auf dem Galaxy S24 (1080 × 2340), hergestellt von
-`store/screenshots.yaml`. Play verlangt mindestens zwei; die Reihenfolge unten
+Aufgenommen auf dem Emulator (Pixel-Profil, 1080 × 2400, Android 15) am
+16. November 2026 mit dem Aussehen aus M18, hergestellt von
+`store/screenshots.yaml`. Nicht mehr auf dem S24: Der Ablauf beginnt mit einem
+leeren Datenbestand, und das Telefon trägt echte Daten. Play verlangt mindestens zwei; die Reihenfolge unten
 erzählt eine Geschichte und ist die empfohlene.
 
 | # | Datei | Was es zeigt |
@@ -127,13 +129,18 @@ erzählt eine Geschichte und ist die empfohlene.
 | 5 | `screenshot-5-uebersicht.png` | Mehrere Listen nebeneinander |
 | 6 | `screenshot-6-katalog.png` | Der mitgelieferte Produktkatalog |
 | 7 | `screenshot-7-vorschlaege.png` | Nach dem Einkauf: die üblichen Verdächtigen |
+| 8 | `screenshot-8-vorrat.png` | Der Vorrat, nach dem Einkauf gefüllt |
+| 9 | `screenshot-9-rezepte.png` | Rezepte mit „fehlt"-Schildern aus dem Vorrat |
 
-Dieselben sieben im Dunkelmodus als `dunkel-*.png`. Für den Store reicht ein
+Play nimmt höchstens acht Telefonbilder. Empfehlung: 1, 3, 5, 8, 9, 2, 4, 7 –
+Bild 6 (Katalog) bleibt draußen.
+
+Dieselben neun im Dunkelmodus als `dunkel-*.png`. Für den Store reicht ein
 Satz – der helle wirkt im Play Store freundlicher. Der dunkle liegt bei, weil
 er beweist, dass FR-7.2 hält.
 
-> **Falls die Console die Seitenverhältnisse bemängelt:** Das S24 nimmt mit
-> 1:2,17 auf, Google dokumentiert 9:16 bis 16:9. In der Praxis nimmt die
+> **Falls die Console die Seitenverhältnisse bemängelt:** Der Emulator nimmt mit
+> 1:2,22 auf, Google dokumentiert 9:16 bis 16:9. In der Praxis nimmt die
 > Console hohe Telefonbilder an. Sollte sie hier zicken, sind die Bilder mit
 > Rändern auf 1080 × 1920 zu bringen – sagen, dann mache ich das.
 

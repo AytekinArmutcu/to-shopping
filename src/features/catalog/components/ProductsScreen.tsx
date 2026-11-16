@@ -265,7 +265,10 @@ export function ProductsScreen() {
           setDraft({ id: null, name: query, categoryId: FALLBACK_CATEGORY_ID, isStaple: false })
         }
         testID="product-create"
-        style={styles.fab}
+        // Orange wie jeder "Neu"-Knopf (ADR-049): eine Farbe fuer "hier entsteht
+        // etwas", auf allen drei Screens dieselbe.
+        color={theme.colors.onTertiaryContainer}
+        style={[styles.fab, { backgroundColor: theme.colors.tertiaryContainer }]}
       />
 
       <Portal>

@@ -619,7 +619,10 @@ export function RecipesScreen({ withParam }: Props) {
         accessibilityLabel={t('recipes.create')}
         onPress={() => router.push({ pathname: '/rezept', params: { recipeId: NEW_RECIPE_ID } })}
         testID="recipe-create"
-        style={styles.fab}
+        // Orange wie jeder "Neu"-Knopf (ADR-049): eine Farbe fuer "hier entsteht
+        // etwas", auf allen drei Screens dieselbe.
+        color={theme.colors.onTertiaryContainer}
+        style={[styles.fab, { backgroundColor: theme.colors.tertiaryContainer }]}
       />
 
       <Portal>

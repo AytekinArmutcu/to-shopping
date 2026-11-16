@@ -7,10 +7,17 @@
 # Gate 4 soll aus Tests bestehen, nicht aus Bildermachen. Der Flow braucht
 # ausserdem einen Menschen, der die Bilder danach ansieht.
 #
-# Die Aufnahmen landen als store/screenshot-*.png. Fuer den dunklen Modus
-# einmal umschalten und erneut laufen lassen:
+# Maestro 2.8 legt die Aufnahmen NICHT ins Projekt, sondern unter
+# ~/.maestro/tests/<Lauf>/screenshots/takeScreenshot/store/ ab; von dort
+# werden sie nach store/ kopiert. Fuer den dunklen Modus einmal umschalten,
+# erneut laufen lassen und die Dateien als dunkel-*.png ablegen:
 #
 #     adb shell cmd uimode night yes
+#
+# Haengt ausser dem Emulator noch das Telefon an adb, IMMER mit Geraet
+# aufrufen - der Flow beginnt mit clearState und wuerde dort alles loeschen:
+#
+#     maestro --device emulator-5554 test store/screenshots.yaml
 #
 # Laeuft gegen einen Release-Build (ADR-025): npm run android:release
 appId: de.toshopping.app
@@ -258,3 +265,37 @@ appId: de.toshopping.app
     timeout: 15000
 - waitForAnimationToEnd
 - takeScreenshot: store/screenshot-7-vorschlaege
+
+# ============================================================
+# 8. Der Vorrat - nach dem Einkauf gefuellt (V2, FR-9)
+#
+# Steht hinter Bild 7, weil erst der abgeschlossene Einkauf den Vorrat fuellt.
+# Der Weg dorthin geht ueber das Menue der Liste; die Tastatur aus Bild 7
+# wird dabei von selbst geschlossen.
+# ============================================================
+- tapOn:
+    id: 'list-menu'
+- extendedWaitUntil:
+    visible:
+      id: 'menu-pantry'
+    timeout: 15000
+- tapOn:
+    id: 'menu-pantry'
+- extendedWaitUntil:
+    visible:
+      id: 'pantry-list'
+    timeout: 15000
+- waitForAnimationToEnd
+- takeScreenshot: store/screenshot-8-vorrat
+
+# ============================================================
+# 9. Rezepte - was sich aus dem Vorrat kochen laesst (V2, FR-10)
+# ============================================================
+- tapOn:
+    id: 'pantry-cook'
+- extendedWaitUntil:
+    visible:
+      id: 'recipes-list'
+    timeout: 15000
+- waitForAnimationToEnd
+- takeScreenshot: store/screenshot-9-rezepte
