@@ -3,15 +3,17 @@ import { router } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SectionList, StyleSheet, View } from 'react-native';
-import { Appbar, Button, Checkbox, List, Snackbar, Text, useTheme } from 'react-native-paper';
+import { Appbar, Button, Checkbox, List, Snackbar, Text } from 'react-native-paper';
 
 import { catalogProductsQuery, categoriesQuery } from '@/features/catalog/repository';
 import { getOrCreateActiveList } from '@/features/lists/repository';
 import { toProductStats } from '@/features/suggestions/logic';
 import { currentStatsQuery } from '@/features/suggestions/repository';
 import { goTo } from '@/lib/navigation';
+import { useAppTheme } from '@/theme';
+import { categoryColorFor } from '@/theme/categoryColors';
 
-import { buildPantryChecklist, missingProductIds } from '../logic';
+import { buildPantryChecklist, countInPantry, missingProductIds } from '../logic';
 import { addMissingToList, pantryQuery, setInPantry } from '../repository';
 
 type Props = {
@@ -22,10 +24,10 @@ type Props = {
 /**
  * Der Vorrat als Checkliste der ueblichen Artikel (ADR-043, T-13.4, PRD Flow 8).
  *
- * Gebaut wie die Produktverwaltung (Abschnitte nach Abteilung, feste
- * Ueberschriften) und mit demselben Fussbereich wie die Einkaufsliste: links
- * der Stand, darunter die eine Aktion. Der Vorrat soll sich nicht wie ein
- * fremdes Modul anfuehlen.
+ * Abschnitte nach Abteilung, seit M18 als farbige Gruppenflaechen (ADR-049,
+ * Punkt 6), und derselbe Fussbereich wie die Einkaufsliste: links der Stand,
+ * darunter die eine Aktion. Der Vorrat soll sich nicht wie ein fremdes Modul
+ * anfuehlen.
  *
  * Nach "Auf die Liste setzen" bleibt der Screen offen. Wer gerade den
  * Kuehlschrank durchgeht, will vielleicht noch einen Haken korrigieren - der
@@ -33,7 +35,7 @@ type Props = {
  */
 export function PantryScreen({ listId }: Props) {
   const { t } = useTranslation();
-  const theme = useTheme();
+  const theme = useAppTheme();
 
   const pantryRows = useLiveQuery(pantryQuery());
   const historyRows = useLiveQuery(currentStatsQuery());
@@ -66,6 +68,7 @@ export function PantryScreen({ listId }: Props) {
 
   const missing = useMemo(() => missingProductIds(sections), [sections]);
   const missingCount = missing.length;
+  const thereCount = useMemo(() => countInPantry(sections), [sections]);
 
   // Zurueck ist ein benanntes Ziel (ADR-036), kein router.back(): Der Vorrat
   // kann ueber die Uebersicht oder ueber eine Liste erreicht werden.
@@ -106,54 +109,94 @@ export function PantryScreen({ listId }: Props) {
         <Appbar.Content title={t('pantry.title')} />
       </Appbar.Header>
 
-      <Text variant="bodySmall" style={[styles.hint, { color: theme.colors.onSurfaceVariant }]}>
-        {t('pantry.hint')}
-      </Text>
+      {/* Der Kopf beantwortet die Frage, mit der man den Vorrat oeffnet:
+          Wie viel fehlt? (ADR-049, "23 da · 4 fehlen"). Der Stand in der
+          Fussleiste bleibt - dort steht er neben dem Knopf, der etwas damit tut. */}
+      <View style={styles.header}>
+        {sections.length > 0 ? (
+          <Text variant="titleMedium">
+            {t('pantry.summary', { there: thereCount, count: missingCount })}
+          </Text>
+        ) : null}
+        <Text variant="bodySmall" style={{ color: theme.colors.onSurfaceVariant }}>
+          {t('pantry.hint')}
+        </Text>
+      </View>
 
+      {/* Jede Abteilung liegt auf einer Flaeche in ihrer Kategoriefarbe
+          (ADR-049): Kopf, Zeilen und Abschluss sind einzelne Zellen der
+          SectionList, die zusammen eine Flaeche ergeben. So bleibt die Liste
+          auch bei 200 Produkten virtualisiert.
+
+          Ohne feste Ueberschriften: Eine haftende Ueberschrift wuerde ihre
+          gerundete Oberkante ueber die Zeilen darunter schieben, und die
+          Flaeche saehe zerschnitten aus. Die Farbe sagt beim Scrollen ohnehin,
+          in welcher Abteilung man ist. */}
       <SectionList
         sections={listSections}
         keyExtractor={(item) => item.productId}
-        stickySectionHeadersEnabled
+        stickySectionHeadersEnabled={false}
         style={styles.list}
-        contentContainerStyle={sections.length === 0 ? styles.emptyContainer : undefined}
+        contentContainerStyle={sections.length === 0 ? styles.emptyContainer : styles.listContent}
         testID="pantry-list"
-        renderSectionHeader={({ section }) => (
-          <Text
-            variant="titleSmall"
-            style={[
-              styles.sectionHeader,
-              { backgroundColor: theme.colors.surface, color: theme.colors.primary },
-            ]}
-          >
-            {section.title}
-          </Text>
-        )}
-        renderItem={({ item }) => (
-          <List.Item
-            title={item.name}
-            onPress={() => void setInPantry(item.productId, !item.inPantry)}
-            accessibilityRole="checkbox"
-            accessibilityState={{ checked: item.inPantry }}
-            accessibilityLabel={t('pantry.toggle', { name: item.name })}
-            testID={`pantry-${item.name}`}
-            style={styles.row}
-            // Gedaempft, aber lesbar: onSurfaceVariant ist die Rolle fuer
-            // zweitrangigen Text und haelt den Kontrast in hell und dunkel.
-            titleStyle={item.inPantry ? undefined : { color: theme.colors.onSurfaceVariant }}
-            left={() => (
-              // Der Haken ist nur Anzeige. Getippt wird die ganze Zeile, und
-              // der Screenreader soll genau ein Kontrollkaestchen hoeren.
-              <View
-                pointerEvents="none"
-                importantForAccessibility="no-hide-descendants"
-                accessibilityElementsHidden
-                style={styles.check}
-              >
-                <Checkbox status={item.inPantry ? 'checked' : 'unchecked'} />
-              </View>
-            )}
-          />
-        )}
+        renderSectionHeader={({ section }) => {
+          const colors = categoryColorFor(theme.categories, section.key);
+          return (
+            <Text
+              variant="titleSmall"
+              style={[
+                styles.sectionHeader,
+                { backgroundColor: colors.container, color: colors.onContainer },
+              ]}
+            >
+              {section.title}
+            </Text>
+          );
+        }}
+        renderSectionFooter={() => <View style={styles.sectionGap} />}
+        renderItem={({ item, index, section }) => {
+          const colors = categoryColorFor(theme.categories, section.key);
+          const isLast = index === section.data.length - 1;
+
+          return (
+            <View
+              style={[
+                styles.rowSurface,
+                isLast ? styles.rowSurfaceLast : null,
+                { backgroundColor: colors.container },
+              ]}
+            >
+              <List.Item
+                title={item.name}
+                onPress={() => void setInPantry(item.productId, !item.inPantry)}
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: item.inPantry }}
+                accessibilityLabel={t('pantry.toggle', { name: item.name })}
+                testID={`pantry-${item.name}`}
+                style={styles.row}
+                // Gedaempft ueber die Deckkraft statt ueber eine zweite Farbe:
+                // Fuer jede Kategorie ist nur das Paar container/onContainer
+                // auf Kontrast geprueft (ADR-049).
+                titleStyle={[
+                  { color: colors.onContainer },
+                  item.inPantry ? null : styles.missingTitle,
+                ]}
+                left={() => (
+                  // Der Haken ist nur Anzeige. Getippt wird die ganze Zeile, und
+                  // der Screenreader soll genau ein Kontrollkaestchen hoeren.
+                  <View
+                    pointerEvents="none"
+                    importantForAccessibility="no-hide-descendants"
+                    accessibilityElementsHidden
+                    style={styles.check}
+                  >
+                    <Checkbox status={item.inPantry ? 'checked' : 'unchecked'} />
+                  </View>
+                )}
+              />
+            </View>
+          );
+        }}
         ListEmptyComponent={
           <View style={styles.empty} testID="pantry-empty">
             <Text variant="titleMedium" style={styles.emptyText}>
@@ -170,7 +213,7 @@ export function PantryScreen({ listId }: Props) {
       />
 
       {sections.length > 0 ? (
-        <View style={[styles.footer, { borderTopColor: theme.colors.outlineVariant }]}>
+        <View style={styles.footer}>
           <View style={styles.footerRow}>
             <Text variant="labelLarge" testID="pantry-missing">
               {missingCount === 0
@@ -221,21 +264,50 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  hint: {
+  header: {
     paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: 4,
+    paddingBottom: 8,
+    gap: 2,
   },
   list: {
     flex: 1,
   },
-  sectionHeader: {
+  listContent: {
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingTop: 4,
+  },
+  // Oberkante der Gruppenflaeche: 18 dp Rundung, 8 dp Innenabstand. Der Titel
+  // rueckt noch einmal 8 dp ein und steht damit ueber den Haken der Zeilen
+  // (die Checkbox bringt ihren eigenen Rand mit).
+  sectionHeader: {
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    paddingTop: 12,
+    paddingBottom: 4,
+    paddingHorizontal: 8 + 8,
+    overflow: 'hidden',
+  },
+  rowSurface: {
+    paddingHorizontal: 8,
+  },
+  // Unterkante der Gruppenflaeche. overflow schneidet die Welle der letzten
+  // Zeile an der Rundung ab.
+  rowSurfaceLast: {
+    borderBottomLeftRadius: 18,
+    borderBottomRightRadius: 18,
+    paddingBottom: 8,
+    overflow: 'hidden',
+  },
+  sectionGap: {
+    height: 10,
   },
   row: {
     minHeight: 56,
     justifyContent: 'center',
+  },
+  missingTitle: {
+    opacity: 0.7,
   },
   check: {
     justifyContent: 'center',
@@ -251,9 +323,9 @@ const styles = StyleSheet.create({
   emptyText: {
     textAlign: 'center',
   },
-  // Wie der Fussbereich der Einkaufsliste (ListScreen), damit beide gleich wirken.
+  // Wie der Fussbereich der Einkaufsliste (ListScreen), damit beide gleich
+  // wirken - seit M18 ohne Trennlinie (ADR-049, Flaechen statt Linien).
   footer: {
-    borderTopWidth: StyleSheet.hairlineWidth,
     paddingHorizontal: 16,
     paddingTop: 8,
     paddingBottom: 12,

@@ -70,6 +70,9 @@ const textPaare: [string, string][] = [
   ['primary', 'background'],
   ['primary', 'surface'],
   ['error', 'surface'],
+  // Orange als Akzent (ADR-049) traegt auch normalen Text, z. B. auf Chips.
+  ['onTertiary', 'tertiary'],
+  ['onTertiaryContainer', 'tertiaryContainer'],
 ];
 
 describe.each([

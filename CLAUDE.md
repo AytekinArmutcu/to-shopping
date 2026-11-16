@@ -75,12 +75,12 @@ Vollständige Liste mit Begründungen: `docs/PRD.md`, Abschnitt 6.
 |---|---|
 | `docs/PRD.md` | Problem, Zielgruppe, User-Flows, Anforderungen (FR-1 bis FR-8 für V1, FR-9 bis FR-11 für V2), Nicht-Ziele, Erfolgskriterien |
 | `docs/architecture.md` | Stack, Datenmodell, Algorithmen, Dateiformate, Ordnerstruktur |
-| `docs/decisions.md` | 48 ADRs: warum so, was wurde verworfen, was kostet es |
+| `docs/decisions.md` | 50 ADRs: warum so, was wurde verworfen, was kostet es |
 | `docs/compliance.md` | Datenschutz, Play-Console-Pflichten, offene Aufgaben C-1 bis C-12 |
 | `docs/datenschutz.md` | Entwurf der Datenschutzerklärung (C-2), Lücken mit `[…]` markiert; Text identisch mit dem Abschnitt in `index.html` |
 | `docs/index.html` | Onepager für GitHub Pages: Vorstellung, Datenschutzerklärung (`#datenschutz`), Impressum; Bilder in `docs/bilder/` |
 | `docs/abnahme.md` | Prüfliste für die manuelle Abnahme (Gate 5) |
 | `docs/store-eintrag.md` | Texte und fertige Formularantworten für die Play Console |
-| `docs/roadmap.md` | 18 Meilensteine (M0–M12 V1, M13–M17 V2), Tasks mit Akzeptanzkriterien |
+| `docs/roadmap.md` | 19 Meilensteine (M0–M12 V1, M13–M18 V2), Tasks mit Akzeptanzkriterien |
 
 Inhalte gehören in `docs/`. Diese Datei bleibt schlank und verweist.

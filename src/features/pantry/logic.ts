@@ -154,3 +154,11 @@ export function missingProductIds(sections: PantrySection[]): string[] {
 export function countMissing(sections: PantrySection[]): number {
   return missingProductIds(sections).length;
 }
+
+/** Anzahl der Artikel mit Haken - fuer den Kopf "23 da · 4 fehlen" (ADR-049). */
+export function countInPantry(sections: PantrySection[]): number {
+  return sections.reduce(
+    (sum, section) => sum + section.items.filter((item) => item.inPantry).length,
+    0,
+  );
+}

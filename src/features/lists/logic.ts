@@ -292,6 +292,173 @@ export function buildListOverview(lists: ListLike[], counts: OpenCount[]): ListO
     }));
 }
 
+/* ------------------------------------------------------------------ *
+ * M18: Listenkarten mit Farbleiste und Vorschau (ADR-049)
+ * ------------------------------------------------------------------ */
+
+/** Ein Artikel irgendeiner Liste, so wie ihn die Uebersicht braucht. */
+export type PreviewItem = SectionItem & {
+  listId: string;
+  name: string;
+};
+
+/** Ein Eintrag aus list_category_order - fuer alle Listen auf einmal. */
+export type ListCategoryOrderEntry = CategoryOrderEntry & {
+  listId: string;
+};
+
+export type ListPreviewSegment = {
+  /**
+   * Kategorie, in deren Abschnitt der Artikel auf der Liste steht. Bei
+   * erledigten Artikeln die eigene Kategorie; die Karte zeichnet sie ohnehin
+   * gedaempft.
+   */
+  categoryId: string;
+  checked: boolean;
+};
+
+export type ListPreview = {
+  /** Ein Segment je Artikel: offene in Ladenreihenfolge, danach die erledigten. */
+  segments: ListPreviewSegment[];
+  /** Die ersten offenen Artikelnamen, in derselben Reihenfolge wie auf der Liste. */
+  previewNames: string[];
+  /** Offene Artikel, die nicht in previewNames stehen. Groesser null: "…" anhaengen. */
+  hiddenCount: number;
+};
+
+/** Mehr Segmente werden auf einer Telefonbreite zu Strichen ohne erkennbare Farbe. */
+export const MAX_PREVIEW_SEGMENTS = 24;
+
+/** So viele Namen passen ungefaehr in eine Zeile; der Rest wird ohnehin abgeschnitten. */
+export const MAX_PREVIEW_NAMES = 5;
+
+/** Vorschau einer Liste ohne Artikel - und jeder Liste, fuer die nichts geliefert wurde. */
+export const EMPTY_LIST_PREVIEW: ListPreview = { segments: [], previewNames: [], hiddenCount: 0 };
+
+/**
+ * Farbleiste und Namensvorschau fuer alle Listenkarten der Uebersicht (T-18.3).
+ *
+ * Die Reihenfolge kommt aus buildListSections - derselben Funktion, die die
+ * Liste selbst sortiert. So zeigt die Karte die Abteilungen genau in der
+ * Reihenfolge, in der man sie nach dem Antippen sieht, samt eigenem
+ * Ladenlayout und Ersatzkategorie. Eine zweite Sortierung fuer die Karte
+ * wuerde frueher oder spaeter von der Liste abweichen.
+ *
+ * Eine Abfrage fuer alle Listen statt einer je Karte: Eine Live-Abfrage pro
+ * Karte hiesse bei jeder Aenderung so viele Datenbankrunden wie Listen.
+ *
+ * Listen ohne Artikel tauchen im Ergebnis nicht auf; der Aufrufer nimmt dann
+ * EMPTY_LIST_PREVIEW.
+ */
+export function buildListPreviews(
+  items: PreviewItem[],
+  categories: CategoryLike[],
+  orders: ListCategoryOrderEntry[],
+  fallbackCategoryId: string,
+): Record<string, ListPreview> {
+  const itemsByList = groupBy(items, (entry) => entry.listId);
+  const ordersByList = groupBy(orders, (entry) => entry.listId);
+  const result: Record<string, ListPreview> = {};
+
+  for (const [listId, listItems] of itemsByList) {
+    const { sections } = buildListSections(listItems, categories, ordersByList.get(listId) ?? [], {
+      showChecked: true,
+      fallbackCategoryId,
+      // Ueberschriften braucht die Karte nicht, nur die Reihenfolge.
+      fallbackTitle: '',
+      checkedTitle: '',
+    });
+
+    const open: ListPreviewSegment[] = [];
+    const checked: ListPreviewSegment[] = [];
+    const openNames: string[] = [];
+
+    for (const section of sections) {
+      const isCheckedSection = section.key === CHECKED_SECTION_ID;
+
+      for (const entry of section.data) {
+        if (isCheckedSection) {
+          checked.push({ categoryId: entry.categoryId ?? fallbackCategoryId, checked: true });
+        } else {
+          open.push({ categoryId: section.key, checked: false });
+          openNames.push(entry.name);
+        }
+      }
+    }
+
+    result[listId] = {
+      segments: limitSegments(open, checked, MAX_PREVIEW_SEGMENTS),
+      previewNames: openNames.slice(0, MAX_PREVIEW_NAMES),
+      hiddenCount: Math.max(openNames.length - MAX_PREVIEW_NAMES, 0),
+    };
+  }
+
+  return result;
+}
+
+/**
+ * Begrenzt die Farbleiste auf hoechstens max Segmente.
+ *
+ * Bis max Artikel bleibt es bei einem Segment je Artikel. Darueber steht jedes
+ * Segment fuer ungefaehr gleich viele Artikel: Offene und erledigte bekommen
+ * ihren Anteil an den Plaetzen, und innerhalb jedes Teils wird gleichmaessig
+ * ausgewaehlt. Die Farbanteile bleiben so ungefaehr erhalten, die Reihenfolge
+ * genau.
+ *
+ * Bewusst so und nicht als "die ersten 24": Dann saehe eine lange Liste aus,
+ * als bestuende sie nur aus Obst, weil Obst vorn steht. Der Preis: Eine
+ * Abteilung mit einem einzigen Artikel unter vielen kann in der Leiste
+ * fehlen. Offene Artikel behalten aber immer mindestens ein Segment - eine
+ * Leiste, die nur gedaempft ist, wuerde "alles erledigt" sagen.
+ */
+export function limitSegments<T>(open: T[], checked: T[], max: number): T[] {
+  const total = open.length + checked.length;
+
+  if (total <= max) {
+    return [...open, ...checked];
+  }
+
+  const minOpen = open.length > 0 ? 1 : 0;
+  const maxOpen = checked.length > 0 ? max - 1 : max;
+  const openSlots = Math.min(Math.max(Math.round((open.length / total) * max), minOpen), maxOpen);
+
+  return [...sample(open, openSlots), ...sample(checked, max - openSlots)];
+}
+
+/** Waehlt count Eintraege gleichmaessig verteilt aus, Reihenfolge bleibt. */
+function sample<T>(entries: T[], count: number): T[] {
+  if (entries.length <= count) {
+    return [...entries];
+  }
+
+  const picked: T[] = [];
+  for (let slot = 0; slot < count; slot += 1) {
+    // Die Mitte jedes Abschnitts statt seines Anfangs: So kommen erster und
+    // letzter Teil gleich oft zum Zug.
+    const entry = entries[Math.floor(((slot + 0.5) * entries.length) / count)];
+    if (entry !== undefined) {
+      picked.push(entry);
+    }
+  }
+  return picked;
+}
+
+function groupBy<T>(entries: T[], keyOf: (entry: T) => string): Map<string, T[]> {
+  const groups = new Map<string, T[]>();
+
+  for (const entry of entries) {
+    const key = keyOf(entry);
+    const bucket = groups.get(key);
+    if (bucket) {
+      bucket.push(entry);
+    } else {
+      groups.set(key, [entry]);
+    }
+  }
+
+  return groups;
+}
+
 /** Laenge eines Listennamens. Was laenger ist, passt in keine Zeile. */
 export const MAX_LIST_NAME_LENGTH = 60;
 

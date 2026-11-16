@@ -10,12 +10,11 @@ import {
   Dialog,
   FAB,
   IconButton,
-  List,
   Menu,
   Portal,
   Snackbar,
   Text,
-  useTheme,
+  TouchableRipple,
 } from 'react-native-paper';
 
 import { catalogProductsQuery, stapleProductIdsQuery } from '@/features/catalog/repository';
@@ -24,6 +23,7 @@ import { getOrCreateActiveList } from '@/features/lists/repository';
 import { pantryQuery } from '@/features/pantry/repository';
 import type { TargetItem } from '@/features/templates/logic';
 import { goTo } from '@/lib/navigation';
+import { useAppTheme } from '@/theme';
 
 import {
   buildRecipeOverview,
@@ -68,6 +68,43 @@ const FILTER_LABEL_KEYS: Record<RecipeFilter, string> = {
   allThere: 'recipes.filterAllThere',
   almost: 'recipes.filterAlmost',
 };
+
+/**
+ * Das Schild "Alles da" / "n fehlen" (M18, ADR-049 Punkt 3).
+ *
+ * Gruen heisst kochen koennen, Orange (tertiary) heisst einkaufen muessen -
+ * beides als Container-Paar, damit der Kontrast aus dem Theme kommt. Keine
+ * Kategoriefarben: Bei Rezepten ist die Frage "alles da?" (ADR-049 Punkt 4).
+ *
+ * Auch von RecipeScreen benutzt, damit Uebersicht und Gericht gleich aussehen.
+ */
+export function RecipeBadge({ missingCount, testID }: { missingCount: number; testID?: string }) {
+  const { t } = useTranslation();
+  const theme = useAppTheme();
+  const allThere = missingCount === 0;
+  return (
+    <View
+      style={[
+        styles.badge,
+        {
+          backgroundColor: allThere
+            ? theme.colors.primaryContainer
+            : theme.colors.tertiaryContainer,
+        },
+      ]}
+    >
+      <Text
+        variant="labelMedium"
+        testID={testID}
+        style={{
+          color: allThere ? theme.colors.onPrimaryContainer : theme.colors.onTertiaryContainer,
+        }}
+      >
+        {allThere ? t('recipes.allThere') : t('recipes.missing', { count: missingCount })}
+      </Text>
+    </View>
+  );
+}
 
 type Props = {
   /**
@@ -139,7 +176,7 @@ export function useActiveListTargets(): TargetItem[] {
  */
 export function RecipesScreen({ withParam }: Props) {
   const { t } = useTranslation();
-  const theme = useTheme();
+  const theme = useAppTheme();
 
   const recipeRows = useLiveQuery(recipesQuery());
   const itemRows = useLiveQuery(recipeItemsQuery());
@@ -282,11 +319,6 @@ export function RecipesScreen({ withParam }: Props) {
       .finally(() => setBusy(false));
   }, [busy, t]);
 
-  const missingText = (row: RecipeOverviewRow) =>
-    row.missingCount === 0
-      ? t('recipes.allThere')
-      : t('recipes.missing', { count: row.missingCount });
-
   const missingDescription = (row: RecipeOverviewRow) => {
     if (row.missingCount === 0) {
       return t('recipes.allThere');
@@ -299,10 +331,14 @@ export function RecipesScreen({ withParam }: Props) {
 
   // Mit Zutatenfilter steht vorne, welche der gewaehlten Zutaten das Gericht
   // verwendet - das ist der Grund, warum es in der Liste steht.
-  const rowDescription = (row: IngredientMatchRow) =>
-    withIds.length === 0
-      ? missingDescription(row)
-      : `${t('recipes.usesNames', { names: row.matchNames.join(', ') })} · ${missingDescription(row)}`;
+  // Ohne Zutatenfilter und mit allem da sagt das Schild schon alles: keine
+  // zweite Zeile, die nur "Alles da" wiederholt.
+  const rowDescription = (row: IngredientMatchRow): string | null => {
+    if (withIds.length === 0) {
+      return row.missingCount === 0 ? null : missingDescription(row);
+    }
+    return `${t('recipes.usesNames', { names: row.matchNames.join(', ') })} · ${missingDescription(row)}`;
+  };
 
   const withLabel = t('recipes.filterWith', { names: withNames.join(', ') });
 
@@ -392,39 +428,41 @@ export function RecipesScreen({ withParam }: Props) {
               {t('recipes.weekTitle')}
             </Text>
             {weekRows.map((row) => (
-              <List.Item
+              <View
                 key={row.id}
-                title={row.name}
                 testID={`week-${row.name}`}
-                style={styles.row}
-                right={() => (
-                  <View style={styles.right}>
-                    <Text
-                      variant="bodyMedium"
-                      style={{
-                        color:
-                          row.missingCount === 0
-                            ? theme.colors.primary
-                            : theme.colors.onSurfaceVariant,
-                      }}
-                    >
-                      {missingText(row)}
-                    </Text>
-                    <IconButton
-                      icon="close"
-                      onPress={() => void setInWeeklyPlan(row.id, false)}
-                      accessibilityLabel={t('recipes.removeFromWeek', { name: row.name })}
-                      testID={`week-remove-${row.name}`}
-                      style={styles.iconButton}
-                    />
+                style={[styles.card, { backgroundColor: theme.colors.elevation.level1 }]}
+              >
+                <View style={styles.cardRow}>
+                  <View style={styles.cardBody}>
+                    <View style={styles.cardTitleRow}>
+                      {/* Wochenplan-Markierung (ADR-049 Punkt 3), nur Anzeige. */}
+                      <View
+                        importantForAccessibility="no"
+                        style={[styles.weekDot, { backgroundColor: theme.colors.tertiary }]}
+                      />
+                      <Text variant="titleMedium" style={styles.cardTitle}>
+                        {row.name}
+                      </Text>
+                      <RecipeBadge missingCount={row.missingCount} />
+                    </View>
                   </View>
-                )}
-              />
+                  <IconButton
+                    icon="close"
+                    onPress={() => void setInWeeklyPlan(row.id, false)}
+                    accessibilityLabel={t('recipes.removeFromWeek', { name: row.name })}
+                    testID={`week-remove-${row.name}`}
+                    style={styles.iconButton}
+                  />
+                </View>
+              </View>
             ))}
             <View style={styles.weekActions}>
               <Button
-                mode="outlined"
+                mode="contained"
                 icon="cart-plus"
+                buttonColor={theme.colors.tertiary}
+                textColor={theme.colors.onTertiary}
                 disabled={weekCount === 0 || busy}
                 onPress={addWeekMissing}
                 testID="week-add-missing"
@@ -486,35 +524,62 @@ export function RecipesScreen({ withParam }: Props) {
         testID="recipes-list"
         ListHeaderComponent={header}
         contentContainerStyle={rows.length === 0 ? styles.emptyContainer : styles.listContent}
-        renderItem={({ item }) => (
-          <List.Item
-            title={item.name}
-            description={rowDescription(item)}
-            descriptionStyle={item.missingCount === 0 ? { color: theme.colors.primary } : undefined}
-            onPress={() => openRecipe(item.id)}
-            testID={`recipe-${item.name}`}
-            style={styles.row}
-            right={() =>
-              item.inPlan ? (
-                <IconButton
-                  icon="check"
-                  onPress={() => void setInWeeklyPlan(item.id, false)}
-                  accessibilityLabel={t('recipes.removeFromWeek', { name: item.name })}
-                  testID={`plan-toggle-${item.name}`}
-                  style={styles.iconButton}
-                />
-              ) : (
-                <IconButton
-                  icon="plus"
-                  onPress={() => void setInWeeklyPlan(item.id, true)}
-                  accessibilityLabel={t('recipes.addToWeek', { name: item.name })}
-                  testID={`week-add-${item.name}`}
-                  style={styles.iconButton}
-                />
-              )
-            }
-          />
-        )}
+        renderItem={({ item }) => {
+          const description = rowDescription(item);
+          return (
+            // Die Karte ist die Tippflaeche wie vorher List.Item: Name, Schild
+            // und Beschreibung liegen darin (E2E sucht sie per childOf).
+            <View
+              style={[
+                styles.card,
+                styles.cardClip,
+                { backgroundColor: theme.colors.elevation.level1 },
+              ]}
+            >
+              <TouchableRipple
+                onPress={() => openRecipe(item.id)}
+                testID={`recipe-${item.name}`}
+                accessibilityRole="button"
+              >
+                <View style={styles.cardRow}>
+                  <View style={styles.cardBody}>
+                    <View style={styles.cardTitleRow}>
+                      <Text variant="titleMedium" style={styles.cardTitle}>
+                        {item.name}
+                      </Text>
+                      <RecipeBadge missingCount={item.missingCount} />
+                    </View>
+                    {description === null ? null : (
+                      <Text
+                        variant="bodySmall"
+                        style={[styles.cardDescription, { color: theme.colors.onSurfaceVariant }]}
+                      >
+                        {description}
+                      </Text>
+                    )}
+                  </View>
+                  {item.inPlan ? (
+                    <IconButton
+                      icon="check"
+                      onPress={() => void setInWeeklyPlan(item.id, false)}
+                      accessibilityLabel={t('recipes.removeFromWeek', { name: item.name })}
+                      testID={`plan-toggle-${item.name}`}
+                      style={styles.iconButton}
+                    />
+                  ) : (
+                    <IconButton
+                      icon="plus"
+                      onPress={() => void setInWeeklyPlan(item.id, true)}
+                      accessibilityLabel={t('recipes.addToWeek', { name: item.name })}
+                      testID={`week-add-${item.name}`}
+                      style={styles.iconButton}
+                    />
+                  )}
+                </View>
+              </TouchableRipple>
+            </View>
+          );
+        }}
         ListEmptyComponent={
           rows.length === 0 ? (
             <View style={styles.empty} testID="recipes-empty">
@@ -593,14 +658,49 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     paddingBottom: 4,
   },
-  row: {
-    minHeight: 56,
-    justifyContent: 'center',
+  // Flaechen statt Linien (ADR-049 Punkt 5): 18 dp Rundung, 12 dp innen,
+  // 10 dp zwischen den Karten, 12 dp zum Rand.
+  card: {
+    borderRadius: 18,
+    marginHorizontal: 12,
+    marginBottom: 10,
   },
-  right: {
+  // Schneidet die Welle des Tippens an der Rundung ab.
+  cardClip: {
+    overflow: 'hidden',
+  },
+  cardRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
+    padding: 12,
+    // 48 dp Knopf plus Innenabstand - auch eine Karte ohne Beschreibung bleibt gross genug.
+    minHeight: 72,
+  },
+  cardBody: {
+    flex: 1,
+    gap: 4,
+  },
+  cardTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  cardTitle: {
+    flex: 1,
+  },
+  cardDescription: {
+    flexShrink: 1,
+  },
+  weekDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  badge: {
+    borderRadius: 999,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
   },
   iconButton: {
     margin: 0,

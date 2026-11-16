@@ -247,11 +247,14 @@ appId: de.toshopping.app
     timeout: 15000
 
 # Leeres Feld antippen: Jetzt stehen die ueblichen Verdaechtigen da.
+# Gewartet wird auf Bananen, nicht auf Milch: Seit dem Vorrat (M13) traegt jede
+# Zeile den Hinweis "Im Vorrat" und ist hoeher - es passen nur noch drei
+# Vorschlaege ins Feld, und bei gleicher Kaufzahl entscheidet das Alphabet.
 - tapOn:
     id: 'add-input'
 - extendedWaitUntil:
     visible:
-      id: 'suggestion-Milch'
+      id: 'suggestion-Bananen'
     timeout: 15000
 - waitForAnimationToEnd
 - takeScreenshot: store/screenshot-7-vorschlaege

@@ -10,12 +10,11 @@ import {
   List,
   Menu,
   Portal,
+  ProgressBar,
   Snackbar,
   Text,
   TextInput,
-  useTheme,
 } from 'react-native-paper';
-import Animated, { useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { AddItemBar } from '@/features/catalog/components/AddItemBar';
@@ -68,7 +67,10 @@ import { buildSharedListForList } from '@/features/transfer/repository';
 import { shareList } from '@/features/transfer/share';
 import { getFlag, setFlag } from '@/db/appState';
 import { goTo } from '@/lib/navigation';
+import { bottomInsetWithKeyboard } from '@/lib/keyboard';
 import { useKeyboardHeight } from '@/lib/useKeyboardHeight';
+import { useAppTheme } from '@/theme';
+import { categoryColorFor } from '@/theme/categoryColors';
 
 /**
  * Der Haupt-Screen: eine Liste mit ihren Artikeln, Eingabefeld und Abschluss.
@@ -86,7 +88,7 @@ type Props = {
 
 export function ListScreen({ listId }: Props) {
   const { t } = useTranslation();
-  const theme = useTheme();
+  const theme = useAppTheme();
   const insets = useSafeAreaInsets();
 
   // UI-Zustand, bewusst lokal: Er gehoert zu genau diesem Screen und ueberlebt
@@ -113,8 +115,8 @@ export function ListScreen({ listId }: Props) {
   // (ADR-026).
   //
   // Die Hoehe kommt aus useKeyboardHeight und nicht mehr aus Reanimateds
-  // useAnimatedKeyboard - siehe ADR-035. Der weiche Uebergang bleibt, er
-  // entsteht jetzt aus withTiming statt aus dem Tastatur-Inset selbst.
+  // useAnimatedKeyboard - siehe ADR-035. Den weichen Uebergang gibt es seit
+  // ADR-050 nicht mehr: Der Abstand ist ein gewoehnlicher Stil.
   const keyboardHeight = useKeyboardHeight();
 
   // Beim Oeffnen zwei Vermerke: Die Liste gilt als zuletzt benutzt, und die
@@ -225,11 +227,12 @@ export function ListScreen({ listId }: Props) {
     });
   }, [listId]);
 
-  const keyboardTarget = Math.max(keyboardHeight, insets.bottom);
-  const keyboardPadding = useAnimatedStyle(
-    () => ({ paddingBottom: withTiming(keyboardTarget, { duration: 220 }) }),
-    [keyboardTarget],
-  );
+  const keyboardTarget = bottomInsetWithKeyboard(keyboardHeight, insets.bottom);
+  // Ein gewoehnlicher Stil, keine Reanimated-Animation mehr (ADR-050): Der
+  // animierte Wert ging verloren, sobald React den Screen neu aufbaute - die
+  // Leiste fiel dann bei offener Tastatur auf ihren Startwert zurueck und lag
+  // unter der Tastatur. Lieber ohne Gleiten als unsichtbar.
+  const keyboardPadding = { paddingBottom: keyboardTarget };
 
   /**
    * Teilen (FR-6.1, PRD Flow 3): Datei plus lesbarer Text ins Android-Menue.
@@ -344,6 +347,14 @@ export function ListScreen({ listId }: Props) {
   const canFinish = canFinishShopping(rows);
   const total = openCount + checkedCount;
 
+  // Flaechen statt Linien (ADR-049 Punkt 5): Jede Abteilung liegt auf einer
+  // getoenten Flaeche, das Erledigte auf einer stilleren. level2 statt level1
+  // fuer die Abteilungen, weil die Erledigt-Flaeche noch leiser sein muss -
+  // und leiser als level1 gibt es unter den Rollen nur noch "gar keine Flaeche".
+  const groupSurface = theme.colors.elevation.level2;
+  const checkedSurface = theme.colors.elevation.level1;
+  const surfaceFor = (key: string) => (key === CHECKED_SECTION_ID ? checkedSurface : groupSurface);
+
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Appbar.Header elevated>
@@ -422,40 +433,93 @@ export function ListScreen({ listId }: Props) {
         </Menu>
       </Appbar.Header>
 
+      {/* Der Fortschritt steht oben unter dem Titel (ADR-049 Punkt 5), nicht
+          mehr in der Fussleiste: Dort verdeckte ihn die Tastatur, sobald man
+          etwas nachtrug. Text und Balken sagen dasselbe auf zwei Arten - der
+          Text fuer den genauen Stand, der Balken fuer den Blick im Gehen. */}
+      {total > 0 ? (
+        <View style={styles.progress}>
+          <Text variant="titleMedium" testID="progress">
+            {openCount === 0 ? t('list.allDone') : t('list.progress', { open: openCount, total })}
+          </Text>
+          <ProgressBar
+            progress={checkedCount / total}
+            color={theme.colors.primary}
+            accessibilityLabel={t('list.progressA11y', { done: checkedCount, total })}
+          />
+        </View>
+      ) : null}
+
       <View style={styles.container}>
+        {/* Eine Gruppenflaeche besteht aus drei Teilen der SectionList: Kopf
+            (oben gerundet, mit Schild), Zeilen (Flaeche ohne Rundung) und
+            Fuss (unten gerundet, Abstand zur naechsten Gruppe). Eine View je
+            Abschnitt waere einfacher zu stylen, nimmt der Liste aber das
+            Virtualisieren und die mitlaufenden Ueberschriften.
+
+            Die Ueberschriften bleiben mitlaufend (sticky): Im Laden sieht man
+            so immer, in welcher Abteilung man gerade ist. Der Preis ist klein -
+            solange eine Ueberschrift oben klebt, laufen die Zeilen hinter ihren
+            gerundeten Ecken durch, und die Ecken wirken eckig. Da Kopf und
+            Zeilen dieselbe Farbe haben, faellt das kaum auf. */}
         <SectionList
           sections={sections}
           keyExtractor={(item) => item.id}
           keyboardShouldPersistTaps="handled"
           stickySectionHeadersEnabled
           testID="item-list"
-          renderSectionHeader={({ section }) => (
-            <Text
-              variant="titleSmall"
-              testID={`section-${section.key}`}
-              style={[
-                styles.sectionHeader,
-                {
-                  backgroundColor: theme.colors.background,
-                  color:
-                    section.key === CHECKED_SECTION_ID
-                      ? theme.colors.onSurfaceVariant
-                      : theme.colors.primary,
-                },
-              ]}
-            >
-              {section.title}
-            </Text>
+          contentContainerStyle={styles.listContent}
+          renderSectionHeader={({ section }) => {
+            const isChecked = section.key === CHECKED_SECTION_ID;
+            const label = categoryColorFor(theme.categories, section.key);
+            return (
+              <View style={[styles.groupTop, { backgroundColor: surfaceFor(section.key) }]}>
+                {isChecked ? (
+                  // Das Erledigte bekommt kein Kategorieschild: Es ist keine
+                  // Abteilung, und Farbe wuerde es lauter machen, als es ist.
+                  <Text
+                    variant="titleSmall"
+                    accessibilityRole="header"
+                    testID={`section-${section.key}`}
+                    style={[styles.checkedTitle, { color: theme.colors.onSurfaceVariant }]}
+                  >
+                    {section.title}
+                  </Text>
+                ) : (
+                  // Das Schild: Farbe der Abteilung (ADR-049 Punkt 1), damit man
+                  // eine Gruppe am Farbton erkennt, bevor man den Titel liest.
+                  // Punkt und Schrift tragen beide die Schriftfarbe des Paares -
+                  // genau die Kombination, die der Kontrasttest prueft.
+                  <View style={[styles.label, { backgroundColor: label.container }]}>
+                    <View style={[styles.labelDot, { backgroundColor: label.onContainer }]} />
+                    <Text
+                      variant="titleSmall"
+                      accessibilityRole="header"
+                      testID={`section-${section.key}`}
+                      style={[styles.labelText, { color: label.onContainer }]}
+                    >
+                      {section.title}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            );
+          }}
+          renderItem={({ item, section }) => (
+            <View style={[styles.groupBody, { backgroundColor: surfaceFor(section.key) }]}>
+              <ItemRow
+                item={item}
+                unitShort={t(`units.${item.unit}.short`)}
+                isEditing={item.id === editingId}
+                surfaceColor={surfaceFor(section.key)}
+                onToggle={handleToggle}
+                onRemove={handleRemove}
+                onOpenDetails={setEditingId}
+              />
+            </View>
           )}
-          renderItem={({ item }) => (
-            <ItemRow
-              item={item}
-              unitShort={t(`units.${item.unit}.short`)}
-              isEditing={item.id === editingId}
-              onToggle={handleToggle}
-              onRemove={handleRemove}
-              onOpenDetails={setEditingId}
-            />
+          renderSectionFooter={({ section }) => (
+            <View style={[styles.groupBottom, { backgroundColor: surfaceFor(section.key) }]} />
           )}
           ListEmptyComponent={
             checkedCount > 0 ? null : (
@@ -471,32 +535,36 @@ export function ListScreen({ listId }: Props) {
           }
         />
 
+        {/* Die Fussleiste traegt nur noch, was man antippt. Kein Rand nach
+            oben: Sie hat den Hintergrund des Bildschirms, die Gruppenflaechen
+            darueber enden von selbst (ADR-049, "Flaechen statt Linien").
+
+            Schalter und Knopf stehen bewusst untereinander und nicht in einer
+            Zeile: Beide Beschriftungen zusammen passen auf einem 360-dp-
+            Telefon nicht nebeneinander, und eine Zeile, die je nach Text mal
+            umbricht und mal nicht, liesse den Abschluss-Knopf beim Umschalten
+            springen. */}
         {total > 0 ? (
-          <View style={[styles.footer, { borderTopColor: theme.colors.outlineVariant }]}>
-            <View style={styles.footerRow}>
-              <Text variant="labelLarge" testID="progress">
-                {openCount === 0
-                  ? t('list.allDone')
-                  : t('list.progress', { open: openCount, total })}
-              </Text>
-              {checkedCount > 0 ? (
-                <Button
-                  compact
-                  onPress={() => setShowChecked((value) => !value)}
-                  testID="toggle-checked"
-                >
-                  {showChecked
-                    ? t('list.hideChecked')
-                    : t('list.showChecked', { count: checkedCount })}
-                </Button>
-              ) : null}
-            </View>
+          <View style={[styles.footer, { backgroundColor: theme.colors.background }]}>
+            {checkedCount > 0 ? (
+              <Button
+                onPress={() => setShowChecked((value) => !value)}
+                testID="toggle-checked"
+                style={styles.toggleChecked}
+                contentStyle={styles.buttonContent}
+              >
+                {showChecked
+                  ? t('list.hideChecked')
+                  : t('list.showChecked', { count: checkedCount })}
+              </Button>
+            ) : null}
             <Button
               mode="contained"
               icon="cart-check"
               disabled={!canFinish}
               onPress={() => (openCount > 0 ? setConfirmOpen(true) : handleFinish())}
               testID="finish-shopping"
+              contentStyle={styles.buttonContent}
             >
               {t('list.finish')}
             </Button>
@@ -507,7 +575,7 @@ export function ListScreen({ listId }: Props) {
             beides. Zwei Eingabebereiche uebereinander waeren bei offener
             Tastatur kaum noch zu treffen, und die Detailzeile gehoert an
             genau die Stelle, die der Daumen ohnehin ansteuert. */}
-        <Animated.View style={keyboardPadding}>
+        <View style={keyboardPadding}>
           {editingItem ? (
             <ItemDetailBar
               // Neuer Artikel, neuer Zustand: siehe ItemDetailBar.
@@ -526,7 +594,7 @@ export function ListScreen({ listId }: Props) {
               onCreateProduct={handleCreate}
             />
           )}
-        </Animated.View>
+        </View>
       </View>
 
       <Portal>
@@ -670,17 +738,72 @@ const styles = StyleSheet.create({
   emptyHint: {
     opacity: 0.7,
   },
-  sectionHeader: {
+  progress: {
     paddingHorizontal: 16,
     paddingTop: 12,
+    paddingBottom: 8,
+    gap: 8,
+  },
+  listContent: {
+    paddingTop: 4,
+  },
+  // Gruppenflaeche (ADR-049 Punkt 5): 18 dp Rundung, 8 dp innen, 10 dp
+  // zwischen den Gruppen, 12 dp zum Rand. Verteilt auf Kopf, Zeilen und Fuss.
+  groupTop: {
+    marginHorizontal: 12,
+    paddingHorizontal: 8,
+    paddingTop: 8,
     paddingBottom: 4,
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+  },
+  groupBody: {
+    marginHorizontal: 12,
+    paddingHorizontal: 8,
+  },
+  groupBottom: {
+    marginHorizontal: 12,
+    marginBottom: 10,
+    height: 8,
+    borderBottomLeftRadius: 18,
+    borderBottomRightRadius: 18,
+  },
+  // Das Schild waechst mit der Schrift und bricht um, statt abzuschneiden
+  // (Abnahme M18: grosse Systemschrift).
+  label: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    maxWidth: '100%',
+    gap: 6,
+    borderRadius: 999,
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+  },
+  labelDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  labelText: {
+    flexShrink: 1,
+  },
+  checkedTitle: {
+    paddingVertical: 4,
+    paddingHorizontal: 12,
   },
   footer: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 12,
-    gap: 8,
+    paddingHorizontal: 12,
+    paddingTop: 4,
+    paddingBottom: 8,
+    gap: 4,
+  },
+  toggleChecked: {
+    alignSelf: 'flex-end',
+  },
+  // Paper-Knoepfe sind 40 dp hoch; CLAUDE.md verlangt 48 dp.
+  buttonContent: {
+    minHeight: 48,
   },
   dialogScroll: {
     paddingHorizontal: 0,
@@ -695,11 +818,5 @@ const styles = StyleSheet.create({
     paddingTop: 8,
     paddingHorizontal: 24,
     opacity: 0.8,
-  },
-  footerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    minHeight: 40,
   },
 });

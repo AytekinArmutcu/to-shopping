@@ -2,6 +2,7 @@ import type { ProductStats } from '@/features/suggestions/logic';
 
 import {
   buildPantryChecklist,
+  countInPantry,
   countMissing,
   missingProductIds,
   pantryAdditions,
@@ -226,6 +227,11 @@ describe('missingProductIds / countMissing', () => {
   it('liefert die Fehlenden einer gemischten Liste in Anzeigereihenfolge (T-13.2)', () => {
     expect(missingProductIds(abschnitte)).toEqual(['a', 'd']);
     expect(countMissing(abschnitte)).toBe(2);
+    expect(countInPantry(abschnitte)).toBe(2);
+  });
+
+  it('zaehlt ohne Abschnitte nichts als da (ADR-049)', () => {
+    expect(countInPantry([])).toBe(0);
   });
 
   it('liefert nichts, wenn alles da ist (T-13.2)', () => {
@@ -236,5 +242,6 @@ describe('missingProductIds / countMissing', () => {
 
     expect(missingProductIds(allesDa)).toEqual([]);
     expect(countMissing(allesDa)).toBe(0);
+    expect(countInPantry(allesDa)).toBe(4);
   });
 });

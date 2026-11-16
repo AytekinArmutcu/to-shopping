@@ -55,6 +55,7 @@ Die beiden zuletzt geplanten Meilensteine **M10 (Vorschläge) und M11 (Vorlagen)
 | M15 | Widget | 8 | Die Liste ohne App-Start |
 | M16 | Rezepte vertiefen | 14 | Schritte und Gewürze, Grundvorrat zählt nicht als fehlend |
 | M17 | Kochen aus dem Vorrat | 5,5 | Filter „Alles da", Gerichte zu gewählten Zutaten |
+| M18 | Markttag: Farbe im Regal | 9,5 | Kategoriefarben, Orange, Flächen statt Linien |
 
 ---
 
@@ -369,6 +370,22 @@ Entschieden am 27. Oktober 2026, nachdem die App sieben Wochen täglich in Gebra
 | T-17.3 | E2E `kochen.yaml`, Abnahmepunkte, Doku | – | 1 | Flow grün auf dem Emulator |
 
 **Abnahme:** Nach einer Minute Vorrat-Checkliste steht unter „Alles da" mindestens ein Gericht. Zucchini anhaken → nur Gerichte mit Zucchini.
+
+---
+
+### M18 – Markttag: Farbe im Regal
+
+**Ziel:** Dieselbe App, moderner und bunter (ADR-049). Entschieden am 14. November 2026 nach einem Entwurf mit Vorher/Nachher; die drei offenen Fragen (Farben nur auf Liste, Vorrat, Listenkarten; Fortschritt oben; Vorrat als Gruppenflächen) sind beantwortet.
+
+| ID | Aufgabe | FR | h | Fertig, wenn … |
+|---|---|---|---|---|
+| T-18.1 | Theme: Orange als tertiary (hell/dunkel), `categoryColors.ts` mit zwölf Paaren, `categoryColorFor`, Theme-Typ `AppTheme`, Kontrasttests für alle Paare | FR-7.4 | 1,5 | Tests grün, kein Paar unter 4,5 : 1 |
+| T-18.2 | Liste: Gruppenflächen mit Kategorie-Schild, Fortschritt (Text + Balken) im Kopf, Erledigt-Fläche, Eingabe als Pille, Fußleiste nur noch Knopf und Erledigte-Schalter | FR-3, FR-5 | 3 | Alle Kennungen bleiben; `hauptweg`, `einkauf-abschliessen`, `ladenlayout` grün |
+| T-18.3 | Listen-Übersicht: Karten mit Farbleiste und Vorschau, Vorrat/Rezepte als Knöpfe über der Liste, FAB in Orange; Vorrat: Gruppenflächen, Kopf „n da · m fehlen" | FR-1, FR-9 | 2,5 | `listen`, `vorrat` grün |
+| T-18.4 | Rezepte: Karten, „Alles da" grün / „Fehlt n" orange als Schild, Wochen-Punkt in Orange, Wochenplan-Knopf | FR-10 | 1,5 | `rezepte`, `kochen`, `rezept-schritte` grün |
+| T-18.5 | Ganze Suite auf dem Emulator, Abnahmeliste ergänzt, Doku | – | 1 | 16/16 grün |
+
+**Abnahme:** Im Laden erkennt man Obst, Kühlregal und Trockenwaren am Farbton, hell und dunkel. Nichts ist kleiner als 48 dp geworden. Der Fortschritt bleibt bei offener Tastatur sichtbar.
 
 ---
 

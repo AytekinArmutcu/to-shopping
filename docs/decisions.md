@@ -1078,6 +1078,66 @@ Ein leerer Filter bekommt eine Erklärung statt einer leeren Fläche: „Nichts 
 
 ---
 
+## ADR-049 – Markttag: Kategoriefarben als Theme-Erweiterung, Orange als dritte Rolle, Flächen statt Linien
+
+**Datum:** 2026-11-14 · **Status:** Angenommen
+
+**Kontext**
+Nach drei Monaten täglicher Nutzung wünscht sich der Auftraggeber ein moderneres, bunteres Erscheinungsbild; Grün soll bleiben. Die Regel in `CLAUDE.md` – Material-3-Farbrollen nicht mit eigenen Werten überschreiben – hat sich bewährt (ADR-009) und soll nicht fallen. Sie sagt aber nichts darüber, ob *neben* den Rollen weitere Farben leben dürfen. Der Entwurf („Markttag", 14. November 2026) braucht genau das: eine Farbe je Abteilung, damit man im Laden eine Gruppe am Farbton erkennt, bevor man den Titel liest.
+
+**Entscheidung**
+1. **Kategoriefarben sind eine Erweiterung des Themes, keine Ausnahme von der Regel.** Sie liegen in `src/theme/categoryColors.ts` als zwölf Paare `container`/`onContainer`, hell und dunkel, für die zwölf Kategorien des Startkatalogs. Das Theme-Objekt bekommt ein Feld `categories`; Bildschirme holen sich die Farbe über `categoryColorFor(theme.categories, categoryId)`. **Kein Bildschirm schreibt einen eigenen Farbwert.** Unbekannte Kategorien (vom Nutzer angelegt) bekommen die Farbe von „Sonstiges".
+2. **Jedes Paar hat einen Kontrasttest** (≥ 4,5 : 1, WCAG AA, wie FR-7.4), hell und dunkel, als Unit-Test neben `contrast.test.ts`. Ein Paar, das den Test nicht besteht, wird nicht gebaut.
+3. **Die dritte Rolle (tertiary) wird Orange** statt des bisher ungenutzten Blaugrün. Sie ist reserviert für das Besondere: neue Liste, „Fehlt n" bei Rezepten, Wochenplan-Markierung. Ein Akzent, nicht zwei.
+4. **Kategoriefarben nur dort, wo Abteilungen die Struktur sind:** Liste, Vorrat, Listenkarten in der Übersicht. Rezepte bleiben bei Grün und Orange – dort ist die Frage „alles da?", nicht „welche Abteilung".
+5. **Flächen statt Linien.** Gruppen liegen auf leicht getönten Flächen (18 dp Rundung); Trennlinien entfallen. Der Fortschritt („5 von 7 offen" plus Balken) wandert in den Kopf der Liste, wo ihn die Tastatur nicht verdeckt. Erledigtes liegt in einer stillen Fläche am Ende.
+6. **Vorrat als farbige Gruppenflächen mit der Checkliste darin**, nicht als Kacheln wie in der Skizze: Die Kachel kann die Pflege von 200 Produkten nicht tragen. Der Kopf zeigt „23 da · 4 fehlen".
+
+**Verworfen**
+- *Farben direkt in den Komponenten* („schnell ein Grün für Obst"): Genau das verbietet ADR-009, und es wäre in sechs Dateien sechsmal anders.
+- *Zweite Hauptfarbe statt Kategoriefarben*: bunter, aber ohne Nutzen beim Scannen.
+- *Eine neue Schrift*: wäre eine neue Abhängigkeit (Rückfrage nötig) und bringt weniger als die Farbflächen. Roboto bleibt, die Größen werden mutiger.
+- *Kacheln im Vorrat*: siehe Punkt 6.
+
+**Preis**
+- Ein Meilenstein (M18). Alle 16 E2E-Flows laufen neu; Kennungen und Texte bleiben, deshalb sollten die meisten unverändert bestehen.
+- 24 Kategoriepaare plus 4 Tertiärpaare im Kontrasttest.
+- Neue Store-Screenshots und neue Bilder für den Onepager, erst nach der Abnahme auf dem Telefon.
+- Das Widget bleibt zunächst unverändert; ein Farbpunkt je Artikel ist Folgearbeit, wenn der Rest steht.
+
+---
+
+## ADR-050 – Der Abstand über der Tastatur ist ein gewöhnlicher Stil, keine Reanimated-Animation
+
+**Datum:** 2026-11-16 · **Status:** Angenommen · **Ändert ADR-035 in einem Punkt**
+
+**Kontext**
+Seit ADR-035 kommt die Tastaturhöhe aus `useKeyboardHeight`; aufgetragen wurde sie in drei Screens (Liste, Katalog, Rezept) als `paddingBottom` über `useAnimatedStyle` mit `withTiming` – „der weiche Übergang bleibt". Beim Abschluss von M18 lag die Eingabeleiste samt Vorschlägen sporadisch **unter** der Tastatur: im Screenshot-Ablauf jedes Mal, in der Suite bei `ladenlayout` gelegentlich.
+
+Gemessen, nicht vermutet: Mit Protokollzeilen im Haken meldete React Native korrekt `keyboardDidShow` mit 312 dp und danach **kein** `keyboardDidHide`. Die Höhe stimmte also. Trotzdem stand der Abstand auf seinem Wert vom Einhängen des Screens (dem unteren Systemrand, 24 dp). Er fiel genau dann zurück, als der erste Artikel auf die Liste kam und React den Screen neu aufbaute (Fortschrittskopf, Gruppenfläche, Fußleiste erscheinen). Der von Reanimated auf dem UI-Thread gesetzte Layout-Wert wurde vom nächsten React-Commit mit dem alten Stand überschrieben. Reanimated 4.5.1, React Native 0.86.2, neue Architektur.
+
+Gegenprobe: Abstand als gewöhnlicher Stil, sonst nichts geändert – vorher 5 von 5 Läufen rot, danach 3 von 3 grün.
+
+**Entscheidung**
+Der Abstand über der Tastatur ist in allen drei Screens ein gewöhnlicher Stil: `{ paddingBottom: ziel }` an einer normalen `View`. Reanimated bleibt für das, was wirklich Bewegung ist (Durchstreichen, Wischen, Verschieben im Ladenlayout). **Layout, von dem die Bedienbarkeit abhängt, wird nicht über einen animierten Stil gesetzt.**
+
+**Verworfen**
+- *Die Animation behalten und den Wert bei jedem Rendern neu anstoßen.* Bekämpft das Symptom und bleibt ein Wettlauf zwischen zwei Threads.
+- *`react-native-keyboard-controller`.* Neue Abhängigkeit (schon in ADR-035 verworfen), und die Ursache lag nicht an der Höhe.
+- *`LayoutAnimation`.* Auf Android experimentell und wirkt auf den ganzen Screen.
+
+**Preis**
+- Die Leiste springt auf ihre Position, statt 220 ms zu gleiten. Da `keyboardDidShow` ohnehin erst feuert, wenn die Tastatur steht, war das Gleiten ein Nachziehen, kein Mitfahren.
+- Die Lehre für die Abnahme: „Eingabefeld über der Tastatur" (Punkt 1 in `abnahme.md`) ist nach **dem zweiten** Artikel zu prüfen und nach einem Wechsel zwischen zwei Listen, nicht nur beim ersten Öffnen.
+
+**Zweiter Fund an derselben Stelle: 24 dp fehlten schon immer**
+Auf den Abschlussbildern war die neue Pille (ADR-049) bei offener Tastatur unten angeschnitten. React Native meldet die Tastaturhöhe ohne die Systemleiste darunter (`ime.bottom − systemBars.bottom`); die App zeichnet aber randlos bis zur Bildschirmkante. Gemeldet 312 dp, tatsächlich verdeckt 336 dp – die Zahl 883 px steht schon in ADR-035, nur wurde damals nicht bemerkt, dass der aufgetragene Abstand um den Systemrand zu klein ist. Beim flachen Eingabefeld lag die Schrift noch oberhalb, deshalb fiel es bei keiner Abnahme auf. Seitdem rechnet `bottomInsetWithKeyboard` in `src/lib/keyboard.ts` den Systemrand dazu, mit Test; die Dialoge (zentriert, anderer Bezug) bleiben unverändert.
+
+**Was die erste Diagnose falsch machte**
+Die erste Vermutung war eine verpasste Tastaturmeldung beim Öffnen des Screens; die dazu gebaute Änderung am Haken half nicht und ist zurückgenommen. Erst die Messung zeigte, dass die Höhe stimmte und der Stil verloren ging.
+
+---
+
 ## Offene Entscheidungen (bewusst vertagt)
 
 | Thema | Wann zu entscheiden | Was dann abzuwägen ist |

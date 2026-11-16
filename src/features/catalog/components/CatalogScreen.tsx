@@ -13,10 +13,10 @@ import {
   Text,
   useTheme,
 } from 'react-native-paper';
-import Animated, { useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { addProductsToList, listItemsQuery } from '@/features/items/repository';
+import { bottomInsetWithKeyboard } from '@/lib/keyboard';
 import { useKeyboardHeight } from '@/lib/useKeyboardHeight';
 
 import { buildCatalogSections, idsToAdd, type CatalogProduct } from '../logic';
@@ -87,11 +87,9 @@ export function CatalogScreen({ listId }: Props) {
   }, [listId, selected]);
 
   // Siehe ADR-035: eine Quelle fuer die Tastaturhoehe, ueberall dieselbe.
-  const footerTarget = Math.max(keyboardHeight, insets.bottom) + 12;
-  const footerPadding = useAnimatedStyle(
-    () => ({ paddingBottom: withTiming(footerTarget, { duration: 220 }) }),
-    [footerTarget],
-  );
+  const footerTarget = bottomInsetWithKeyboard(keyboardHeight, insets.bottom) + 12;
+  // Gewoehnlicher Stil statt Reanimated-Animation: siehe ADR-050.
+  const footerPadding = { paddingBottom: footerTarget };
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
@@ -185,9 +183,7 @@ export function CatalogScreen({ listId }: Props) {
       />
 
       <Divider />
-      <Animated.View
-        style={[styles.footer, footerPadding, { backgroundColor: theme.colors.surface }]}
-      >
+      <View style={[styles.footer, footerPadding, { backgroundColor: theme.colors.surface }]}>
         <Button
           mode="contained"
           icon="playlist-plus"
@@ -199,7 +195,7 @@ export function CatalogScreen({ listId }: Props) {
             ? t('catalog.apply')
             : t('catalog.applyCount', { count: toAdd.length })}
         </Button>
-      </Animated.View>
+      </View>
     </View>
   );
 }

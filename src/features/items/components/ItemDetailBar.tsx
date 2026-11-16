@@ -90,7 +90,13 @@ export function ItemDetailBar({ item, onChange, onClose, showNote = true }: Prop
 
   return (
     <View
-      style={[styles.wrapper, { backgroundColor: theme.colors.surfaceVariant }]}
+      style={[
+        styles.wrapper,
+        {
+          backgroundColor: theme.colors.surfaceVariant,
+          borderTopColor: theme.colors.outlineVariant,
+        },
+      ]}
       testID="item-detail"
     >
       <View style={styles.header}>
@@ -200,7 +206,6 @@ function formatInput(value: number): string {
 const styles = StyleSheet.create({
   wrapper: {
     borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(0,0,0,0.12)',
     paddingHorizontal: 12,
     paddingBottom: 8,
     gap: 4,

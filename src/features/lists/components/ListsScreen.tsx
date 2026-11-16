@@ -10,16 +10,16 @@ import {
   Dialog,
   FAB,
   IconButton,
-  List,
   Menu,
   Portal,
   Snackbar,
   Text,
   TextInput,
-  useTheme,
+  TouchableRipple,
 } from 'react-native-paper';
 
 import { ensureFirstStart } from '@/db/appState';
+import { categoriesQuery, FALLBACK_CATEGORY_ID } from '@/features/catalog/repository';
 import { needsBackupReminder } from '@/features/transfer/backup';
 import {
   BACKUP_REMINDER_DISMISSED_KEY,
@@ -28,12 +28,24 @@ import {
   setTimestamp,
 } from '@/features/transfer/repository';
 import { useKeyboardHeight } from '@/lib/useKeyboardHeight';
+import { useAppTheme } from '@/theme';
+import { categoryColorFor } from '@/theme/categoryColors';
 
-import { buildListOverview, cleanListName, listRoute, MAX_LIST_NAME_LENGTH } from '../logic';
 import {
+  buildListOverview,
+  buildListPreviews,
+  cleanListName,
+  EMPTY_LIST_PREVIEW,
+  listRoute,
+  MAX_LIST_NAME_LENGTH,
+  type ListPreview,
+} from '../logic';
+import {
+  allCategoryOrdersQuery,
   createList,
   deleteList,
   duplicateList,
+  listPreviewItemsQuery,
   listsQuery,
   openCountsQuery,
   renameList,
@@ -47,17 +59,25 @@ import {
  * von dem aus sich Listen anlegen, umbenennen, duplizieren und loeschen
  * lassen (FR-1.2).
  *
- * Jede Zeile fuehrt zu ihrer Liste; alles Weitere steckt hinter dem
+ * Jede Karte fuehrt zu ihrer Liste; alles Weitere steckt hinter dem
  * Drei-Punkte-Knopf. Vier Aktionen offen nebeneinander waeren auf einem
  * Telefon eine Reihe von Zielen, die man im Vorbeigehen falsch trifft.
+ *
+ * Seit M18 (ADR-049) zeigt jede Karte, was auf der Liste steht: eine
+ * Farbleiste mit einem Segment je Artikel in den Kategoriefarben und die
+ * ersten Namen. So erkennt man die richtige Liste, bevor man sie oeffnet.
  */
 export function ListsScreen() {
   const { t } = useTranslation();
-  const theme = useTheme();
+  const theme = useAppTheme();
   const keyboardHeight = useKeyboardHeight();
 
   const listRows = useLiveQuery(listsQuery());
   const countRows = useLiveQuery(openCountsQuery());
+  // Drei Abfragen fuer alle Karten zusammen, nicht je Karte (T-18.3).
+  const previewRows = useLiveQuery(listPreviewItemsQuery());
+  const categoryRows = useLiveQuery(categoriesQuery());
+  const orderRows = useLiveQuery(allCategoryOrdersQuery());
 
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [nameDraft, setNameDraft] = useState('');
@@ -71,6 +91,30 @@ export function ListsScreen() {
   const rows = useMemo(
     () => buildListOverview(listRows.data ?? [], countRows.data ?? []),
     [listRows.data, countRows.data],
+  );
+
+  const previews = useMemo(
+    () =>
+      buildListPreviews(
+        previewRows.data ?? [],
+        categoryRows.data ?? [],
+        orderRows.data ?? [],
+        FALLBACK_CATEGORY_ID,
+      ),
+    [previewRows.data, categoryRows.data, orderRows.data],
+  );
+
+  const previewText = useCallback(
+    (preview: ListPreview): string | null => {
+      if (preview.previewNames.length > 0) {
+        const names = preview.previewNames.join(', ');
+        return preview.hiddenCount > 0 ? t('lists.previewMore', { names }) : names;
+      }
+      // Nur Erledigtes: Der Stand sagt schon "Alles erledigt", die Leiste ist
+      // gedaempft - eine dritte Aussage braucht die Karte nicht.
+      return preview.segments.length === 0 ? t('lists.emptyPreview') : null;
+    },
+    [t],
   );
 
   // Erinnerung an die Sicherung (FR-6.6). Die Entscheidung selbst trifft eine
@@ -160,6 +204,49 @@ export function ListsScreen() {
   // Der Dialog haengt im Portal desselben Fensters und weiss nichts von der
   // Tastatur. Der Abstand hebt ihn darueber (ADR-026, useKeyboardHeight).
   const dialogStyle = { marginBottom: keyboardHeight };
+
+  // Das Drei-Punkte-Menue einer Karte - Inhalt und Kennungen wie vor M18.
+  const renderMenu = (item: { id: string; name: string }) => (
+    <Menu
+      visible={menuFor === item.id}
+      onDismiss={() => setMenuFor(null)}
+      anchor={
+        <IconButton
+          icon="dots-vertical"
+          onPress={() => setMenuFor(item.id)}
+          accessibilityLabel={t('lists.more', { name: item.name })}
+          testID={`more-${item.name}`}
+          style={styles.more}
+        />
+      }
+    >
+      <Menu.Item
+        leadingIcon="pencil"
+        title={t('lists.rename')}
+        testID="menu-rename"
+        onPress={() => {
+          setMenuFor(null);
+          setNameDraft(item.name);
+          setRenameFor({ id: item.id, name: item.name });
+        }}
+      />
+      <Menu.Item
+        leadingIcon="content-copy"
+        title={t('lists.duplicate')}
+        testID="menu-duplicate"
+        onPress={() => duplicate(item.id, item.name)}
+      />
+      <Menu.Item
+        leadingIcon="delete-outline"
+        title={t('lists.delete')}
+        testID="menu-delete"
+        onPress={() => {
+          setMenuFor(null);
+          setDeleteFor({ id: item.id, name: item.name });
+        }}
+      />
+    </Menu>
+  );
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
@@ -269,64 +356,108 @@ export function ListsScreen() {
         {t('backup.reminder')}
       </Banner>
 
+      {/* Vorrat und Rezepte offen statt nur im Menue (ADR-049): Beides wird
+          mehrmals die Woche gebraucht. Die Menueeintraege bleiben trotzdem -
+          wer sie kennt, soll sie nicht verlieren, und die E2E-Flows nutzen sie. */}
+      <View style={styles.quick}>
+        <Button
+          mode="contained-tonal"
+          icon="fridge-outline"
+          onPress={() => router.push('/vorrat')}
+          accessibilityLabel={t('lists.pantry')}
+          testID="quick-pantry"
+          style={styles.quickButton}
+          contentStyle={styles.quickContent}
+        >
+          {t('lists.pantry')}
+        </Button>
+        <Button
+          mode="contained-tonal"
+          icon="chef-hat"
+          onPress={() => router.push('/rezepte')}
+          accessibilityLabel={t('lists.recipes')}
+          testID="quick-recipes"
+          style={styles.quickButton}
+          contentStyle={styles.quickContent}
+        >
+          {t('lists.recipes')}
+        </Button>
+      </View>
+
       <FlatList
         data={rows}
         keyExtractor={(row) => row.id}
         testID="lists"
         contentContainerStyle={styles.listContent}
-        renderItem={({ item }) => (
-          <List.Item
-            title={item.name}
-            description={
-              item.openCount === 0 ? t('lists.allDone') : t('lists.open', { count: item.openCount })
-            }
-            onPress={() => open(item.id)}
-            accessibilityLabel={t('lists.openList', { name: item.name })}
-            testID={`list-${item.name}`}
-            style={styles.row}
-            right={() => (
-              <Menu
-                visible={menuFor === item.id}
-                onDismiss={() => setMenuFor(null)}
-                anchor={
-                  <IconButton
-                    icon="dots-vertical"
-                    onPress={() => setMenuFor(item.id)}
-                    accessibilityLabel={t('lists.more', { name: item.name })}
-                    testID={`more-${item.name}`}
-                    style={styles.more}
-                  />
-                }
+        ItemSeparatorComponent={Separator}
+        renderItem={({ item }) => {
+          const preview = previews[item.id] ?? EMPTY_LIST_PREVIEW;
+          const text = previewText(preview);
+
+          return (
+            // Die Rundung schneidet die Welle beim Antippen mit ab; deshalb
+            // liegt overflow auf der aeusseren Flaeche und nicht am Knopf.
+            <View style={[styles.card, { backgroundColor: theme.colors.elevation.level1 }]}>
+              <TouchableRipple
+                onPress={() => open(item.id)}
+                accessibilityRole="button"
+                accessibilityLabel={t('lists.openList', { name: item.name })}
+                testID={`list-${item.name}`}
+                style={styles.cardPress}
               >
-                <Menu.Item
-                  leadingIcon="pencil"
-                  title={t('lists.rename')}
-                  testID="menu-rename"
-                  onPress={() => {
-                    setMenuFor(null);
-                    setNameDraft(item.name);
-                    setRenameFor({ id: item.id, name: item.name });
-                  }}
-                />
-                <Menu.Item
-                  leadingIcon="content-copy"
-                  title={t('lists.duplicate')}
-                  testID="menu-duplicate"
-                  onPress={() => duplicate(item.id, item.name)}
-                />
-                <Menu.Item
-                  leadingIcon="delete-outline"
-                  title={t('lists.delete')}
-                  testID="menu-delete"
-                  onPress={() => {
-                    setMenuFor(null);
-                    setDeleteFor({ id: item.id, name: item.name });
-                  }}
-                />
-              </Menu>
-            )}
-          />
-        )}
+                <View style={styles.cardBody}>
+                  <View style={styles.cardHeader}>
+                    <Text variant="titleMedium" numberOfLines={1} style={styles.cardTitle}>
+                      {item.name}
+                    </Text>
+                    <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
+                      {item.openCount === 0
+                        ? t('lists.allDone')
+                        : t('lists.open', { count: item.openCount })}
+                    </Text>
+                    {renderMenu(item)}
+                  </View>
+
+                  {/* Die Leiste ist Schmuck mit Nutzen fuers Auge; der
+                      Screenreader hoert Stand und Vorschau als Text. */}
+                  {preview.segments.length > 0 ? (
+                    <View
+                      style={styles.bar}
+                      importantForAccessibility="no-hide-descendants"
+                      accessibilityElementsHidden
+                    >
+                      {preview.segments.map((segment, index) => (
+                        <View
+                          // Reine Anzeige ohne eigenen Zustand: Die Position
+                          // ist hier ein ausreichender Schluessel.
+                          key={index}
+                          style={[
+                            styles.segment,
+                            {
+                              backgroundColor: segment.checked
+                                ? theme.colors.surfaceVariant
+                                : categoryColorFor(theme.categories, segment.categoryId).container,
+                            },
+                          ]}
+                        />
+                      ))}
+                    </View>
+                  ) : null}
+
+                  {text !== null ? (
+                    <Text
+                      variant="bodySmall"
+                      numberOfLines={1}
+                      style={{ color: theme.colors.onSurfaceVariant }}
+                    >
+                      {text}
+                    </Text>
+                  ) : null}
+                </View>
+              </TouchableRipple>
+            </View>
+          );
+        }}
         ListEmptyComponent={
           <View style={styles.empty} testID="lists-empty">
             <Text variant="titleMedium" style={styles.emptyText}>
@@ -340,7 +471,9 @@ export function ListsScreen() {
       />
 
       {/* Beschriftet statt nur als Symbol: Ein Pluszeichen allein ist fuer die
-          Zielgruppe eine Vermutung, kein Angebot. */}
+          Zielgruppe eine Vermutung, kein Angebot. In der Tertiaerrolle
+          (Orange, ADR-049): "Neue Liste" ist das Besondere auf diesem
+          Bildschirm, nicht das Alltaegliche. */}
       <FAB
         icon="plus"
         label={t('lists.create')}
@@ -350,7 +483,8 @@ export function ListsScreen() {
           setCreateOpen(true);
         }}
         testID="list-create"
-        style={styles.fab}
+        color={theme.colors.onTertiaryContainer}
+        style={[styles.fab, { backgroundColor: theme.colors.tertiaryContainer }]}
       />
 
       <Portal>
@@ -429,17 +563,65 @@ export function ListsScreen() {
   );
 }
 
+function Separator() {
+  return <View style={styles.separator} />;
+}
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  quick: {
+    flexDirection: 'row',
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 4,
+  },
+  quickButton: {
+    flex: 1,
+  },
+  // Paper-Knoepfe sind von sich aus 40 dp hoch; die Tippflaeche soll 48 haben.
+  quickContent: {
+    minHeight: 48,
+  },
   listContent: {
-    // Platz, damit der letzte Eintrag nicht unter dem FAB verschwindet.
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    // Platz, damit die letzte Karte nicht unter dem FAB verschwindet.
     paddingBottom: 96,
   },
-  row: {
-    minHeight: 64,
-    justifyContent: 'center',
+  // Abstand als Trenner und nicht als gap: Die FlatList legt fuer nicht
+  // gezeichnete Bereiche eigene Platzhalter an, die sonst mitgezaehlt wuerden.
+  separator: {
+    height: 10,
+  },
+  card: {
+    borderRadius: 18,
+    overflow: 'hidden',
+  },
+  cardPress: {
+    padding: 12,
+  },
+  cardBody: {
+    gap: 8,
+  },
+  cardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  cardTitle: {
+    flex: 1,
+  },
+  bar: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  segment: {
+    flex: 1,
+    height: 6,
+    borderRadius: 3,
   },
   more: {
     margin: 0,

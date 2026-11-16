@@ -1,4 +1,4 @@
-import { keyboardHeightInDp, MAX_KEYBOARD_SHARE } from './keyboard';
+import { bottomInsetWithKeyboard, keyboardHeightInDp, MAX_KEYBOARD_SHARE } from './keyboard';
 
 // Werte eines Galaxy-artigen Geraets: 914 dp hoch, Pixeldichte 2,625.
 const HOEHE = 914;
@@ -36,5 +36,27 @@ describe('keyboardHeightInDp', () => {
     const grenze = HOEHE * MAX_KEYBOARD_SHARE;
     expect(keyboardHeightInDp(grenze, HOEHE, DICHTE)).toBe(grenze);
     expect(keyboardHeightInDp(grenze + 1, HOEHE, DICHTE)).toBeLessThan(grenze);
+  });
+});
+
+describe('bottomInsetWithKeyboard', () => {
+  it('haelt bei geschlossener Tastatur nur den Systemrand frei', () => {
+    expect(bottomInsetWithKeyboard(0, 24)).toBe(24);
+  });
+
+  it('zaehlt bei offener Tastatur den Systemrand dazu - die gemeldete Hoehe enthaelt ihn nicht', () => {
+    // Gemessen auf dem Emulator: gemeldet 312 dp, verdeckt 336 dp.
+    expect(bottomInsetWithKeyboard(312, 24)).toBe(336);
+  });
+
+  it('kommt ohne Systemrand aus', () => {
+    expect(bottomInsetWithKeyboard(312, 0)).toBe(312);
+  });
+
+  it('faellt bei unsinnigen Werten auf die sichere Seite', () => {
+    expect(bottomInsetWithKeyboard(Number.NaN, 24)).toBe(24);
+    expect(bottomInsetWithKeyboard(-5, 24)).toBe(24);
+    expect(bottomInsetWithKeyboard(312, Number.NaN)).toBe(312);
+    expect(bottomInsetWithKeyboard(312, -3)).toBe(312);
   });
 });

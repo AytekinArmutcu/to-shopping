@@ -62,6 +62,7 @@
       "other": "{{count}} Artikel"
     },
     "progress": "{{open}} von {{total}} offen",
+    "progressA11y": "{{done}} von {{total}} erledigt",
     "allDone": "Alles abgehakt",
     "showChecked": "{{count}} erledigt anzeigen",
     "hideChecked": "Erledigte ausblenden",
@@ -171,7 +172,9 @@
     "diagnostics": "Diagnose",
     "templates": "Vorlagen",
     "pantry": "Vorrat",
-    "recipes": "Rezepte"
+    "recipes": "Rezepte",
+    "emptyPreview": "Noch nichts drauf",
+    "previewMore": "{{names}} …"
   },
   "products": {
     "title": "Produkte",
@@ -324,7 +327,9 @@
     "cook": "Was kann ich kochen?",
     "added_one": "1 Artikel auf die Liste gesetzt",
     "added_other": "{{count}} Artikel auf die Liste gesetzt",
-    "addedNone": "Alles stand schon auf der Liste"
+    "addedNone": "Alles stand schon auf der Liste",
+    "summary_one": "{{there}} da · {{count}} fehlt",
+    "summary_other": "{{there}} da · {{count}} fehlen"
   },
   "recipes": {
     "title": "Rezepte",

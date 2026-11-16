@@ -1,18 +1,23 @@
 import {
   buildListOverview,
+  buildListPreviews,
   buildListSections,
   CHECKED_SECTION_ID,
   cleanListName,
   copyName,
   dropIndex,
+  limitSegments,
   listRoute,
   MAX_LIST_NAME_LENGTH,
+  MAX_PREVIEW_NAMES,
+  MAX_PREVIEW_SEGMENTS,
   moveCategory,
   orderCategories,
   parseListRoute,
   resolveStartRoute,
   ROUTE_OVERVIEW,
   type CategoryLike,
+  type PreviewItem,
   type SectionItem,
 } from './logic';
 
@@ -368,5 +373,163 @@ describe('resolveStartRoute', () => {
   it('faellt bei unbekannten Routen auf die Uebersicht zurueck', () => {
     expect(resolveStartRoute('/gibtsnicht')).toBe(ROUTE_OVERVIEW);
     expect(resolveStartRoute('kaputt')).toBe(ROUTE_OVERVIEW);
+  });
+});
+
+describe('buildListPreviews', () => {
+  const eintrag = (
+    overrides: Partial<PreviewItem> & { id: string; name: string },
+  ): PreviewItem => ({
+    listId: 'l1',
+    categoryId: 'obst',
+    isChecked: false,
+    position: 0,
+    createdAt: 1000,
+    ...overrides,
+  });
+
+  const kategorieFolge = (preview: { segments: { categoryId: string }[] } | undefined) =>
+    preview?.segments.map((segment) => segment.categoryId);
+
+  it('ordnet die Segmente nach der Standardreihenfolge der Kategorien', () => {
+    const result = buildListPreviews(
+      [
+        eintrag({ id: 'a', name: 'Milch', categoryId: 'kuehlregal', position: 0 }),
+        eintrag({ id: 'b', name: 'Brot', categoryId: 'backwaren', position: 1 }),
+        eintrag({ id: 'c', name: 'Äpfel', categoryId: 'obst', position: 2 }),
+        eintrag({ id: 'd', name: 'Joghurt', categoryId: 'kuehlregal', position: 3 }),
+      ],
+      kategorien,
+      [],
+      'sonstiges',
+    );
+
+    expect(kategorieFolge(result.l1)).toEqual(['obst', 'backwaren', 'kuehlregal', 'kuehlregal']);
+    expect(result.l1?.previewNames).toEqual(['Äpfel', 'Brot', 'Milch', 'Joghurt']);
+    expect(result.l1?.hiddenCount).toBe(0);
+  });
+
+  it('folgt dem eigenen Ladenlayout jeder Liste getrennt', () => {
+    const result = buildListPreviews(
+      [
+        eintrag({ id: 'a', name: 'Milch', categoryId: 'kuehlregal' }),
+        eintrag({ id: 'b', name: 'Äpfel', categoryId: 'obst' }),
+        eintrag({ id: 'c', listId: 'l2', name: 'Milch', categoryId: 'kuehlregal' }),
+        eintrag({ id: 'd', listId: 'l2', name: 'Äpfel', categoryId: 'obst' }),
+      ],
+      kategorien,
+      [
+        { listId: 'l1', categoryId: 'kuehlregal', position: 0 },
+        { listId: 'l1', categoryId: 'obst', position: 1 },
+      ],
+      'sonstiges',
+    );
+
+    expect(kategorieFolge(result.l1)).toEqual(['kuehlregal', 'obst']);
+    // Das Layout von l1 gilt nicht fuer l2.
+    expect(kategorieFolge(result.l2)).toEqual(['obst', 'kuehlregal']);
+  });
+
+  it('haengt Erledigtes gedaempft ans Ende und laesst es aus der Vorschau', () => {
+    const result = buildListPreviews(
+      [
+        eintrag({ id: 'a', name: 'Äpfel', categoryId: 'obst', isChecked: true }),
+        eintrag({ id: 'b', name: 'Milch', categoryId: 'kuehlregal' }),
+      ],
+      kategorien,
+      [],
+      'sonstiges',
+    );
+
+    expect(result.l1?.segments).toEqual([
+      { categoryId: 'kuehlregal', checked: false },
+      { categoryId: 'obst', checked: true },
+    ]);
+    expect(result.l1?.previewNames).toEqual(['Milch']);
+  });
+
+  it('steckt Artikel ohne oder mit unbekannter Kategorie in die Ersatzkategorie', () => {
+    const result = buildListPreviews(
+      [
+        eintrag({ id: 'a', name: 'Kerzen', categoryId: null }),
+        eintrag({ id: 'b', name: 'Wein', categoryId: 'weinregal' }),
+      ],
+      kategorien,
+      [],
+      'sonstiges',
+    );
+
+    expect(kategorieFolge(result.l1)).toEqual(['sonstiges', 'sonstiges']);
+  });
+
+  it('zeigt hoechstens fuenf Namen und zaehlt den Rest', () => {
+    const viele = Array.from({ length: 8 }, (_, index) =>
+      eintrag({ id: `i${index}`, name: `Artikel ${index}`, position: index }),
+    );
+    const result = buildListPreviews(viele, kategorien, [], 'sonstiges');
+
+    expect(result.l1?.previewNames).toHaveLength(MAX_PREVIEW_NAMES);
+    expect(result.l1?.previewNames[0]).toBe('Artikel 0');
+    expect(result.l1?.hiddenCount).toBe(8 - MAX_PREVIEW_NAMES);
+  });
+
+  it('begrenzt die Leiste bei langen Listen', () => {
+    const viele = Array.from({ length: 40 }, (_, index) =>
+      eintrag({ id: `i${index}`, name: `Artikel ${index}`, position: index }),
+    );
+    const result = buildListPreviews(viele, kategorien, [], 'sonstiges');
+
+    expect(result.l1?.segments).toHaveLength(MAX_PREVIEW_SEGMENTS);
+  });
+
+  it('liefert fuer Listen ohne Artikel keinen Eintrag', () => {
+    expect(buildListPreviews([], kategorien, [], 'sonstiges')).toEqual({});
+  });
+});
+
+describe('limitSegments', () => {
+  const offen = (count: number, prefix = 'o') =>
+    Array.from({ length: count }, (_, index) => `${prefix}${index}`);
+
+  it('laesst kurze Leisten unveraendert', () => {
+    expect(limitSegments(['a', 'b'], ['c'], 24)).toEqual(['a', 'b', 'c']);
+  });
+
+  it('verteilt die Plaetze anteilig auf Offenes und Erledigtes', () => {
+    const result = limitSegments(offen(30), offen(18, 'e'), 24);
+
+    expect(result).toHaveLength(24);
+    expect(result.filter((entry) => entry.startsWith('o'))).toHaveLength(15);
+    expect(result.filter((entry) => entry.startsWith('e'))).toHaveLength(9);
+  });
+
+  it('behaelt die Reihenfolge: erst offen, dann erledigt', () => {
+    const result = limitSegments(offen(30), offen(30, 'e'), 24);
+    const firstChecked = result.findIndex((entry) => entry.startsWith('e'));
+
+    expect(result.slice(0, firstChecked).every((entry) => entry.startsWith('o'))).toBe(true);
+    expect(result.slice(firstChecked).every((entry) => entry.startsWith('e'))).toBe(true);
+  });
+
+  it('waehlt gleichmaessig aus, statt nur den Anfang zu nehmen', () => {
+    const result = limitSegments(offen(48), [], 24);
+
+    expect(result).toHaveLength(24);
+    expect(result[0]).toBe('o1');
+    expect(result[23]).toBe('o47');
+  });
+
+  it('laesst einem einzelnen offenen Artikel immer ein Segment', () => {
+    const result = limitSegments(['o0'], offen(60, 'e'), 24);
+
+    expect(result).toHaveLength(24);
+    expect(result[0]).toBe('o0');
+  });
+
+  it('laesst einem einzelnen erledigten Artikel ebenfalls ein Segment', () => {
+    const result = limitSegments(offen(60), ['e0'], 24);
+
+    expect(result).toHaveLength(24);
+    expect(result[23]).toBe('e0');
   });
 });

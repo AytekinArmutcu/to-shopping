@@ -5,7 +5,7 @@ import { Pressable, StyleSheet, View } from 'react-native';
 import ReanimatedSwipeable, {
   type SwipeableMethods,
 } from 'react-native-gesture-handler/ReanimatedSwipeable';
-import { Checkbox, Divider, Icon, IconButton, Text, useTheme } from 'react-native-paper';
+import { Checkbox, Icon, IconButton, Text, useTheme } from 'react-native-paper';
 import Animated, {
   useAnimatedStyle,
   useSharedValue,
@@ -29,6 +29,14 @@ type Props = {
   unitShort: string;
   /** true, solange die Detailzeile unten genau diesen Artikel zeigt. */
   isEditing: boolean;
+  /**
+   * Farbe der Gruppenflaeche, auf der die Zeile liegt (ADR-049).
+   *
+   * Die Zeile braucht einen deckenden Grund in genau dieser Farbe: Darunter
+   * liegt der Wisch-Hintergrund, und eine durchsichtige Zeile liesse ihn beim
+   * Wischen durch den Text scheinen.
+   */
+  surfaceColor: string;
   onToggle: (id: string, isChecked: boolean) => void;
   onRemove: (id: string) => void;
   onOpenDetails: (id: string) => void;
@@ -44,7 +52,15 @@ type Props = {
  * Die Zeile entfernt sich nicht selbst aus der Liste. Sie meldet nur, dass
  * abgehakt wurde; was danach sichtbar bleibt, entscheidet partitionItems.
  */
-export function ItemRow({ item, unitShort, isEditing, onToggle, onRemove, onOpenDetails }: Props) {
+export function ItemRow({
+  item,
+  unitShort,
+  isEditing,
+  surfaceColor,
+  onToggle,
+  onRemove,
+  onOpenDetails,
+}: Props) {
   const { t } = useTranslation();
   const theme = useTheme();
   const swipeable = useRef<SwipeableMethods>(null);
@@ -63,8 +79,13 @@ export function ItemRow({ item, unitShort, isEditing, onToggle, onRemove, onOpen
   }
 
   return (
+    // Keine Trennlinie mehr (ADR-049, "Flaechen statt Linien"): Die Zeilen
+    // liegen auf der Gruppenflaeche und sind selbst gerundet. Die Rundung
+    // sitzt am aeusseren Container, der ohnehin abschneidet - so folgt ihr
+    // auch der Wisch-Hintergrund und die Markierung beim Bearbeiten.
     <ReanimatedSwipeable
       ref={swipeable}
+      containerStyle={styles.shape}
       friction={2}
       leftThreshold={56}
       rightThreshold={56}
@@ -84,7 +105,10 @@ export function ItemRow({ item, unitShort, isEditing, onToggle, onRemove, onOpen
         style={[
           styles.row,
           {
-            backgroundColor: isEditing ? theme.colors.surfaceVariant : theme.colors.background,
+            // secondaryContainer ist in Material 3 die Rolle fuer "ausgewaehlt".
+            // surfaceVariant hob sich auf der getoenten Gruppenflaeche im
+            // hellen Modus kaum noch ab.
+            backgroundColor: isEditing ? theme.colors.secondaryContainer : surfaceColor,
           },
         ]}
         testID={`item-${item.name}`}
@@ -140,7 +164,6 @@ export function ItemRow({ item, unitShort, isEditing, onToggle, onRemove, onOpen
           style={styles.removeButton}
         />
       </View>
-      <Divider />
     </ReanimatedSwipeable>
   );
 }
@@ -228,6 +251,9 @@ function SwipeBackground({
 }
 
 const styles = StyleSheet.create({
+  shape: {
+    borderRadius: 12,
+  },
   row: {
     flexDirection: 'row',
     alignItems: 'center',

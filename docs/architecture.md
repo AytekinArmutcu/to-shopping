@@ -421,7 +421,7 @@ To-Shopping/
 │   │   ├── diagnostics/          # Fehlerspeicher, Error Boundary
 │   │   └── transfer/             # Export, Import, Sicherung, Formate
 │   ├── components/               # domänenfreie UI-Bausteine
-│   ├── theme/                    # Material-3-Farbschema (Grün), Typografie
+│   ├── theme/                    # Material-3-Farbschema (Grün, Orange als Akzent), Kategoriefarben (ADR-049), Kontrastprüfung
 │   ├── i18n/
 │   │   ├── index.ts
 │   │   └── locales/de.json       # alle sichtbaren Texte

@@ -3,7 +3,9 @@ import {
   DefaultTheme as NavigationDefaultTheme,
 } from 'expo-router';
 import type { ColorSchemeName } from 'react-native';
-import { MD3DarkTheme, MD3LightTheme, type MD3Theme } from 'react-native-paper';
+import { MD3DarkTheme, MD3LightTheme, type MD3Theme, useTheme } from 'react-native-paper';
+
+import { type CategoryColor, categoryColorsDark, categoryColorsLight } from './categoryColors';
 
 /**
  * Material-3-Farbwelt in Gruen (ADR-009).
@@ -13,6 +15,14 @@ import { MD3DarkTheme, MD3LightTheme, type MD3Theme } from 'react-native-paper';
  * Material 3 leitet Kontraste zwischen zusammengehoerigen Rollen ab
  * ("primary" / "onPrimary"), und ein einzeln geaenderter Wert zerstoert diese
  * Beziehung - deshalb die Regel in CLAUDE.md, Farbrollen nicht anzufassen.
+ *
+ * Die Tertiaerrollen sind Orange (ADR-049): Gruen traegt die App, Orange ist
+ * der Akzent fuer das Besondere. Auch hier ist jeweils das ganze Quartett
+ * (tertiary, onTertiary, tertiaryContainer, onTertiaryContainer) gesetzt.
+ *
+ * Neben den Material-Rollen traegt das Theme die Kategoriefarben
+ * ("categories", siehe categoryColors.ts) - Bildschirme lesen sie ueber
+ * useAppTheme() und schreiben nie eigene Werte.
  *
  * Dark Mode folgt der Systemeinstellung, es gibt keinen Schalter (ADR-010).
  */
@@ -25,10 +35,10 @@ const lightColors = {
   onSecondary: 'rgb(255, 255, 255)',
   secondaryContainer: 'rgb(213, 232, 208)',
   onSecondaryContainer: 'rgb(16, 31, 17)',
-  tertiary: 'rgb(56, 101, 110)',
+  tertiary: 'rgb(180, 82, 26)',
   onTertiary: 'rgb(255, 255, 255)',
-  tertiaryContainer: 'rgb(188, 235, 246)',
-  onTertiaryContainer: 'rgb(0, 31, 36)',
+  tertiaryContainer: 'rgb(255, 219, 203)',
+  onTertiaryContainer: 'rgb(58, 17, 0)',
   error: 'rgb(186, 26, 26)',
   onError: 'rgb(255, 255, 255)',
   errorContainer: 'rgb(255, 218, 214)',
@@ -68,10 +78,10 @@ const darkColors = {
   onSecondary: 'rgb(37, 52, 37)',
   secondaryContainer: 'rgb(59, 75, 58)',
   onSecondaryContainer: 'rgb(213, 232, 208)',
-  tertiary: 'rgb(160, 207, 217)',
-  onTertiary: 'rgb(0, 54, 61)',
-  tertiaryContainer: 'rgb(30, 77, 85)',
-  onTertiaryContainer: 'rgb(188, 235, 246)',
+  tertiary: 'rgb(255, 182, 144)',
+  onTertiary: 'rgb(86, 32, 0)',
+  tertiaryContainer: 'rgb(122, 55, 0)',
+  onTertiaryContainer: 'rgb(255, 219, 203)',
   error: 'rgb(255, 180, 171)',
   onError: 'rgb(105, 0, 5)',
   errorContainer: 'rgb(147, 0, 10)',
@@ -102,18 +112,28 @@ const darkColors = {
   backdrop: 'rgba(44, 50, 42, 0.4)',
 };
 
-export const lightTheme: MD3Theme = {
+/** Material-3-Theme plus Kategoriefarben (ADR-049). */
+export type AppTheme = MD3Theme & { categories: Record<string, CategoryColor> };
+
+export const lightTheme: AppTheme = {
   ...MD3LightTheme,
   colors: { ...MD3LightTheme.colors, ...lightColors },
+  categories: categoryColorsLight,
 };
 
-export const darkTheme: MD3Theme = {
+export const darkTheme: AppTheme = {
   ...MD3DarkTheme,
   colors: { ...MD3DarkTheme.colors, ...darkColors },
+  categories: categoryColorsDark,
 };
 
-export function themeFor(scheme: ColorSchemeName): MD3Theme {
+export function themeFor(scheme: ColorSchemeName): AppTheme {
   return scheme === 'dark' ? darkTheme : lightTheme;
+}
+
+/** Wie useTheme() aus Paper, aber mit dem erweiterten Typ samt Kategoriefarben. */
+export function useAppTheme(): AppTheme {
+  return useTheme<AppTheme>();
 }
 
 /**

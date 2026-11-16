@@ -1,7 +1,13 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ScrollView, StyleSheet, View } from 'react-native';
-import { Divider, List, TextInput, useTheme } from 'react-native-paper';
+import {
+  type TextInput as NativeTextInput,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  View,
+} from 'react-native';
+import { Icon, List, TextInput, useTheme } from 'react-native-paper';
 
 import { SESSION_START } from '@/features/suggestions/clock';
 import { rankSuggestions, type ProductStats } from '@/features/suggestions/logic';
@@ -40,6 +46,7 @@ export function AddItemBar({
   const theme = useTheme();
   const [query, setQuery] = useState('');
   const [focused, setFocused] = useState(false);
+  const input = useRef<NativeTextInput>(null);
 
   const { suggestions, canCreate } = useMemo(
     () => rankSuggestions(query, products, stats, productIdsOnList, SESSION_START),
@@ -72,7 +79,10 @@ export function AddItemBar({
   }
 
   return (
-    <View style={[styles.wrapper, { backgroundColor: theme.colors.surface }]}>
+    // Kein Rand nach oben mehr: Die Pille hebt sich selbst ab ("Flaechen statt
+    // Linien", ADR-049). Der alte Rand war ausserdem ein fester Farbwert, der
+    // im Dunkelmodus nicht zu sehen war.
+    <View style={{ backgroundColor: theme.colors.surface }}>
       {showPanel ? (
         <>
           <ScrollView style={styles.panel} keyboardShouldPersistTaps="handled" testID="suggestions">
@@ -98,39 +108,68 @@ export function AddItemBar({
               />
             ) : null}
           </ScrollView>
-          <Divider />
         </>
       ) : null}
 
-      <TextInput
-        mode="flat"
-        value={query}
-        onChangeText={setQuery}
-        placeholder={t('add.placeholder')}
-        accessibilityLabel={t('add.label')}
-        testID="add-input"
-        autoCorrect={false}
-        onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
-        returnKeyType="done"
-        onSubmitEditing={() => {
-          const first = suggestions[0];
-          if (first) {
-            pick(first.product);
-          } else if (canCreate) {
-            create();
-          }
-        }}
-        style={styles.input}
-      />
+      {/* Das Feld als runde Pille mit Plus davor (ADR-049): Es soll nach
+          "hier kommt etwas dazu" aussehen, nicht nach einem Formular. Die
+          Pille ist eine eigene Flaeche, das Paper-Feld darin traegt dieselbe
+          Farbe und keine Unterstreichung - so bleiben Platzhalter, Cursor und
+          Verhalten von Paper, nur die Form ist neu.
+
+          Ein Tipp auf das Plus oder den Rand der Pille setzt den Fokus ins
+          Feld. accessible={false}, damit der Screenreader nicht zwei Ziele
+          fuer dasselbe meldet - das Feld selbst ist ansprechbar. */}
+      <View style={styles.pillRow}>
+        <Pressable
+          accessible={false}
+          onPress={() => input.current?.focus()}
+          style={[styles.pill, { backgroundColor: theme.colors.elevation.level2 }]}
+        >
+          <Icon source="plus" size={24} color={theme.colors.onSurfaceVariant} />
+          <TextInput
+            ref={input}
+            mode="flat"
+            value={query}
+            onChangeText={setQuery}
+            placeholder={t('add.placeholder')}
+            accessibilityLabel={t('add.label')}
+            testID="add-input"
+            autoCorrect={false}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
+            returnKeyType="done"
+            onSubmitEditing={() => {
+              const first = suggestions[0];
+              if (first) {
+                pick(first.product);
+              } else if (canCreate) {
+                create();
+              }
+            }}
+            style={[styles.input, { backgroundColor: theme.colors.elevation.level2 }]}
+            contentStyle={styles.inputContent}
+            underlineStyle={styles.noUnderline}
+          />
+        </Pressable>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  wrapper: {
-    borderTopWidth: StyleSheet.hairlineWidth,
-    borderTopColor: 'rgba(0,0,0,0.12)',
+  pillRow: {
+    paddingHorizontal: 12,
+    paddingTop: 4,
+    paddingBottom: 8,
+  },
+  pill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderRadius: 999,
+    paddingLeft: 16,
+    paddingRight: 8,
+    overflow: 'hidden',
   },
   panel: {
     // Bewusst niedrig: Bei offener Tastatur teilen sich Vorschlaege und
@@ -143,6 +182,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   input: {
+    flex: 1,
     minHeight: 56,
+  },
+  inputContent: {
+    paddingLeft: 8,
+  },
+  // Die Pille ist die Form, eine Unterstreichung darunter waere doppelt.
+  noUnderline: {
+    display: 'none',
   },
 });

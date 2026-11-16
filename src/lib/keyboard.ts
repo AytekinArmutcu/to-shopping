@@ -43,3 +43,29 @@ export function keyboardHeightInDp(
 
   return Math.min(asDp, limit);
 }
+
+/**
+ * Abstand, den ein am unteren Bildschirmrand verankerter Bereich freihalten
+ * muss, damit er ueber Tastatur und Systemleiste steht.
+ *
+ * React Native meldet die Tastaturhoehe **ohne** die Systemleiste darunter
+ * (`ime.bottom - systemBars.bottom`). Die App zeichnet aber randlos bis zur
+ * Bildschirmkante (seit Android 15 Pflicht, ADR-026) - die Tastatur verdeckt
+ * also die gemeldete Hoehe **plus** den unteren Systemrand. Auf dem Emulator
+ * gemessen: gemeldet 312 dp, verdeckt 336 dp (883 px), Systemrand 24 dp.
+ *
+ * Bis M18 fehlten diese 24 dp. Beim flachen Eingabefeld fiel es nicht auf,
+ * weil die Schrift noch oberhalb lag; die Pillenform aus ADR-049 wurde davon
+ * sichtbar angeschnitten (ADR-050).
+ *
+ * Ist die Tastatur zu, bleibt nur der Systemrand frei.
+ */
+export function bottomInsetWithKeyboard(keyboardHeight: number, bottomInset: number): number {
+  const inset = Number.isFinite(bottomInset) && bottomInset > 0 ? bottomInset : 0;
+
+  if (!Number.isFinite(keyboardHeight) || keyboardHeight <= 0) {
+    return inset;
+  }
+
+  return keyboardHeight + inset;
+}

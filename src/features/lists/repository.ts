@@ -143,6 +143,45 @@ export function openCountsQuery() {
     .groupBy(listItems.listId);
 }
 
+/**
+ * Alle Artikel aller Listen, schmal - fuer Farbleiste und Vorschau der
+ * Listenkarten (T-18.3).
+ *
+ * Eine Abfrage fuer die ganze Uebersicht statt einer je Karte: useLiveQuery
+ * fuehrt jede Abfrage bei jeder Aenderung neu aus, und zehn Karten hiessen
+ * dann zehn Runden. Die Gruppierung macht buildListPreviews in der App, weil
+ * sie dieselbe Ladenreihenfolge braucht wie die Liste selbst - und die steckt
+ * in reiner Logik, nicht in SQL.
+ *
+ * Die Kategorie kommt aus dem Listeneintrag, nicht aus dem Produkt: Genau
+ * danach gruppiert auch die Liste (ADR-007, Kopie beim Hinzufuegen). Die
+ * Farbleiste soll dieselben Abteilungen zeigen, die man nach dem Antippen sieht.
+ */
+export function listPreviewItemsQuery() {
+  return db
+    .select({
+      id: listItems.id,
+      listId: listItems.listId,
+      name: listItems.name,
+      categoryId: listItems.categoryId,
+      isChecked: listItems.isChecked,
+      position: listItems.position,
+      createdAt: listItems.createdAt,
+    })
+    .from(listItems);
+}
+
+/** Das Ladenlayout aller Listen auf einmal - Gegenstueck zu categoryOrderQuery. */
+export function allCategoryOrdersQuery() {
+  return db
+    .select({
+      listId: listCategoryOrder.listId,
+      categoryId: listCategoryOrder.categoryId,
+      position: listCategoryOrder.position,
+    })
+    .from(listCategoryOrder);
+}
+
 export async function getList(id: string) {
   const found = await db.select().from(lists).where(eq(lists.id, id)).limit(1);
   return found[0] ?? null;

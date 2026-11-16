@@ -27,6 +27,11 @@ Male ohne Gerät. Auf dem Emulator trat der Fehler auf, auf dem S24 nie.
 - [ ] Liste öffnen, unten ins Eingabefeld tippen
 - [ ] **Das Eingabefeld bleibt sichtbar**, direkt über der Tastatur
 - [ ] Ein paar Buchstaben tippen — die Vorschläge erscheinen darüber, nicht dahinter
+- [ ] Einen Vorschlag antippen und **sofort den zweiten Artikel tippen**: Feld und
+      Vorschläge stehen weiter über der Tastatur (ADR-050 — der Fehler trat erst
+      nach dem ersten Artikel auf)
+- [ ] Zur Übersicht, eine andere Liste öffnen, dort zwei Artikel hintereinander
+      hinzufügen: dasselbe
 - [ ] Einen Artikel antippen → Detailzeile öffnet sich → in die Notiz tippen
       → Notizfeld bleibt sichtbar
 - [ ] In der Übersicht: „Neue Liste" → das Namensfeld im Dialog ist erreichbar
@@ -171,13 +176,30 @@ Nicht heute abzuhaken. Nach ein paar echten Einkäufen:
 
 ---
 
+## 12. Markttag — Farbe im Regal (M18, ADR-049)
+
+Hell **und** dunkel, jeweils einmal durchgehen:
+
+- [ ] Liste: Jede Abteilung liegt auf einer eigenen Fläche mit farbigem Schild; Obst, Kühlregal und Trockenwaren sind am Farbton zu unterscheiden, ohne den Titel zu lesen
+- [ ] Liste: „n von m offen" und der Balken stehen oben unter dem Titel und bleiben sichtbar, wenn die Tastatur offen ist
+- [ ] Liste: Erledigtes liegt in einer stillen Fläche unten, durchgestrichen, der Schalter „Erledigte ausblenden" funktioniert
+- [ ] Liste: Das Eingabefeld ist eine runde Pille mit Plus; Vorschläge erscheinen wie vorher
+- [ ] Übersicht: Jede Listenkarte zeigt Farbleiste und Vorschau; die Karte öffnet die Liste, das Drei-Punkte-Menü funktioniert
+- [ ] Übersicht: „Vorrat" und „Rezepte" stehen als Knöpfe über den Karten; der FAB „Neue Liste" ist orange
+- [ ] Vorrat: Kopf zeigt „n da · m fehlen"; die Abteilungen liegen auf Flächen in ihrer Farbe; Haken setzen und lösen geht per Zeile
+- [ ] Rezepte: „Alles da" grün, „Fehlt n" orange als Schild; der Wochenplan-Knopf ist orange
+- [ ] Nichts ist kleiner als 48 dp geworden: mit dem Finger alle Knöpfe und Chips treffen
+- [ ] Große Systemschrift: Karten und Schilder brechen um, nichts ist abgeschnitten
+
+---
+
 ## Ergebnis
 
 | | |
 |---|---|
 | Datum | |
 | Gerät, Android-Version | |
-| Punkte 1–9 abgehakt | |
+| Punkte 1–12 abgehakt | |
 | Gefundene Mängel | |
 
 Gefundene Mängel gehören als Notiz gesammelt, nicht sofort behoben — außer

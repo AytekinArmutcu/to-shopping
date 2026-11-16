@@ -18,7 +18,6 @@ import {
   TextInput,
   useTheme,
 } from 'react-native-paper';
-import Animated, { useAnimatedStyle, withTiming } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { DEFAULT_UNIT } from '@/db/units';
@@ -37,6 +36,7 @@ import { toProductStats } from '@/features/suggestions/logic';
 import { currentStatsQuery } from '@/features/suggestions/repository';
 import { MAX_TEMPLATE_NAME_LENGTH } from '@/features/templates/logic';
 import { goTo } from '@/lib/navigation';
+import { bottomInsetWithKeyboard } from '@/lib/keyboard';
 import { useKeyboardHeight } from '@/lib/useKeyboardHeight';
 
 import {
@@ -59,7 +59,7 @@ import {
   weeklyPlanQuery,
   type NewIngredient,
 } from '../repository';
-import { NEW_RECIPE_ID, useActiveListTargets } from './RecipesScreen';
+import { NEW_RECIPE_ID, RecipeBadge, useActiveListTargets } from './RecipesScreen';
 
 type Props = {
   recipeId: string;
@@ -500,11 +500,9 @@ export function RecipeScreen({ recipeId }: Props) {
       .finally(() => setBusy(false));
   }, [busy, recipeId]);
 
-  const keyboardTarget = Math.max(keyboardHeight, insets.bottom);
-  const keyboardPadding = useAnimatedStyle(
-    () => ({ paddingBottom: withTiming(keyboardTarget, { duration: 220 }) }),
-    [keyboardTarget],
-  );
+  const keyboardTarget = bottomInsetWithKeyboard(keyboardHeight, insets.bottom);
+  // Gewoehnlicher Stil statt Reanimated-Animation: siehe ADR-050.
+  const keyboardPadding = { paddingBottom: keyboardTarget };
 
   const quantityText = (item: { quantity: number; unit: string }) =>
     formatQuantity(item, t(`units.${item.unit}.short`));
@@ -718,7 +716,7 @@ export function RecipeScreen({ recipeId }: Props) {
               fokussierte Feld bei einer Groessenaenderung wieder ins Bild. */}
           {/* Unten entweder das Eingabefeld oder die Detailzeile, nie beides -
               wie auf der Liste. */}
-          <Animated.View style={keyboardPadding}>
+          <View style={keyboardPadding}>
             {editingDraft ? (
               <ItemDetailBar
                 // Neue Zutat, neuer Zustand: siehe ItemDetailBar.
@@ -745,7 +743,7 @@ export function RecipeScreen({ recipeId }: Props) {
                 onCreateProduct={handleCreate}
               />
             )}
-          </Animated.View>
+          </View>
         </View>
       ) : (
         <>
@@ -893,11 +891,8 @@ export function RecipeScreen({ recipeId }: Props) {
           {recipe ? (
             <View style={[styles.footer, { borderTopColor: theme.colors.outlineVariant }]}>
               <View style={styles.footerRow}>
-                <Text variant="labelLarge" testID="recipe-missing">
-                  {notInPantry === 0
-                    ? t('recipes.allThere')
-                    : t('recipes.missing', { count: notInPantry })}
-                </Text>
+                {/* Dasselbe Schild wie in der Uebersicht (M18). */}
+                <RecipeBadge missingCount={notInPantry} testID="recipe-missing" />
               </View>
               <Button
                 mode="contained"
