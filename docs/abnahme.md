@@ -188,6 +188,7 @@ Hell **und** dunkel, jeweils einmal durchgehen:
 - [ ] Übersicht: „Vorrat" und „Rezepte" stehen als Knöpfe über den Karten; der FAB „Neue Liste" ist orange
 - [ ] Vorrat: Kopf zeigt „n da · m fehlen"; die Abteilungen liegen auf Flächen in ihrer Farbe; Haken setzen und lösen geht per Zeile
 - [ ] Rezepte: „Alles da" grün, „Fehlt n" orange als Schild; der Wochenplan-Knopf ist orange
+- [ ] Katalog (Plus-Symbol in der Liste) und Produkte (Menü): Abteilungen auf Flächen in ihrer Farbe wie im Vorrat; „Steht schon auf der Liste" und „Grundvorrat" sind lesbar; die drei „Neu"-Knöpfe sind orange
 - [ ] Nichts ist kleiner als 48 dp geworden: mit dem Finger alle Knöpfe und Chips treffen
 - [ ] Große Systemschrift: Karten und Schilder brechen um, nichts ist abgeschnitten
 

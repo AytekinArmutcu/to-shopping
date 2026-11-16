@@ -19,10 +19,11 @@ import {
   Snackbar,
   Text,
   TextInput,
-  useTheme,
 } from 'react-native-paper';
 
 import { useKeyboardHeight } from '@/lib/useKeyboardHeight';
+import { useAppTheme } from '@/theme';
+import { categoryColorFor } from '@/theme/categoryColors';
 
 import {
   buildCatalogSections,
@@ -65,7 +66,7 @@ type Draft = {
  */
 export function ProductsScreen() {
   const { t } = useTranslation();
-  const theme = useTheme();
+  const theme = useAppTheme();
   const keyboardHeight = useKeyboardHeight();
 
   const catalog = useLiveQuery(catalogProductsQuery());
@@ -176,75 +177,102 @@ export function ProductsScreen() {
         sections={sections}
         keyExtractor={(product) => product.id}
         keyboardShouldPersistTaps="handled"
-        stickySectionHeadersEnabled
+        // Keine festen Ueberschriften mehr: Ein klebender Kopf haette oben
+        // runde Ecken und laege als Fremdkoerper ueber der naechsten Flaeche.
+        // Die Farbe der Flaeche sagt beim Blaettern, in welcher Abteilung man
+        // ist (ADR-049).
+        stickySectionHeadersEnabled={false}
         contentContainerStyle={styles.listContent}
         testID="products-list"
-        renderSectionHeader={({ section }) => (
-          <Text
-            variant="titleSmall"
-            style={[
-              styles.sectionHeader,
-              { backgroundColor: theme.colors.surface, color: theme.colors.primary },
-            ]}
-          >
-            {section.title}
-          </Text>
-        )}
-        renderItem={({ item }) => (
-          <List.Item
-            title={item.name}
-            description={stapleIds.has(item.id) ? t('products.staple') : undefined}
-            onPress={() =>
-              setDraft({
-                id: item.id,
-                name: item.name,
-                categoryId: item.categoryId ?? FALLBACK_CATEGORY_ID,
-                isStaple: stapleIds.has(item.id),
-              })
-            }
-            testID={`product-${item.name}`}
-            style={styles.row}
-            right={() => (
-              <Menu
-                visible={menuFor === item.id}
-                onDismiss={() => setMenuFor(null)}
-                anchor={
-                  <IconButton
-                    icon="dots-vertical"
-                    onPress={() => setMenuFor(item.id)}
-                    accessibilityLabel={t('products.more', { name: item.name })}
-                    testID={`product-more-${item.name}`}
-                    style={styles.more}
-                  />
+        renderSectionHeader={({ section }) => {
+          const colors = categoryColorFor(theme.categories, section.key);
+          return (
+            <Text
+              variant="titleSmall"
+              accessibilityRole="header"
+              style={[
+                styles.sectionHeader,
+                { backgroundColor: colors.container, color: colors.onContainer },
+              ]}
+            >
+              {section.title}
+            </Text>
+          );
+        }}
+        renderSectionFooter={() => <View style={styles.sectionGap} />}
+        renderItem={({ item, index, section }) => {
+          const colors = categoryColorFor(theme.categories, section.key);
+          const isLast = index === section.data.length - 1;
+
+          return (
+            <View
+              style={[
+                styles.rowSurface,
+                isLast ? styles.rowSurfaceLast : null,
+                { backgroundColor: colors.container },
+              ]}
+            >
+              <List.Item
+                title={item.name}
+                description={stapleIds.has(item.id) ? t('products.staple') : undefined}
+                // Nur das Paar container/onContainer ist auf Kontrast geprueft
+                // (ADR-049) - deshalb nicht die Standardfarben von Paper.
+                titleStyle={{ color: colors.onContainer }}
+                descriptionStyle={{ color: colors.onContainer }}
+                onPress={() =>
+                  setDraft({
+                    id: item.id,
+                    name: item.name,
+                    categoryId: item.categoryId ?? FALLBACK_CATEGORY_ID,
+                    isStaple: stapleIds.has(item.id),
+                  })
                 }
-              >
-                <Menu.Item
-                  leadingIcon="pencil"
-                  title={t('products.edit')}
-                  testID="product-edit"
-                  onPress={() => {
-                    setMenuFor(null);
-                    setDraft({
-                      id: item.id,
-                      name: item.name,
-                      categoryId: item.categoryId ?? FALLBACK_CATEGORY_ID,
-                      isStaple: stapleIds.has(item.id),
-                    });
-                  }}
-                />
-                <Menu.Item
-                  leadingIcon="delete-outline"
-                  title={t('products.delete')}
-                  testID="product-delete"
-                  onPress={() => {
-                    setMenuFor(null);
-                    setDeleteFor(item);
-                  }}
-                />
-              </Menu>
-            )}
-          />
-        )}
+                testID={`product-${item.name}`}
+                style={styles.row}
+                right={() => (
+                  <Menu
+                    visible={menuFor === item.id}
+                    onDismiss={() => setMenuFor(null)}
+                    anchor={
+                      <IconButton
+                        icon="dots-vertical"
+                        iconColor={colors.onContainer}
+                        onPress={() => setMenuFor(item.id)}
+                        accessibilityLabel={t('products.more', { name: item.name })}
+                        testID={`product-more-${item.name}`}
+                        style={styles.more}
+                      />
+                    }
+                  >
+                    <Menu.Item
+                      leadingIcon="pencil"
+                      title={t('products.edit')}
+                      testID="product-edit"
+                      onPress={() => {
+                        setMenuFor(null);
+                        setDraft({
+                          id: item.id,
+                          name: item.name,
+                          categoryId: item.categoryId ?? FALLBACK_CATEGORY_ID,
+                          isStaple: stapleIds.has(item.id),
+                        });
+                      }}
+                    />
+                    <Menu.Item
+                      leadingIcon="delete-outline"
+                      title={t('products.delete')}
+                      testID="product-delete"
+                      onPress={() => {
+                        setMenuFor(null);
+                        setDeleteFor(item);
+                      }}
+                    />
+                  </Menu>
+                )}
+              />
+            </View>
+          );
+        }}
         ListEmptyComponent={
           <View style={styles.empty} testID="products-empty">
             <Text variant="titleMedium" style={styles.emptyText}>
@@ -384,12 +412,36 @@ const styles = StyleSheet.create({
   search: {
     margin: 12,
   },
+  // Seitenrand der Gruppenflaechen - wie im Vorrat (ADR-049).
   listContent: {
+    paddingHorizontal: 16,
+    paddingTop: 4,
+    // Platz, damit der letzte Eintrag nicht unter dem FAB verschwindet.
     paddingBottom: 96,
   },
+  // Oberkante der Gruppenflaeche: 18 dp Rundung. Der Titel rueckt 16 dp ein
+  // und steht damit ueber den Kaestchen der Zeilen.
   sectionHeader: {
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    paddingTop: 12,
+    paddingBottom: 4,
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    overflow: 'hidden',
+  },
+  rowSurface: {
+    paddingHorizontal: 8,
+  },
+  // Unterkante der Gruppenflaeche. overflow schneidet die Welle der letzten
+  // Zeile an der Rundung ab.
+  rowSurfaceLast: {
+    borderBottomLeftRadius: 18,
+    borderBottomRightRadius: 18,
+    paddingBottom: 8,
+    overflow: 'hidden',
+  },
+  sectionGap: {
+    height: 10,
   },
   row: {
     minHeight: 56,

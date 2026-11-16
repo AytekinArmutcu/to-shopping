@@ -3,21 +3,14 @@ import { router } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { SectionList, StyleSheet, View } from 'react-native';
-import {
-  Appbar,
-  Button,
-  Checkbox,
-  Divider,
-  List,
-  Searchbar,
-  Text,
-  useTheme,
-} from 'react-native-paper';
+import { Appbar, Button, Checkbox, List, Searchbar, Text } from 'react-native-paper';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { addProductsToList, listItemsQuery } from '@/features/items/repository';
 import { bottomInsetWithKeyboard } from '@/lib/keyboard';
 import { useKeyboardHeight } from '@/lib/useKeyboardHeight';
+import { useAppTheme } from '@/theme';
+import { categoryColorFor } from '@/theme/categoryColors';
 
 import { buildCatalogSections, idsToAdd, type CatalogProduct } from '../logic';
 import { catalogProductsQuery, categoriesQuery } from '../repository';
@@ -40,7 +33,7 @@ type Props = {
  */
 export function CatalogScreen({ listId }: Props) {
   const { t } = useTranslation();
-  const theme = useTheme();
+  const theme = useAppTheme();
   const insets = useSafeAreaInsets();
   const keyboardHeight = useKeyboardHeight();
 
@@ -114,60 +107,86 @@ export function CatalogScreen({ listId }: Props) {
         sections={sections}
         keyExtractor={(product) => product.id}
         keyboardShouldPersistTaps="handled"
-        stickySectionHeadersEnabled
+        // Keine festen Ueberschriften mehr: Ein klebender Kopf haette oben
+        // runde Ecken und laege als Fremdkoerper ueber der naechsten Flaeche.
+        // Die Farbe der Flaeche sagt beim Blaettern, in welcher Abteilung man
+        // ist (ADR-049).
+        stickySectionHeadersEnabled={false}
+        contentContainerStyle={styles.listContent}
         testID="catalog-list"
-        renderSectionHeader={({ section }) => (
-          <Text
-            variant="titleSmall"
-            style={[
-              styles.sectionHeader,
-              { backgroundColor: theme.colors.surface, color: theme.colors.primary },
-            ]}
-          >
-            {section.title}
-          </Text>
-        )}
-        renderItem={({ item }) => {
+        renderSectionHeader={({ section }) => {
+          const colors = categoryColorFor(theme.categories, section.key);
+          return (
+            <Text
+              variant="titleSmall"
+              accessibilityRole="header"
+              style={[
+                styles.sectionHeader,
+                { backgroundColor: colors.container, color: colors.onContainer },
+              ]}
+            >
+              {section.title}
+            </Text>
+          );
+        }}
+        renderSectionFooter={() => <View style={styles.sectionGap} />}
+        renderItem={({ item, index, section }) => {
           const isOnList = onList.has(item.id);
           const isSelected = selected.includes(item.id);
+          const colors = categoryColorFor(theme.categories, section.key);
+          const isLast = index === section.data.length - 1;
 
           return (
-            <List.Item
-              title={item.name}
-              // Was offen auf der Liste steht, bleibt sichtbar, aber nicht
-              // waehlbar: Ausblenden wuerde beim Blaettern den Eindruck
-              // erwecken, das Produkt fehle im Katalog.
-              description={isOnList ? t('catalog.onList') : undefined}
-              disabled={isOnList}
-              onPress={() => toggle(item.id)}
-              // Eine gesperrte Zeile fasst Android in der Bedienungshilfe zu
-              // einem einzigen Knoten zusammen - ihre Beschriftung "Steht
-              // schon auf der Liste" wird dann nicht mehr vorgelesen. Deshalb
-              // muss die Ansage der Zeile selbst sie enthalten, sonst hoert
-              // man "auswaehlen" bei etwas, das nicht waehlbar ist.
-              accessibilityLabel={
-                isOnList
-                  ? t('catalog.onListLabel', { name: item.name })
-                  : isSelected
-                    ? t('catalog.deselect', { name: item.name })
-                    : t('catalog.select', { name: item.name })
-              }
-              accessibilityState={{ disabled: isOnList, checked: isSelected || isOnList }}
-              testID={`catalog-${item.name}`}
-              left={(props) => (
-                <Checkbox.Android
-                  {...props}
-                  status={isSelected || isOnList ? 'checked' : 'unchecked'}
-                  disabled={isOnList}
-                  onPress={() => toggle(item.id)}
-                  // Bedienelement ist die ganze Zeile - sie traegt die Ansage
-                  // und den Zustand. Waere das Kaestchen zusaetzlich
-                  // ansteuerbar, laege es unbeschriftet im Vorlesefluss.
-                  importantForAccessibility="no"
-                />
-              )}
-              style={[styles.row, isOnList ? styles.rowOnList : null]}
-            />
+            <View
+              style={[
+                styles.rowSurface,
+                isLast ? styles.rowSurfaceLast : null,
+                { backgroundColor: colors.container },
+              ]}
+            >
+              <List.Item
+                title={item.name}
+                // Was offen auf der Liste steht, bleibt sichtbar, aber nicht
+                // waehlbar: Ausblenden wuerde beim Blaettern den Eindruck
+                // erwecken, das Produkt fehle im Katalog.
+                description={isOnList ? t('catalog.onList') : undefined}
+                // Fuer jede Kategorie ist nur das Paar container/onContainer auf
+                // Kontrast geprueft - Titel und Hinweis nehmen deshalb beide
+                // onContainer statt der Standardfarben von Paper (ADR-049).
+                titleStyle={{ color: colors.onContainer }}
+                descriptionStyle={{ color: colors.onContainer }}
+                disabled={isOnList}
+                onPress={() => toggle(item.id)}
+                // Eine gesperrte Zeile fasst Android in der Bedienungshilfe zu
+                // einem einzigen Knoten zusammen - ihre Beschriftung "Steht
+                // schon auf der Liste" wird dann nicht mehr vorgelesen. Deshalb
+                // muss die Ansage der Zeile selbst sie enthalten, sonst hoert
+                // man "auswaehlen" bei etwas, das nicht waehlbar ist.
+                accessibilityLabel={
+                  isOnList
+                    ? t('catalog.onListLabel', { name: item.name })
+                    : isSelected
+                      ? t('catalog.deselect', { name: item.name })
+                      : t('catalog.select', { name: item.name })
+                }
+                accessibilityState={{ disabled: isOnList, checked: isSelected || isOnList }}
+                testID={`catalog-${item.name}`}
+                left={(props) => (
+                  <Checkbox.Android
+                    {...props}
+                    status={isSelected || isOnList ? 'checked' : 'unchecked'}
+                    disabled={isOnList}
+                    uncheckedColor={colors.onContainer}
+                    onPress={() => toggle(item.id)}
+                    // Bedienelement ist die ganze Zeile - sie traegt die Ansage
+                    // und den Zustand. Waere das Kaestchen zusaetzlich
+                    // ansteuerbar, laege es unbeschriftet im Vorlesefluss.
+                    importantForAccessibility="no"
+                  />
+                )}
+                style={[styles.row, isOnList ? styles.rowOnList : null]}
+              />
+            </View>
           );
         }}
         ListEmptyComponent={
@@ -182,8 +201,8 @@ export function CatalogScreen({ listId }: Props) {
         }
       />
 
-      <Divider />
-      <View style={[styles.footer, footerPadding, { backgroundColor: theme.colors.surface }]}>
+      {/* Ohne Trennlinie: Flaechen statt Linien (ADR-049). */}
+      <View style={[styles.footer, footerPadding, { backgroundColor: theme.colors.background }]}>
         <Button
           mode="contained"
           icon="playlist-plus"
@@ -207,9 +226,34 @@ const styles = StyleSheet.create({
   search: {
     margin: 12,
   },
-  sectionHeader: {
+  // Seitenrand der Gruppenflaechen - wie im Vorrat (ADR-049).
+  listContent: {
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingTop: 4,
+  },
+  // Oberkante der Gruppenflaeche: 18 dp Rundung. Der Titel rueckt 16 dp ein
+  // und steht damit ueber den Kaestchen der Zeilen.
+  sectionHeader: {
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
+    paddingTop: 12,
+    paddingBottom: 4,
+    paddingHorizontal: 16,
+    overflow: 'hidden',
+  },
+  rowSurface: {
+    paddingHorizontal: 8,
+  },
+  // Unterkante der Gruppenflaeche. overflow schneidet die Welle der letzten
+  // Zeile an der Rundung ab.
+  rowSurfaceLast: {
+    borderBottomLeftRadius: 18,
+    borderBottomRightRadius: 18,
+    paddingBottom: 8,
+    overflow: 'hidden',
+  },
+  sectionGap: {
+    height: 10,
   },
   row: {
     minHeight: 56,
